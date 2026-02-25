@@ -32,6 +32,8 @@
         transparent 50%);
     background-attachment: fixed;
     min-height: 100vh;
+    overflow-x: hidden;
+    touch-action: pan-y;
   }
 }
 

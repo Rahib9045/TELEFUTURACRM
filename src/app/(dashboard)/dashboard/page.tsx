@@ -2,6 +2,7 @@
 
 import { StatTable } from "@/components/ui/StatTable";
 import { Users, TrendingUp, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 // Mock Data representing the stats
 const summaryStats = [
@@ -29,12 +30,16 @@ const mockDashboardData = [
 ];
 
 export default function Dashboard() {
+    const { user } = useAuth();
+
     return (
         <div className="w-full space-y-8">
             {/* Header & Date Filters */}
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
                 <div>
-                    <h2 className="text-3xl font-bold text-white mb-2">Benvenuto, Agente</h2>
+                    <h2 className="text-3xl font-bold text-white mb-2">
+                        Benvenuto, {user?.name ? user.name.split(' ')[0] : 'Ospite'}
+                    </h2>
                     <p className="text-slate-400">Ecco la panoramica delle tue PDA e statistiche</p>
                 </div>
 

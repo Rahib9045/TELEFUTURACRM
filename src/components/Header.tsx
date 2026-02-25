@@ -1,9 +1,9 @@
 ﻿"use client";
 
-import { Search, Sun, Maximize, Bell } from "lucide-react";
+import { Search, Sun, Maximize, Bell, Menu } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
-export function Header() {
+export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
     const { user } = useAuth();
 
     // Compute initials from name (e.g., "Luca Perotta" -> "LP")
@@ -16,8 +16,14 @@ export function Header() {
             .substring(0, 2);
     };
     return (
-        <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b border-white/5 bg-[#0f111a]/80 backdrop-blur-xl px-6">
-            <div className="flex flex-1 gap-4 items-center">
+        <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b border-white/5 bg-[#0f111a]/80 backdrop-blur-xl px-4 md:px-6">
+            <div className="flex flex-1 gap-2 md:gap-4 items-center">
+                <button
+                    onClick={onMenuClick}
+                    className="lg:hidden p-2 -ml-2 text-slate-400 hover:text-white transition-colors"
+                >
+                    <Menu className="w-6 h-6" />
+                </button>
                 {/* Search Bar Replica */}
                 <div className="max-w-md w-full relative hidden md:block">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
