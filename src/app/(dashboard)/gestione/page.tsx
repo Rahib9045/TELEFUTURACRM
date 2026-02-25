@@ -1,0 +1,168 @@
+"use client";
+
+import { Search, Save, Trash2, Paperclip, CheckSquare } from "lucide-react";
+import { cn } from "@/utils";
+import { StatusDropdown, STATUS_OPTIONS } from "@/components/StatusDropdown";
+
+// Mock data representing the complex admin view of PDAs
+const mockGestioneData = [
+    {
+        id: 11,
+        logo: "🏢",
+        categoria: "ENERGIA",
+        brand: "Edison Business",
+        venditore: "Luca Perotta",
+        inviato_il: "23/08/2023 10:52",
+        operatore: "Alfonso Carluccini",
+        stato: "Assegnata",
+        societa: "modoc",
+        piva: "41341241241",
+        referente: "raul",
+        recapito: "3296263515",
+        tipologia: "FISSO",
+        segmento: "Business",
+        pod: "1",
+        pdr: "1"
+    },
+    {
+        id: 10,
+        logo: "🏢",
+        categoria: "ENERGIA",
+        brand: "Edison Business",
+        venditore: "Alessandro Sandri",
+        inviato_il: "19/07/2023 15:21",
+        operatore: "Alessandro Sandri",
+        stato: "OK caricata EVA",
+        societa: "Reesolve Srl",
+        piva: "00144768699",
+        referente: "Remo",
+        recapito: "3333333333",
+        tipologia: "FISSO",
+        segmento: "Business",
+        pod: "1",
+        pdr: ""
+    }
+];
+
+export default function GestionePda() {
+    return (
+        <div className="w-full">
+            <div className="mb-8">
+                <h2 className="text-3xl font-bold text-white mb-2">Gestione PDA (Back Office)</h2>
+                <p className="text-slate-400">Visualizza, verifica e gestisci le PDA ricevute</p>
+            </div>
+
+            {/* Advanced Filter Section Replica */}
+            <div className="glass-card mb-6 p-6">
+                <h3 className="text-lg font-medium text-white mb-4 border-b border-white/10 pb-2">Ricerca avanzata</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Categoria</label>
+                        <select className="glass-input w-full">
+                            <option>Tutte</option>
+                            <option>ENERGIA</option>
+                            <option>DIGITAL</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Venditore</label>
+                        <select className="glass-input w-full">
+                            <option>Tutti</option>
+                            <option>agente</option>
+                            <option>Luca Perotta</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Stato</label>
+                        <select className="glass-input w-full">
+                            <option>Tutti gli stati</option>
+                            {STATUS_OPTIONS.map(opt => (
+                                <option key={opt.label} value={opt.label}>{opt.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+                <div className="mt-6 flex gap-3">
+                    <button className="primary-btn h-10 px-6">Ricerca pda</button>
+                    <button className="h-10 px-6 rounded-lg font-medium bg-white/5 text-slate-300 hover:bg-white/10 transition-colors">Annulla</button>
+                </div>
+            </div>
+
+            {/* Editable Data Table */}
+            <div className="glass-card overflow-hidden">
+                <div className="p-4 border-b border-white/5 flex gap-4 bg-white/[0.02]">
+                    <div className="relative flex-1 max-w-sm">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                        <input type="text" placeholder="Cerca..." className="glass-input w-full pl-10" />
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto pb-48">
+                    {/* Force a wide minimum width because admin tables have many inputs */}
+                    <table className="w-full min-w-[1800px] text-left text-sm text-slate-300">
+                        <thead className="bg-white/[0.03] text-xs uppercase text-slate-400">
+                            <tr>
+                                <th className="px-4 py-4 w-12 text-center"><CheckSquare className="w-4 h-4 mx-auto cursor-pointer" /></th>
+                                <th className="px-4 py-4 w-12">Logo</th>
+                                <th className="px-4 py-4 font-semibold">Brand</th>
+                                <th className="px-4 py-4">Venditore</th>
+                                <th className="px-4 py-4">Inviato il</th>
+                                <th className="px-4 py-4 w-32 text-center">Azioni</th>
+                                <th className="px-4 py-4 w-48">Operatore BO</th>
+                                <th className="px-4 py-4 w-48">Stato</th>
+                                <th className="px-4 py-4">Ragione Sociale</th>
+                                <th className="px-4 py-4">P. IVA</th>
+                                <th className="px-4 py-4">Referente</th>
+                                <th className="px-4 py-4 w-32">Segmento</th>
+                                <th className="px-4 py-4 w-20">POD</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {mockGestioneData.map((row) => (
+                                <tr key={row.id} className="border-b border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-colors">
+                                    <td className="px-4 py-3 text-center">
+                                        <input type="checkbox" className="w-4 h-4 rounded border-white/20 bg-white/5 accent-primary" />
+                                    </td>
+                                    <td className="px-4 py-3 text-2xl">{row.logo}</td>
+                                    <td className="px-4 py-3 font-medium text-white">{row.brand}</td>
+                                    <td className="px-4 py-3 text-slate-400">{row.venditore}</td>
+                                    <td className="px-4 py-3 text-xs text-slate-500">{row.inviato_il}</td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex gap-1 justify-center">
+                                            <button className="p-1.5 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors" title="Allegati"><Paperclip className="w-4 h-4" /></button>
+                                            <button className="p-1.5 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors" title="Salva"><Save className="w-4 h-4" /></button>
+                                            <button className="p-1.5 rounded bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 transition-colors" title="Elimina"><Trash2 className="w-4 h-4" /></button>
+                                        </div>
+                                    </td>
+                                    <td className="px-2 py-3">
+                                        <select className="glass-input w-full text-xs py-1.5 px-2 h-auto" defaultValue={row.operatore}>
+                                            <option>{row.operatore}</option>
+                                            <option>Alfonso Carluccini</option>
+                                        </select>
+                                    </td>
+                                    <td className="px-2 py-3">
+                                        <StatusDropdown value={row.stato} />
+                                    </td>
+                                    <td className="px-2 py-3"><input type="text" className="glass-input w-full text-xs py-1.5 px-2 h-auto" defaultValue={row.societa} /></td>
+                                    <td className="px-2 py-3"><input type="text" className="glass-input w-full text-xs py-1.5 px-2 h-auto" defaultValue={row.piva} /></td>
+                                    <td className="px-2 py-3"><input type="text" className="glass-input w-full text-xs py-1.5 px-2 h-auto" defaultValue={row.referente} /></td>
+                                    <td className="px-2 py-3">
+                                        <select className="glass-input w-full text-xs py-1.5 px-2 h-auto" defaultValue={row.segmento}>
+                                            <option>Business</option>
+                                            <option>Consumer</option>
+                                        </select>
+                                    </td>
+                                    <td className="px-2 py-3"><input type="text" className="glass-input w-full text-xs py-1.5 px-2 h-auto text-center" defaultValue={row.pod} /></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="px-6 py-4 border-t border-white/5 flex items-center justify-between text-xs text-slate-400 bg-white/[0.01]">
+                    <span>Visualizzate da 1 a 2 di 2 totale</span>
+                </div>
+            </div>
+        </div>
+    );
+}

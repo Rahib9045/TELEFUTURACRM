@@ -1,0 +1,59 @@
+﻿"use client";
+
+import { Search, Sun, Maximize, Bell } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+
+export function Header() {
+    const { user } = useAuth();
+
+    // Compute initials from name (e.g., "Luca Perotta" -> "LP")
+    const getInitials = (name: string) => {
+        return name
+            .split(' ')
+            .map(n => n[0])
+            .join('')
+            .toUpperCase()
+            .substring(0, 2);
+    };
+    return (
+        <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b border-white/5 bg-[#0f111a]/80 backdrop-blur-xl px-6">
+            <div className="flex flex-1 gap-4 items-center">
+                {/* Search Bar Replica */}
+                <div className="max-w-md w-full relative hidden md:block">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 text-slate-500" />
+                    </div>
+                    <input
+                        type="text"
+                        className="glass-input w-full pl-10 h-10 text-sm"
+                        placeholder="Search for anything..."
+                    />
+                </div>
+            </div>
+
+            <div className="flex items-center gap-6">
+                <button className="text-slate-400 hover:text-white transition-colors">
+                    <Sun className="h-5 w-5" />
+                </button>
+                <button className="text-slate-400 hover:text-white transition-colors">
+                    <Maximize className="h-5 w-5" />
+                </button>
+                <button className="text-slate-400 hover:text-white transition-colors relative">
+                    <Bell className="h-5 w-5" />
+                    <span className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full"></span>
+                </button>
+
+                {/* User Profile */}
+                <div className="flex items-center gap-3 pl-4 border-l border-white/10 cursor-pointer">
+                    <div className="hidden text-right md:block">
+                        <p className="text-sm font-medium text-white leading-none">{user?.name || "Ospite"}</p>
+                        <p className="text-xs text-slate-400 mt-1 capitalize">{user?.role || "Nessun Ruolo"}</p>
+                    </div>
+                    <div className="w-9 h-9 rounded-full bg-indigo-500/20 text-indigo-300 font-bold border-2 border-indigo-500/40 flex items-center justify-center overflow-hidden">
+                        {user?.name ? getInitials(user.name) : 'A'}
+                    </div>
+                </div>
+            </div>
+        </header>
+    );
+}
