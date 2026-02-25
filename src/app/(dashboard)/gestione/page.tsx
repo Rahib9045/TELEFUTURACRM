@@ -97,7 +97,7 @@ export default function GestionePda() {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto pb-48">
+                <div className="overflow-x-auto w-full max-w-[100vw] pb-48">
                     {/* Force a wide minimum width because admin tables have many inputs */}
                     <table className="w-full min-w-[1800px] text-left text-sm text-slate-300">
                         <thead className="bg-white/[0.03] text-xs uppercase text-slate-400">

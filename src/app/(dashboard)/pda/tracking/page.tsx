@@ -94,7 +94,7 @@ export default function TrackingPda() {
                 </div>
 
                 {/* Table is slightly modified to handle the raw emoji avatar for the mock */}
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto w-full max-w-[100vw]">
                     <table className="w-full text-left text-sm text-slate-300">
                         <thead className="bg-white/[0.03] text-xs uppercase text-slate-400">
                             <tr>
