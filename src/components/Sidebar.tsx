@@ -48,17 +48,17 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                 />
             )}
             <aside className={cn(
-                "fixed inset-y-0 left-0 z-50 w-64 bg-[#0f111a]/95 backdrop-blur-xl border-r border-white/5 transition-transform duration-300 lg:translate-x-0",
+                "fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-[#0f111a]/95 backdrop-blur-xl border-r border-white/5 transition-transform duration-300 lg:translate-x-0",
                 isOpen ? "translate-x-0" : "-translate-x-full"
             )}>
-                <div className="flex h-16 items-center justify-center border-b border-white/5">
+                <div className="flex-none h-16 flex items-center justify-center border-b border-white/5">
                     {/* Placeholder Logo */}
                     <div className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
                         <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">T</div>
                         Telefutura <span className="text-indigo-400">CRM</span>
                     </div>
                 </div>
-                <div className="flex flex-col h-[calc(100vh-4rem)] justify-between">
+                <div className="flex-1 flex flex-col justify-between overflow-y-auto">
                     <nav className="flex-1 space-y-1 p-4">
                         <p className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">
                             Menu

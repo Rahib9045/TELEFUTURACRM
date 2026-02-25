@@ -1,10 +1,10 @@
 ﻿"use client";
 
-import { Search, Sun, Maximize, Bell, Menu } from "lucide-react";
+import { Search, Sun, Maximize, Bell, Menu, LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
 
     // Compute initials from name (e.g., "Luca Perotta" -> "LP")
     const getInitials = (name: string) => {
@@ -47,6 +47,14 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                 <button className="text-slate-400 hover:text-white transition-colors relative">
                     <Bell className="h-5 w-5" />
                     <span className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full"></span>
+                </button>
+
+                {/* Mobile Quick Logout */}
+                <button
+                    onClick={logout}
+                    className="lg:hidden text-rose-400 hover:text-rose-300 transition-colors p-2"
+                >
+                    <LogOut className="h-5 w-5" />
                 </button>
 
                 {/* User Profile */}
