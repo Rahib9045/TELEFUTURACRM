@@ -3,6 +3,7 @@
 import { Search, Save, Trash2, Paperclip, CheckSquare } from "lucide-react";
 import { cn } from "@/utils";
 import { StatusDropdown, STATUS_OPTIONS } from "@/components/StatusDropdown";
+import { DatePickerInput } from "@/components/DatePickerInput";
 
 // Mock data representing the complex admin view of PDAs
 const mockGestioneData = [
@@ -80,6 +81,22 @@ export default function GestionePda() {
                                 <option key={opt.label} value={opt.label}>{opt.label}</option>
                             ))}
                         </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Da data invio</label>
+                        <DatePickerInput
+                            id="dadatainvio"
+                            name="dadatainvio"
+                            placeholder="inserire data inizio"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">A data invio</label>
+                        <DatePickerInput
+                            id="adatainvio"
+                            name="adatainvio"
+                            placeholder="inserire data fine"
+                        />
                     </div>
                 </div>
                 <div className="mt-6 flex gap-3">

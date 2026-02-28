@@ -91,16 +91,7 @@ export default function Dashboard() {
                 data={mockDashboardData}
             />
 
-            {/* Support Info */}
-            <div className="p-6 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div>
-                    <h4 className="text-lg font-semibold text-indigo-100 mb-1">Hai bisogno di assistenza?</h4>
-                    <p className="text-sm text-indigo-200/70">Il nostro team di supporto è disponibile dal lunedì al venerdì (09:00 - 18:00).</p>
-                </div>
-                <button className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-medium transition-colors whitespace-nowrap">
-                    Contatta Back Office
-                </button>
-            </div>
+
         </div>
     );
 }

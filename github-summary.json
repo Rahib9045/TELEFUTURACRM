@@ -1,0 +1,240 @@
+[
+  {
+    "name": "Rahib9045/adminfhd",
+    "description": "No description provided.",
+    "language": "JavaScript",
+    "private": true,
+    "readme": "[NO README] Root files: .editorconfig, .gitignore, .htaccess, .well-known, Dockerfile, Procfile, app, artisan, bootstrap, composer.json, composer.lock, config, database, package-lock.json, package.json, public, render.yaml, resources, routes, storage, tests, vercel.json, vite.config.js"
+  },
+  {
+    "name": "Rahib9045/aepsite",
+    "description": "No description provided.",
+    "language": "TypeScript",
+    "private": true,
+    "readme": "# A&P Holding - Next.js Website\n\nA stunning, modern redesign of the A&P Holding website built with **Next.js 16**, **React 19**, **TypeScript**, and **Tailwind CSS 4**.\n\n## 🚀 Features\n\n- ⚡ **Next.js 16** with App Router\n- 🎨 **Tailwind CSS 4** for styling\n- 📱 **Fully Responsive** design\n- ✨ **Smooth Animations** and interactions\n- 🎯 **TypeScript** for type safety\n- ⚡ **Optimized Performance** with Next.js Image\n- 🎨 **Modern Design** with gradient backgrounds\n- 📊 **Animated Statistics** counter\n- 📝 **Contact Form** with validation\n\n## 🏃‍♂️ Getting Started\n\n### Install Dependencies\n\n```bash\nnpm install\n```\n\n### Run Development Server\n\n```bash\nnpm run dev\n```\n\nOpen [http://localhost:3000](http://localhost:3000) in your browser.\n\n### Build for Production\n\n```bash\nnpm run build\nnpm start\n```\n\n## 📁 Project Structure\n\n```\naepholding-nextjs/\n├── app/\n│   ├── layout.tsx      # Root layout\n│   ├── page.tsx        # Home page\n│   └── globals.css     # Global styles\n├── components/\n│   ├── Navbar.tsx      # Navigation component\n│   ├── Hero.tsx        # Hero section\n│   ├── Companies.tsx   # Companies showcase\n│   ├── About.tsx       # About section\n│   ├── Contact.tsx     # Contact form\n│   ├── Footer.tsx      # Footer\n│   └── ScrollToTop.tsx # Scroll to top button\n├── public/\n│   └── images/         # All images\n└── package.json\n```\n\n## 🎨 Design Features\n\n- **Modern Hero Section** - Full-screen with animated gradients\n- **Company Cards** - Beautiful interactive cards for each "
+  },
+  {
+    "name": "Rahib9045/AGENZIMAIA",
+    "description": "No description provided.",
+    "language": "TypeScript",
+    "private": true,
+    "readme": "This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).\n\n## Getting Started\n\nFirst, run the development server:\n\n```bash\nnpm run dev\n# or\nyarn dev\n# or\npnpm dev\n```\n\nOpen [http://localhost:3000](http://localhost:3000) with your browser to see the result.\n\nYou can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.\n\nThis project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.\n\n## Learn More\n\nTo learn more about Next.js, take a look at the following resources:\n\n- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.\n- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.\n\nYou can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!\n\n## Deploy on Vercel\n\nThe easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.\n\nCheck out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.\n"
+  },
+  {
+    "name": "Rahib9045/AlfredTHEbutler",
+    "description": "No description provided.",
+    "language": "Unknown",
+    "private": true,
+    "readme": "[NO README] Root files: LICENSE.md, requirements.txt"
+  },
+  {
+    "name": "Rahib9045/Ayeasha-Akondo-Akhi",
+    "description": "No description provided.",
+    "language": "JavaScript",
+    "private": true,
+    "readme": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).\n\n## Getting Started\n\nFirst, run the development server:\n\n```bash\nnpm run dev\n# or\nyarn dev\n# or\npnpm dev\n# or\nbun dev\n```\n\nOpen [http://localhost:3000](http://localhost:3000) with your browser to see the result.\n\nYou can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.\n\nThis project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.\n\n## Learn More\n\nTo learn more about Next.js, take a look at the following resources:\n\n- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.\n- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.\n\nYou can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!\n\n## Deploy on Vercel\n\nThe easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.\n\nCheck out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.\n"
+  },
+  {
+    "name": "Rahib9045/bizverse25",
+    "description": "No description provided.",
+    "language": "TypeScript",
+    "private": true,
+    "readme": "# BIZ VERSE 2025 - National Business Communication Competition\n\nA modern, responsive website for the BIZ VERSE 2025 competition organized by BRAC University Business Club (BIZ BEE).\n\n## Features\n\n- **Modern Design**: Clean, professional design with smooth animations\n- **Responsive**: Fully responsive design that works on all devices\n- **Interactive**: Smooth scrolling navigation and interactive FAQ section\n- **Performance**: Built with Next.js 14 for optimal performance\n- **Accessibility**: Semantic HTML and proper contrast ratios\n\n## Sections\n\n1. **Hero Section**: Main title, tagline, and key information\n2. **About**: Competition introduction and BIZ BEE information\n3. **Timeline**: 4-phase competition journey\n4. **Prizes**: Prize pool and recognition details\n5. **Legacy**: Highlights from BIZ VERSE 2024\n6. **Rulebook**: Downloadable resources and guidelines\n7. **Registration**: Team registration form\n8. **FAQ & Contact**: Frequently asked questions and contact information\n\n## Tech Stack\n\n- **Framework**: Next.js 14\n- **Language**: TypeScript\n- **Styling**: Tailwind CSS\n- **Animations**: Framer Motion\n- **Icons**: Lucide React\n\n## Getting Started\n\n### Prerequisites\n\n- Node.js 18+ \n- npm or yarn\n\n### Installation\n\n1. Clone the repository:\n```bash\ngit clone <repository-url>\ncd bizverse-2025\n```\n\n2. Install dependencies:\n```bash\nnpm install\n# or\nyarn install\n```\n\n3. Run the development server:\n```bash\nnpm run dev\n# or\nyarn dev\n```\n\n4. Open [http://localhost:3000](http://localho"
+  },
+  {
+    "name": "Rahib9045/BRACSWAP",
+    "description": "No description provided.",
+    "language": "JavaScript",
+    "private": true,
+    "readme": "# BRACSwap - Course Section Swapping Platform\n\nBRACSwap is a web application designed to facilitate course section swapping for students at BRAC University. The platform allows students to find matches for their desired course sections and automatically notifies them when a suitable swap is available.\n\n## 🚀 Features\n\n- **Course Swap Requests**: Students can submit requests to swap their current course sections\n- **Automatic Matching**: The system automatically finds matching swap requests\n- **Email Notifications**: Users receive email notifications when matches are found\n- **Modern UI**: Built with React and Chakra UI for a clean, responsive interface\n- **Real-time Updates**: Instant feedback on swap request status\n\n## 🛠️ Tech Stack\n\n### Backend\n- **Node.js** - Runtime environment\n- **Express.js** - Web framework\n- **MongoDB** - Database with Mongoose ODM\n- **Nodemailer** - Email service\n- **bcryptjs** - Password hashing\n- **jsonwebtoken** - Authentication\n- **CORS** - Cross-origin resource sharing\n\n### Frontend\n- **React** - Frontend framework\n- **Chakra UI** - Component library\n- **React Router** - Client-side routing\n- **Axios** - HTTP client\n- **Framer Motion** - Animation library\n\n## 📁 Project Structure\n\n```\nBRACSwap/\n├── server.js              # Main server file\n├── package.json           # Backend dependencies\n├── routes/\n│   └── swaps.js          # Swap API routes\n├── models/\n│   └── Swap.js           # MongoDB schema\n└── client/               # React frontend\n    "
+  },
+  {
+    "name": "Rahib9045/Fabio",
+    "description": "No description provided.",
+    "language": "JavaScript",
+    "private": true,
+    "readme": "# AI Chat Assistant\n\nA modern web application that integrates with ElevenLabs' conversational AI to create an interactive chat experience.\n\n## Features\n\n- Clean and modern UI built with React and TypeScript\n- Real-time chat interface\n- Integration with ElevenLabs AI\n- Responsive design\n- Message history\n- Loading states and error handling\n\n## Setup\n\n1. Install dependencies:\n```bash\nnpm install\n```\n\n2. Create a `.env` file in the root directory and add your ElevenLabs API credentials:\n```\nREACT_APP_ELEVENLABS_API_KEY=your_api_key_here\nREACT_APP_ELEVENLABS_API_ENDPOINT=your_api_endpoint_here\n```\n\n3. Start the development server:\n```bash\nnpm start\n```\n\nThe application will be available at `http://localhost:3000`.\n\n## Configuration\n\nTo use the ElevenLabs integration, you'll need to:\n\n1. Sign up for an ElevenLabs account\n2. Get your API key from the ElevenLabs dashboard\n3. Update the API endpoint and key in the `.env` file\n\n## Development\n\n- Built with React 18\n- TypeScript for type safety\n- Tailwind CSS for styling\n- Axios for API requests\n\n## License\n\nMIT "
+  },
+  {
+    "name": "Rahib9045/fabio-refined",
+    "description": "No description provided.",
+    "language": "Python",
+    "private": true,
+    "readme": "# AI Assistant with Secure Storage, Memory, and Document Management\n\nAn AI assistant that can handle tasks, store sensitive information, maintain conversation context, and manage documents locally.\n\n## Features\n\n- **Secure Storage**: Store sensitive information like API keys and passwords\n- **Conversation Memory**: Maintains context of past interactions\n- **Document Management**: Organize and search through documents\n- **Natural Language Processing**: Understand and respond to natural language queries\n- **Web Dashboard**: User-friendly interface for document management\n\n## Document Management\n\nThe assistant provides two ways to manage documents:\n\n### 1. Web Dashboard\nA modern web interface for document management:\n- Upload documents with drag-and-drop\n- Organize documents by categories\n- Add tags and titles\n- Search through documents\n- View and delete documents\n- Responsive design for all devices\n\nTo start the dashboard:\n```bash\npython dashboard.py\n```\nThen open http://localhost:8000 in your browser.\n\n### 2. Command Line Interface\nYou can also manage documents through the AI assistant's command line interface:\n```\nadd_doc <file_path> <category> [title]\nsearch_docs <query>\nlist_docs [category]\n```\n\n## Document Storage\n\nThe assistant organizes documents in a local storage system with the following features:\n\n- **Categorized Storage**: Documents are organized into categories:\n  - `meetings/`: Meeting notes and minutes\n  - `notes/`: General notes and documentation\n  - `projects/`"
+  },
+  {
+    "name": "Rahib9045/fabiobr",
+    "description": "No description provided.",
+    "language": "JavaScript",
+    "private": true,
+    "readme": "[NO README] Root files: .gitignore, index.js, node_modules, package-lock.json, package.json, uploads"
+  },
+  {
+    "name": "Rahib9045/fabiofr",
+    "description": "No description provided.",
+    "language": "JavaScript",
+    "private": true,
+    "readme": "# AI Chat Assistant\n\nA modern web application that integrates with ElevenLabs' conversational AI to create an interactive chat experience.\n\n## Features\n\n- Clean and modern UI built with React and TypeScript\n- Real-time chat interface\n- Integration with ElevenLabs AI\n- Responsive design\n- Message history\n- Loading states and error handling\n\n## Setup\n\n1. Install dependencies:\n```bash\nnpm install\n```\n\n2. Create a `.env` file in the root directory and add your ElevenLabs API credentials:\n```\nREACT_APP_ELEVENLABS_API_KEY=your_api_key_here\nREACT_APP_ELEVENLABS_API_ENDPOINT=your_api_endpoint_here\n```\n\n3. Start the development server:\n```bash\nnpm start\n```\n\nThe application will be available at `http://localhost:3000`.\n\n## Configuration\n\nTo use the ElevenLabs integration, you'll need to:\n\n1. Sign up for an ElevenLabs account\n2. Get your API key from the ElevenLabs dashboard\n3. Update the API endpoint and key in the `.env` file\n\n## Development\n\n- Built with React 18\n- TypeScript for type safety\n- Tailwind CSS for styling\n- Axios for API requests\n\n## License\n\nMIT "
+  },
+  {
+    "name": "Rahib9045/Fahadbhai",
+    "description": "No description provided.",
+    "language": "JavaScript",
+    "private": true,
+    "readme": "[NO README] Root files: .editorconfig, .env, .htaccess, .well-known, Dockerfile, app, artisan, bootstrap, composer.json, composer.lock, config, database, docker-compose.yml, package-lock.json, package.json, public, resources, routes, storage, tests, vendor, vite.config.js"
+  },
+  {
+    "name": "Rahib9045/frntendfhd",
+    "description": "No description provided.",
+    "language": "JavaScript",
+    "private": true,
+    "readme": "This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).\n\n## Getting Started\n\nFirst, run the development server:\n\n```bash\nnpm run dev\n# or\nyarn dev\n# or\npnpm dev\n```\n\nOpen [http://localhost:3000](http://localhost:3000) with your browser to see the result.\n\nYou can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.\n\nThis project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.\n\n## Learn More\n\nTo learn more about Next.js, take a look at the following resources:\n\n- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.\n- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.\n\nYou can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!\n\n## Deploy on Vercel\n\nThe easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.\n\nCheck out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.\n"
+  },
+  {
+    "name": "Rahib9045/fwefwfw",
+    "description": "qdqd",
+    "language": "Unknown",
+    "private": true,
+    "readme": ""
+  },
+  {
+    "name": "Rahib9045/GEODETRIC",
+    "description": "No description provided.",
+    "language": "TypeScript",
+    "private": true,
+    "readme": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).\n\n## Getting Started\n\nFirst, run the development server:\n\n```bash\nnpm run dev\n# or\nyarn dev\n# or\npnpm dev\n# or\nbun dev\n```\n\nOpen [http://localhost:3000](http://localhost:3000) with your browser to see the result.\n\nYou can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.\n\nThis project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.\n\n## Learn More\n\nTo learn more about Next.js, take a look at the following resources:\n\n- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.\n- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.\n\nYou can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!\n\n## Deploy on Vercel\n\nThe easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.\n\nCheck out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.\n"
+  },
+  {
+    "name": "Rahib9045/heysuitewassapmcp",
+    "description": "No description provided.",
+    "language": "Python",
+    "private": true,
+    "readme": "# WhatsApp MCP Server\n\nThis is a Model Context Protocol (MCP) server for WhatsApp.\n\nWith this you can search and read your personal Whatsapp messages (including images, videos, documents, and audio messages), search your contacts and send messages to either individuals or groups. You can also send media files including images, videos, documents, and audio messages.\n\nIt connects to your **personal WhatsApp account** directly via the Whatsapp web multidevice API (using the [whatsmeow](https://github.com/tulir/whatsmeow) library). All your messages are stored locally in a SQLite database and only sent to an LLM (such as Claude) when the agent accesses them through tools (which you control).\n\nHere's an example of what you can do when it's connected to Claude.\n\n![WhatsApp MCP](./example-use.png)\n\n> To get updates on this and other projects I work on [enter your email here](https://docs.google.com/forms/d/1rTF9wMBTN0vPfzWuQa2BjfGKdKIpTbyeKxhPMcEzgyI/preview)\n\n> *Caution:* as with many MCP servers, the WhatsApp MCP is subject to [the lethal trifecta](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/). This means that project injection could lead to private data exfiltration.\n\n## Installation\n\n### Prerequisites\n\n- Go\n- Python 3.6+\n- Anthropic Claude Desktop app (or Cursor)\n- UV (Python package manager), install with `curl -LsSf https://astral.sh/uv/install.sh | sh`\n- FFmpeg (_optional_) - Only needed for audio messages. If you want to send audio files as playable WhatsApp vo"
+  },
+  {
+    "name": "Rahib9045/JJSELFBOT",
+    "description": "No description provided.",
+    "language": "Python",
+    "private": true,
+    "readme": "\n<p align=\"center\">\n  <img src=\"https://3684636823-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FAAWXLgBhsxb38Q3iF3ha%2Fsocialpreview%2FJYYwVSNx9yLnXY8adfAU%2Fbanner.png?alt=media&token=264b3ce3-6643-4b55-8990-ca5cd2516dce\">\n</p>\n\n<h1 align=\"center\">[Discord] - SelfBot (V2.1)</h1>\n<p align=\"center\">\n  <a href=\"https://github.com/AstraaDev/Discord-SelfBot/blob/main/LICENSE\">\n    <img src=\"https://img.shields.io/badge/License-MIT-important\">\n  </a>\n  <a href=\"https://github.com/AstraaDev\">\n    <img src=\"https://img.shields.io/github/repo-size/AstraaDev/Discord-SelfBot.svg?label=Repo%20size&style=flat-square\">\n  </a>\n</p>\n\n<p align=\"center\">\n  [Discord] - SelfBot is a feature-rich script designed for Windows, Linux, and macOS, written in Python.\n</p>\n\nThis SelfBot provides a large variety of commands to streamline your Discord experience. It features an intuitive interface, complete help documentation, and updates to keep it functional and efficient. Some unnecessary commands have been removed, but you are welcome to suggest additions via issues or Discord.\n\n---\n\n## Features\n\n<details>\n  <summary>All Commands</summary>\n\n`*astraa` - Show my social networks.  \n`changeprefix <prefix>` - Change the bot's prefix.  \n`shutdown` - Stop the selfbot.  \n`*uptime` - Returns how long the selfbot has been running.  \n`*remoteuser <@user>` - Authorize a user to execute commands remotely.  \n`copycat ON|OFF <@user>` - Automatically reply with the same message whenever the me"
+  },
+  {
+    "name": "Rahib9045/JJsite",
+    "description": "No description provided.",
+    "language": "TypeScript",
+    "private": true,
+    "readme": "# [NextJS Tailwind Author Page](http://demos.creative-tim.com/nextjs-tailwind-author-page?ref=readme-ntpp) [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social&logo=twitter)](https://twitter.com/intent/tweet?url=https://www.creative-tim.com/product/nextjs-tailwind-author-page&text=Check%20Material%20Tailwind%202%20Template%20made%20by%20@CreativeTim%20#webdesign%20#template%20#materialdesign%20#react%20https://www.creative-tim.com/product/nextjs-tailwind-author-page)\n\n![version](https://img.shields.io/badge/version-1.0.0-blue.svg) [![GitHub issues open](https://img.shields.io/github/issues/creativetimofficial/nextjs-tailwind-author-page.svg)](https://github.com/creativetimofficial/nextjs-tailwind-author-page/issues?q=is%3Aopen+is%3Aissue) [![GitHub issues closed](https://img.shields.io/github/issues-closed-raw/creativetimofficial/nextjs-tailwind-author-page.svg)](https://github.com/creativetimofficial/nextjs-tailwind-author-page/issues?q=is%3Aissue+is%3Aclosed)\n\n![Image](https://s3.amazonaws.com/creativetim_bucket/products/742/original/material-tailwind-react-author-template-thumbnail.jpg?1697629563)\n\nIntroducing Tailwind Author Page, a free \"About the Author\" blog page based on Tailwind CSS and Material Tailwind.\n\nAre you looking for a pre-designed and customizable blog web page template specifically created for writers, authors, and blog owners to showcase their work and establish an online presence. Look no further! We are thrilled to offer you a F"
+  },
+  {
+    "name": "Rahib9045/LUCABOT",
+    "description": "No description provided.",
+    "language": "Python",
+    "private": true,
+    "readme": "# Lucaselfbot - Telegram Channel Monitor\n\nA Telegram selfbot that monitors channels and stores messages in MongoDB, with plans for Android alarm integration.\n\n## Features\n\n- 🔍 **Channel Monitoring**: Monitor multiple Telegram channels for new messages\n- 📱 **Real-time Notifications**: Get notified when new messages arrive\n- 🗄️ **MongoDB Storage**: All messages are stored in MongoDB for analysis\n- 📊 **Search & Analytics**: Search through stored messages and view statistics\n- 🌐 **Web Interface**: Health checks and status monitoring via HTTP endpoints\n\n## Quick Start\n\n### Local Development\n\n1. **Install Dependencies**\n   ```bash\n   pip install -r requirements.txt\n   ```\n\n2. **Run the Bot**\n   ```bash\n   python test_bot.py\n   ```\n\n3. **Setup Commands** (send these in any Telegram chat):\n   - `.getid` - Get current chat ID\n   - `.add_channel @channelname` - Add a channel to monitor\n   - `.set_notification_chat @username` - Set notification destination\n   - `.status` - Check current settings\n\n### Production Deployment (Render)\n\n1. **Deploy to Render**\n   ```bash\n   # The web server automatically starts the bot\n   python deploy.py\n   ```\n\n2. **Health Check**\n   - Visit `/health` endpoint for bot status\n   - Visit `/status` endpoint for detailed information\n\n## Commands\n\n| Command | Description |\n|---------|-------------|\n| `.test` | Test if bot is working |\n| `.help` | Show all available commands |\n| `.getid` | Get ID of current chat |\n| `.add_channel <channel>` | Add channel to"
+  },
+  {
+    "name": "Rahib9045/lvlBOT",
+    "description": "No description provided.",
+    "language": "Unknown",
+    "private": true,
+    "readme": "# lvlBOT"
+  },
+  {
+    "name": "Rahib9045/Regina-Palermo",
+    "description": "Regina Palermo",
+    "language": "TypeScript",
+    "private": true,
+    "readme": "[NO README] Root files: .dockerignore, .gitignore, .next, .replit, Dockerfile, attached_assets, components.json, generated-icon.png, next-env.d.ts, next.config.js, package-lock.json, package.json, postcss.config.js, public, src, tailwind.config.js, tailwind.config.ts, tsconfig.json, vite.config.ts"
+  },
+  {
+    "name": "Rahib9045/SELFBOT-FIVV-PRIV",
+    "description": "No description provided.",
+    "language": "Python",
+    "private": true,
+    "readme": "[NO README] Root files: config, main.py, requirements.txt"
+  },
+  {
+    "name": "Rahib9045/telecorso",
+    "description": "No description provided.",
+    "language": "TypeScript",
+    "private": true,
+    "readme": "# Course Platform - Modern E-Learning Platform\n\nA modern, animated course platform inspired by Ulama.io, built with Next.js 14, Framer Motion, and Tailwind CSS.\n\n## 🚀 Features\n\n- **Modern Design**: Clean, professional interface with smooth animations\n- **Responsive**: Fully responsive design that works on all devices\n- **Animations**: Advanced animations and transitions using Framer Motion\n- **Performance**: Optimized for speed and SEO with Next.js 14\n- **Accessibility**: Built with accessibility best practices\n- **TypeScript**: Full TypeScript support for better development experience\n\n## 🛠️ Tech Stack\n\n- **Framework**: Next.js 14 with App Router\n- **Styling**: Tailwind CSS with custom animations\n- **Animations**: Framer Motion for advanced animations\n- **Icons**: Lucide React for beautiful icons\n- **Language**: TypeScript for type safety\n- **Font**: Inter font family for modern typography\n\n## 📦 Installation\n\n1. **Clone the repository**\n   ```bash\n   git clone <repository-url>\n   cd course-platform\n   ```\n\n2. **Install dependencies**\n   ```bash\n   npm install\n   ```\n\n3. **Run the development server**\n   ```bash\n   npm run dev\n   ```\n\n4. **Open your browser**\n   Navigate to [http://localhost:3000](http://localhost:3000)\n\n## 🎨 Customization\n\n### Colors\nThe color scheme can be customized in `tailwind.config.js`:\n- Primary colors: Blue gradient\n- Secondary colors: Purple gradient\n- Custom animations and keyframes\n\n### Components\nAll components are modular and can be easily c"
+  },
+  {
+    "name": "Rahib9045/telecorsoff",
+    "description": "No description provided.",
+    "language": "TypeScript",
+    "private": true,
+    "readme": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).\n\n## Getting Started\n\nFirst, run the development server:\n\n```bash\nnpm run dev\n# or\nyarn dev\n# or\npnpm dev\n# or\nbun dev\n```\n\nOpen [http://localhost:3000](http://localhost:3000) with your browser to see the result.\n\nYou can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.\n\nThis project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.\n\n## Learn More\n\nTo learn more about Next.js, take a look at the following resources:\n\n- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.\n- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.\n\nYou can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!\n\n## Deploy on Vercel\n\nThe easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.\n\nCheck out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.\n#\u0000 \u0000D\u0000a\u0000t\u0000a\u0000b\u0000a\u0000s\u0000e\u0000 \u0000c\u0000o\u0000n\u0000n\u0000e\u0000c\u0000t\u0000e\u0000d\u0000\r\u0000\n\u0000"
+  },
+  {
+    "name": "Rahib9045/TELECORSOFINAL",
+    "description": "No description provided.",
+    "language": "TypeScript",
+    "private": true,
+    "readme": "# 🎓 Course Platform - Ulama Clone\n\nA free, modern course platform with real-time community chat. Built with Next.js, Supabase, and TypeScript.\n\n## ✨ Features\n\n### 🎯 Core Features\n- **Free Course Access** - All courses are completely free\n- **Real-time Community Chat** - Connect with learners and instructors\n- **Video-based Learning** - Support for YouTube, Vimeo, and direct video URLs\n- **Progress Tracking** - Track your learning journey\n- **Instructor Dashboard** - Create and manage courses\n- **Course Channels** - Dedicated chat for each course\n- **Mobile Responsive** - Works on all devices\n\n### 👥 User Roles\n- **Students** - Enroll in courses, track progress, participate in community\n- **Instructors** - Create courses, add lessons, interact with students\n- **Admin** - Full platform management (coming soon)\n\n### 📚 Course Features\n- Multi-lesson courses with organized structure\n- Video lessons with progress tracking\n- Automatic lesson completion\n- Course categories and difficulty levels\n- Free preview lessons\n\n### 💬 Community Features\n- General community chat\n- Course-specific discussion channels\n- Real-time messaging with Supabase Realtime\n- User profiles and avatars\n- Message deletion\n\n## 🚀 Quick Start\n\n### Prerequisites\n- Node.js 18+ installed\n- A Supabase account (free tier works!)\n- Git\n\n### 1. Clone the Repository\n\n\\`\\`\\`bash\ngit clone <your-repo-url>\ncd telecorsofinal\n\\`\\`\\`\n\n### 2. Install Dependencies\n\n\\`\\`\\`bash\nnpm install\n\\`\\`\\`\n\n### 3. Setup Supabase\n\n1. Go "
+  },
+  {
+    "name": "Rahib9045/Telefutura-proto",
+    "description": "No description provided.",
+    "language": "TypeScript",
+    "private": true,
+    "readme": "# Telefutura - Telecom Management System\n\nA modern telecom management system with Admin and Customer portals built with Next.js, NestJS, and GraphQL.\n\n## 🚀 Quick Start\n\n### Prerequisites\n- Node.js (v18 or higher)\n- Yarn package manager\n\n### Installation & Startup\n\n1. **Install dependencies:**\n   ```bash\n   yarn install\n   ```\n\n2. **Start both portals:**\n   ```bash\n   yarn dev\n   ```\n\n3. **Access the portals:**\n   - **Admin Portal**: http://localhost:3000\n   - **Customer Portal**: http://localhost:3001\n\n## 🔐 Authentication Credentials\n\n### Admin Portal (http://localhost:3000)\n- **Email**: `admin@telefutura.com`\n- **Password**: `admin123`\n\n### Customer Portal (http://localhost:3001)\nChoose any of these credentials:\n- **Email**: `customer@example.com` | **Password**: `password`\n- **Email**: `giulia@example.com` | **Password**: `password`\n- **Email**: `luca@example.com` | **Password**: `password`\n- **Email**: `admin@telefutura.com` | **Password**: `password`\n\n## 🏗️ Project Structure\n\n```\ntelefutura/\n├── apps/\n│   ├── admin-web/          # Admin Portal (Next.js)\n│   ├── customer-web/       # Customer Portal (Next.js)\n│   └── api/               # Backend API (NestJS)\n├── packages/              # Shared packages\n├── prisma/               # Database schema\n└── package.json          # Root package.json\n```\n\n## 🛠️ Available Scripts\n\n### Root Level\n- `yarn dev` - Start both Admin and Customer portals\n- `yarn dev:admin` - Start only Admin portal\n- `yarn dev:customer` - Start only Cus"
+  },
+  {
+    "name": "Rahib9045/TELEFUTURACRM",
+    "description": "No description provided.",
+    "language": "TypeScript",
+    "private": true,
+    "readme": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).\n\n## Getting Started\n\nFirst, run the development server:\n\n```bash\nnpm run dev\n# or\nyarn dev\n# or\npnpm dev\n# or\nbun dev\n```\n\nOpen [http://localhost:3000](http://localhost:3000) with your browser to see the result.\n\nYou can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.\n\nThis project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.\n\n## Learn More\n\nTo learn more about Next.js, take a look at the following resources:\n\n- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.\n- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.\n\nYou can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!\n\n## Deploy on Vercel\n\nThe easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.\n\nCheck out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.\n"
+  },
+  {
+    "name": "Rahib9045/teleteleapp",
+    "description": "No description provided.",
+    "language": "JavaScript",
+    "private": true,
+    "readme": "# Telefutura - Telecom Customer Management App\n\nA comprehensive mobile application for telecommunications companies to manage customer profiles, plans, deals, and team performance.\n\n---\n\n## 🎯 **NEW TO THIS PROJECT? START HERE!**\n\n### 🆕 Complete Beginner?\n👉 **Read First:** [`START_DEVELOPING.md`](START_DEVELOPING.md) - Your complete setup guide\n\n### ⚡ Want to Start Coding Right Now?\n```bash\nnpm run dev\n```\nThen scan QR code with **Expo Go** app on your phone. Done! 🎉\n\n### 🔧 Having Connection Issues?\n👉 **Read:** [`.expo-fix-guide.md`](.expo-fix-guide.md) - Fix Expo Go connection problems\n\n### 💻 PC Crashing or Too Slow?\n👉 **Read:** [`LIGHTWEIGHT_ALTERNATIVES.md`](LIGHTWEIGHT_ALTERNATIVES.md) - Solutions for low-spec PCs\n\n### 📚 All Guides:\n- [`QUICK_START.md`](QUICK_START.md) - Fast reference card\n- [`BEGINNERS_GUIDE.md`](BEGINNERS_GUIDE.md) - Step-by-step for complete beginners\n- [`DEVELOPMENT_WORKFLOW.md`](DEVELOPMENT_WORKFLOW.md) - Full development workflow\n- [`COMMAND_REFERENCE.txt`](COMMAND_REFERENCE.txt) - Quick command cheatsheet\n\n---\n\n## 🚀 Features\n\n### Customer Features\n- **Profile Management**: Personal information and account details\n- **Plan Tracking**: Monitor all active plans (phone, TV, energy, insurance) with expiration alerts\n- **Deals Section**: Personalized offers based on customer profile + general promotions\n- **Notifications**: Real-time alerts for plan expirations and new deals\n\n### Admin Features\n- **Dashboard**: Key metrics, analytics, and busin"
+  },
+  {
+    "name": "Rahib9045/testBot",
+    "description": "A simple test bot",
+    "language": "Unknown",
+    "private": true,
+    "readme": "[NO README] Root files: .gitignore"
+  },
+  {
+    "name": "Rahib9045/thisisatest",
+    "description": "No description provided.",
+    "language": "Python",
+    "private": false,
+    "readme": "# Discord Bot\n\nA simple Discord bot with basic commands.\n\n## Features\n- `!hello` - Get a friendly greeting\n- `!ping` - Check bot's latency\n\n## Setup\n1. Clone this repository\n2. Install dependencies:\n   ```\n   pip install -r requirements.txt\n   ```\n3. Create a `.env` file and add your Discord bot token:\n   ```\n   DISCORD_TOKEN=your_bot_token_here\n   ```\n4. Run the bot:\n   ```\n   python bot.py\n   ```\n\n## Environment Variables\n- `DISCORD_TOKEN`: MTAwNzczOTEwNjQ2NzUxMjQ1Mg.Gzte7W.EUlz9sng7TVNru17NcF77TQ5GkB2VbmxAx5NRM \n"
+  },
+  {
+    "name": "Rahib9045/UGC-BOT-docs",
+    "description": "No description provided.",
+    "language": "Unknown",
+    "private": false,
+    "readme": "[NO README] Root files: index.md, privacy-policy.md, terms-of-service.md, tiktokJCDc0Eunt65k6Aaq1cod0VPXm3A6ckuK.txt"
+  },
+  {
+    "name": "Rahib9045/UGC_BOT_PRIV",
+    "description": "No description provided.",
+    "language": "Python",
+    "private": true,
+    "readme": "# UGC Competition Bot\n\nA comprehensive Discord bot designed to manage User Generated Content (UGC) competitions across multiple social media platforms. The bot automates competition creation, participant registration, video submission tracking, view count aggregation, and report generation.\n\n## 🎯 Features\n\n### Competition Management\n- **Start Competitions**: Create new competitions with custom names, durations, and announcement channels\n- **Terminate Competitions**: End competitions early with reason tracking\n- **Status Monitoring**: Check competition status and participant counts\n- **Automated Deadlines**: Automatic report generation when competition deadlines are reached\n\n### Multi-Platform Support\n- **TikTok**: Track video views using RapidAPI TikTok API23\n- **Instagram**: Monitor Reel views via RapidAPI Instagram scraper\n- **Facebook**: Track video views using RapidAPI Facebook scraper\n- **YouTube**: Fetch video statistics using YouTube Data API v3\n\n### User Management\n- **Registration System**: Users register with their social media profile URLs\n- **Profile Validation**: URL validation for all supported platforms\n- **Multi-Platform Profiles**: Support for multiple social media accounts per user\n\n### Data Management\n- **Google Sheets Integration**: Automatic worksheet creation and data tracking\n- **MongoDB Storage**: Persistent storage for users and competitions\n- **Report Generation**: Automated reports with view counts and participant data\n- **Real-time Updates**: Live"
+  },
+  {
+    "name": "Rahib9045/Vanci",
+    "description": "No description provided.",
+    "language": "TypeScript",
+    "private": true,
+    "readme": "# VANCI CLOTHING - Premium Men's Shirts\n\nA modern, responsive clothing brand website built with Next.js, TypeScript, and Tailwind CSS. This project showcases a complete e-commerce website for Vanci Clothing, specializing in premium men's shirts with beautiful UI/UX design and smooth animations.\n\n## 🚀 Features\n\n### Core Features\n- **Responsive Design**: Mobile-first approach with beautiful layouts for all devices\n- **Modern UI/UX**: Clean, professional design with smooth animations\n- **Product Showcase**: Featured men's shirts with hover effects and quick actions\n- **Category Navigation**: Easy browsing by shirt types (Dress, Oxford, Linen, etc.)\n- **Search & Filter**: Advanced product filtering and search functionality\n- **Contact Form**: Interactive contact page with form validation\n- **About Page**: Company story, values, and team information\n\n### Technical Features\n- **Next.js 15**: Latest version with App Router\n- **TypeScript**: Full type safety throughout the application\n- **Tailwind CSS**: Utility-first CSS framework with custom Vanci color palette\n- **Framer Motion**: Smooth animations and transitions\n- **Lucide React**: Beautiful, customizable icons\n- **Headless UI**: Accessible UI components\n- **ESLint**: Code quality and consistency\n\n### Pages & Components\n- **Homepage**: Hero section, featured shirts, categories\n- **Shop Page**: Product grid with search and filtering\n- **About Page**: Company story, values, team, statistics\n- **Contact Page**: Contact form and co"
+  },
+  {
+    "name": "Rahib9045/vitalizers30",
+    "description": "No description provided.",
+    "language": "TypeScript",
+    "private": true,
+    "readme": "[NO README] Root files: .cursor, .gitignore, package-lock.json, render.yaml, vitalizers_next_v1.0.0_20251029_WORKING"
+  }
+]
