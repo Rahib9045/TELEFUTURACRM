@@ -1,7 +1,8 @@
 ﻿"use client";
 
 import { useState } from "react";
-import { UploadCloud, CheckCircle } from "lucide-react";
+import Link from "next/link";
+import { UploadCloud, CheckCircle, FilePlus, ArrowRight } from "lucide-react";
 
 export default function InviaPda() {
     const [categoria, setCategoria] = useState("");
@@ -140,6 +141,31 @@ export default function InviaPda() {
 
                     </form>
                 </div>
+            </div>
+
+            {/* Separator */}
+            <div className="relative flex items-center gap-4 my-2">
+                <div className="flex-1 h-px bg-white/10" />
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">oppure</span>
+                <div className="flex-1 h-px bg-white/10" />
+            </div>
+
+            {/* Registra Contratto card */}
+            <div className="glass-card p-6 flex flex-col sm:flex-row items-center gap-5">
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center">
+                    <FilePlus className="w-6 h-6 text-emerald-400" />
+                </div>
+                <div className="flex-1 text-center sm:text-left">
+                    <h3 className="text-base font-semibold text-white mb-1">Registra Contratto</h3>
+                    <p className="text-sm text-slate-400">Il contratto è già stato attivato in negozio? Registralo direttamente nel CRM per il tracking e la reportistica.</p>
+                </div>
+                <Link
+                    href="/registra-contratto"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/25 transition-all font-medium text-sm whitespace-nowrap"
+                >
+                    Registra Contratto
+                    <ArrowRight className="w-4 h-4" />
+                </Link>
             </div>
         </div>
     );

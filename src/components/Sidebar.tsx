@@ -18,8 +18,12 @@ import {
 
 const navigation = [
     { name: "Home", href: "/dashboard", icon: Home, roles: ["admin", "agente"] },
-    { name: "Invia pda", href: "/pda/invia", icon: Send, roles: ["admin", "agente"] },
-    { name: "Registra Contratto", href: "/registra-contratto", icon: FilePlus, roles: ["admin", "agente"] },
+    {
+        name: "Invia pda", href: "/pda/invia", icon: Send, roles: ["admin", "agente"],
+        children: [
+            { name: "Registra Contratto", href: "/registra-contratto", icon: FilePlus, roles: ["admin", "agente"] },
+        ]
+    },
     { name: "Gestione pda", href: "/gestione", icon: Database, roles: ["admin"] },
     { name: "Tracking pda", href: "/pda/tracking", icon: Navigation, roles: ["admin", "agente"] },
     { name: "Calendario", href: "/calendario", icon: CalendarDays, roles: ["admin", "agente"] },
@@ -67,21 +71,38 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                         <p className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">
                             Menu
                         </p>
-                        {filteredNavigation.map((item) => {
+                        {navigation.filter(item => user && item.roles.includes(user.role)).map((item) => {
                             const isActive = pathname === item.href;
+                            const visibleChildren = item.children?.filter(c => user && c.roles.includes(user.role)) ?? [];
                             return (
-                                <Link
-                                    key={item.name}
-                                    href={item.href}
-                                    onClick={() => setIsOpen?.(false)}
-                                    className={cn(
-                                        "nav-link",
-                                        isActive ? "active" : ""
+                                <div key={item.name}>
+                                    <Link
+                                        href={item.href}
+                                        onClick={() => setIsOpen?.(false)}
+                                        className={cn("nav-link", isActive ? "active" : "")}
+                                    >
+                                        <item.icon className={cn("w-5 h-5", isActive ? "text-indigo-400" : "text-slate-500")} />
+                                        {item.name}
+                                    </Link>
+                                    {visibleChildren.length > 0 && (
+                                        <div className="ml-4 mt-0.5 space-y-0.5 border-l border-white/[0.06] pl-3">
+                                            {visibleChildren.map(child => {
+                                                const childActive = pathname === child.href;
+                                                return (
+                                                    <Link
+                                                        key={child.name}
+                                                        href={child.href}
+                                                        onClick={() => setIsOpen?.(false)}
+                                                        className={cn("nav-link text-sm py-1.5", childActive ? "active" : "")}
+                                                    >
+                                                        <child.icon className={cn("w-4 h-4", childActive ? "text-indigo-400" : "text-slate-500")} />
+                                                        {child.name}
+                                                    </Link>
+                                                );
+                                            })}
+                                        </div>
                                     )}
-                                >
-                                    <item.icon className={cn("w-5 h-5", isActive ? "text-indigo-400" : "text-slate-500")} />
-                                    {item.name}
-                                </Link>
+                                </div>
                             );
                         })}
                     </nav>
