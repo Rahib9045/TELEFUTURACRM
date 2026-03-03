@@ -1,0 +1,434 @@
+"use client";
+
+import { useState } from "react";
+import { ChevronLeft, ChevronRight, Plus, X, Phone, MapPin, User, Clock } from "lucide-react";
+import { cn } from "@/utils";
+import { useAuth } from "@/context/AuthContext";
+
+// Mock appointment data — will be replaced with Supabase queries
+type AppointmentType = "incoming" | "outgoing";
+type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "rescheduled";
+
+interface Appointment {
+    id: number;
+    date: string; // "YYYY-MM-DD"
+    time: string;
+    type: AppointmentType;
+    agente: string;
+    store?: string;
+    customerAddress?: string;
+    customerName: string;
+    customerPhone: string;
+    notes: string;
+    status: AppointmentStatus;
+}
+
+const MOCK_AGENTS = ["Luca Perotta", "Alessandro Sandri", "Marco Bianchi", "Giulia Rossi", "Venditore 1"];
+const MOCK_STORES = ["Roma Centro (RM001)", "Roma Est (RM002)", "Milano Centrale (MI001)", "Milano Nord (MI002)", "Napoli Centro (NA001)"];
+
+const MOCK_APPOINTMENTS: Appointment[] = [
+    { id: 1, date: "2026-03-03", time: "10:00", type: "outgoing", agente: "Luca Perotta", customerAddress: "Via Roma 12, Roma", customerName: "Mario Rossi", customerPhone: "3331234567", notes: "Cliente interessato a Vodafone fibra", status: "scheduled" },
+    { id: 2, date: "2026-03-03", time: "14:30", type: "incoming", agente: "Alessandro Sandri", store: "Roma Centro (RM001)", customerName: "Anna Verdi", customerPhone: "3457654321", notes: "Rinnovo contratto Wind3", status: "completed" },
+    { id: 3, date: "2026-03-05", time: "09:00", type: "incoming", agente: "Marco Bianchi", store: "Milano Centrale (MI001)", customerName: "Giuseppe Ferrari", customerPhone: "3289876543", notes: "", status: "scheduled" },
+    { id: 4, date: "2026-03-10", time: "11:00", type: "outgoing", agente: "Giulia Rossi", customerAddress: "Corso Buenos Aires 5, Milano", customerName: "Francesca Bruno", customerPhone: "3401122334", notes: "Nuovo cliente energia", status: "scheduled" },
+    { id: 5, date: "2026-03-10", time: "15:00", type: "incoming", agente: "Luca Perotta", store: "Roma Est (RM002)", customerName: "Carlo Neri", customerPhone: "3609988776", notes: "Assicurazione Generali", status: "rescheduled" },
+    { id: 6, date: "2026-03-17", time: "10:30", type: "outgoing", agente: "Venditore 1", customerAddress: "Via Napoli 88, Napoli", customerName: "Lucia Esposito", customerPhone: "3211234567", notes: "", status: "scheduled" },
+];
+
+const STATUS_COLORS: Record<AppointmentStatus, string> = {
+    scheduled: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+    completed: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+    cancelled: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+    rescheduled: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+};
+
+const STATUS_LABELS: Record<AppointmentStatus, string> = {
+    scheduled: "Programmato",
+    completed: "Completato",
+    cancelled: "Annullato",
+    rescheduled: "Riprogrammato",
+};
+
+const DAYS_IT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
+const MONTHS_IT = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+
+function getDaysInMonth(year: number, month: number) {
+    return new Date(year, month + 1, 0).getDate();
+}
+
+function getFirstDayOfMonth(year: number, month: number) {
+    // Monday = 0
+    const day = new Date(year, month, 1).getDay();
+    return (day + 6) % 7;
+}
+
+export default function Calendario() {
+    const { user } = useAuth();
+    const today = new Date();
+    const [viewYear, setViewYear] = useState(today.getFullYear());
+    const [viewMonth, setViewMonth] = useState(today.getMonth());
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    const [showModal, setShowModal] = useState(false);
+    const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [appointments, setAppointments] = useState<Appointment[]>(MOCK_APPOINTMENTS);
+
+    // New appointment form state
+    const [newAppt, setNewAppt] = useState({
+        time: "10:00",
+        type: "incoming" as AppointmentType,
+        agente: "",
+        store: "",
+        customerAddress: "",
+        customerName: "",
+        customerPhone: "",
+        notes: "",
+    });
+
+    const prevMonth = () => {
+        if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
+        else setViewMonth(m => m - 1);
+    };
+    const nextMonth = () => {
+        if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0); }
+        else setViewMonth(m => m + 1);
+    };
+
+    const daysInMonth = getDaysInMonth(viewYear, viewMonth);
+    const firstDay = getFirstDayOfMonth(viewYear, viewMonth);
+
+    // Role-based visibility filter
+    const visibleAppointments = appointments.filter(a => {
+        if (user?.role === "admin") return true;
+        // agente sees only own appointments
+        return a.agente === user?.name;
+    });
+
+    const apptsByDate = (dateStr: string) =>
+        visibleAppointments.filter(a => a.date === dateStr);
+
+    const handleDayClick = (day: number) => {
+        const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        setSelectedDate(dateStr);
+        setShowCreateModal(false);
+        setSelectedAppointment(null);
+    };
+
+    const handleCreateSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedDate) return;
+        const newId = Math.max(...appointments.map(a => a.id)) + 1;
+        const created: Appointment = {
+            id: newId,
+            date: selectedDate,
+            ...newAppt,
+            status: "scheduled",
+            store: newAppt.type === "incoming" ? newAppt.store : undefined,
+            customerAddress: newAppt.type === "outgoing" ? newAppt.customerAddress : undefined,
+        };
+        setAppointments(prev => [...prev, created]);
+        setShowCreateModal(false);
+        setNewAppt({ time: "10:00", type: "incoming", agente: "", store: "", customerAddress: "", customerName: "", customerPhone: "", notes: "" });
+    };
+
+    const dateAppts = selectedDate ? apptsByDate(selectedDate) : [];
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+    const isCallCenter = user?.role === "admin"; // in mock: admin acts as call center operator
+
+    return (
+        <div className="w-full">
+            <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h2 className="text-3xl font-bold text-white mb-2">Calendario Appuntamenti</h2>
+                    <p className="text-slate-400">
+                        {isCallCenter ? "Visualizzazione completa — tutti gli agenti" : `I tuoi appuntamenti — ${user?.name}`}
+                    </p>
+                </div>
+                {isCallCenter && selectedDate && (
+                    <button
+                        onClick={() => setShowCreateModal(true)}
+                        className="primary-btn h-10 px-5 flex items-center gap-2"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Nuovo appuntamento
+                    </button>
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Calendar Grid */}
+                <div className="lg:col-span-2 glass-card p-6">
+                    {/* Month navigation */}
+                    <div className="flex items-center justify-between mb-6">
+                        <button onClick={prevMonth} className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-slate-300">
+                            <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <h3 className="text-xl font-bold text-white">
+                            {MONTHS_IT[viewMonth]} {viewYear}
+                        </h3>
+                        <button onClick={nextMonth} className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-slate-300">
+                            <ChevronRight className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    {/* Day headers */}
+                    <div className="grid grid-cols-7 mb-2">
+                        {DAYS_IT.map(d => (
+                            <div key={d} className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider py-2">
+                                {d}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Day cells */}
+                    <div className="grid grid-cols-7 gap-1">
+                        {/* Empty cells before first day */}
+                        {Array.from({ length: firstDay }).map((_, i) => (
+                            <div key={`empty-${i}`} />
+                        ))}
+                        {Array.from({ length: daysInMonth }).map((_, i) => {
+                            const day = i + 1;
+                            const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                            const dayAppts = apptsByDate(dateStr);
+                            const isToday = dateStr === todayStr;
+                            const isSelected = dateStr === selectedDate;
+
+                            return (
+                                <button
+                                    key={day}
+                                    onClick={() => handleDayClick(day)}
+                                    className={cn(
+                                        "relative aspect-square rounded-xl flex flex-col items-center justify-start pt-2 pb-1 px-1 transition-all group",
+                                        isSelected ? "bg-indigo-500/25 border border-indigo-500/50" :
+                                            isToday ? "bg-white/[0.05] border border-white/15" :
+                                                "hover:bg-white/[0.04] border border-transparent"
+                                    )}
+                                >
+                                    <span className={cn(
+                                        "text-sm font-medium",
+                                        isToday ? "text-indigo-400 font-bold" :
+                                            isSelected ? "text-white" : "text-slate-300"
+                                    )}>
+                                        {day}
+                                    </span>
+                                    {dayAppts.length > 0 && (
+                                        <div className="flex flex-wrap gap-0.5 mt-1 justify-center">
+                                            {dayAppts.slice(0, 3).map(a => (
+                                                <div key={a.id}
+                                                    className={cn("w-1.5 h-1.5 rounded-full",
+                                                        a.type === "incoming" ? "bg-blue-400" : "bg-amber-400"
+                                                    )}
+                                                />
+                                            ))}
+                                            {dayAppts.length > 3 && (
+                                                <span className="text-[9px] text-slate-400">+{dayAppts.length - 3}</span>
+                                            )}
+                                        </div>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Legend */}
+                    <div className="mt-4 pt-4 border-t border-white/8 flex gap-5 text-xs text-slate-500">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400" />In entrata</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" />In uscita</span>
+                    </div>
+                </div>
+
+                {/* Side panel */}
+                <div className="glass-card p-5 flex flex-col">
+                    {selectedDate ? (
+                        <>
+                            <div className="flex items-center justify-between mb-4">
+                                <h4 className="font-semibold text-white text-base">
+                                    {new Date(selectedDate + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}
+                                </h4>
+                                {isCallCenter && (
+                                    <button
+                                        onClick={() => setShowCreateModal(true)}
+                                        className="p-1.5 rounded-lg bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/30 transition-colors"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+
+                            {dateAppts.length === 0 ? (
+                                <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-2">
+                                    <p className="text-sm">Nessun appuntamento</p>
+                                    {isCallCenter && (
+                                        <button onClick={() => setShowCreateModal(true)} className="text-xs text-indigo-400 hover:text-indigo-300">
+                                            + Aggiungi appuntamento
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-3 flex-1 overflow-y-auto">
+                                    {dateAppts.map(a => (
+                                        <button
+                                            key={a.id}
+                                            onClick={() => { setSelectedAppointment(a); setShowModal(true); }}
+                                            className="w-full text-left p-3 rounded-xl bg-white/[0.03] border border-white/8 hover:bg-white/[0.06] transition-all"
+                                        >
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-sm font-semibold text-white">{a.time} — {a.customerName}</span>
+                                                <span className={cn("text-[10px] px-2 py-0.5 rounded-full border font-medium", STATUS_COLORS[a.status])}>
+                                                    {STATUS_LABELS[a.status]}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs text-slate-400">
+                                                {a.type === "incoming"
+                                                    ? <><MapPin className="w-3 h-3" />{a.store}</>
+                                                    : <><MapPin className="w-3 h-3" />{a.customerAddress}</>
+                                                }
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                                                <User className="w-3 h-3" /> {a.agente}
+                                                <span className={cn("ml-auto px-1.5 py-0.5 rounded text-[10px] font-medium",
+                                                    a.type === "incoming" ? "bg-blue-500/15 text-blue-400" : "bg-amber-500/15 text-amber-400"
+                                                )}>
+                                                    {a.type === "incoming" ? "In entrata" : "In uscita"}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-2">
+                            <p className="text-sm text-center">Seleziona un giorno nel calendario per vedere gli appuntamenti</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Appointment Detail Modal */}
+            {showModal && selectedAppointment && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)}>
+                    <div className="glass-card p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold text-white">Dettaglio Appuntamento</h3>
+                            <button onClick={() => setShowModal(false)} className="text-slate-500 hover:text-slate-300"><X className="w-5 h-5" /></button>
+                        </div>
+                        <div className="space-y-3 text-sm">
+                            <div className="flex items-center justify-between">
+                                <span className={cn("px-3 py-1 rounded-full border text-xs font-medium",
+                                    selectedAppointment.type === "incoming" ? "bg-blue-500/15 border-blue-500/30 text-blue-400" : "bg-amber-500/15 border-amber-500/30 text-amber-400"
+                                )}>
+                                    {selectedAppointment.type === "incoming" ? "🏪 In entrata — cliente viene in store" : "🚗 In uscita — agente va dal cliente"}
+                                </span>
+                                <span className={cn("px-2.5 py-1 rounded-full border text-xs font-medium", STATUS_COLORS[selectedAppointment.status])}>
+                                    {STATUS_LABELS[selectedAppointment.status]}
+                                </span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-white/[0.03] border border-white/8 space-y-2">
+                                <div className="flex items-center gap-2 text-slate-300"><Clock className="w-4 h-4 text-slate-500" />{selectedAppointment.date} alle {selectedAppointment.time}</div>
+                                <div className="flex items-center gap-2 text-slate-300"><User className="w-4 h-4 text-slate-500" />{selectedAppointment.customerName}</div>
+                                <div className="flex items-center gap-2 text-slate-300"><Phone className="w-4 h-4 text-slate-500" />{selectedAppointment.customerPhone}</div>
+                                <div className="flex items-center gap-2 text-slate-300"><MapPin className="w-4 h-4 text-slate-500" />{selectedAppointment.store || selectedAppointment.customerAddress}</div>
+                                <div className="flex items-center gap-2 text-slate-400 text-xs"><User className="w-3 h-3" />Agente: {selectedAppointment.agente}</div>
+                            </div>
+                            {selectedAppointment.notes && (
+                                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-slate-400 text-xs">
+                                    <p className="font-medium text-slate-500 mb-1 uppercase tracking-wider text-[10px]">Note</p>
+                                    {selectedAppointment.notes}
+                                </div>
+                            )}
+                            <div className="flex gap-2 pt-2">
+                                {(["completed", "cancelled", "rescheduled"] as AppointmentStatus[]).map(s => (
+                                    <button key={s}
+                                        onClick={() => {
+                                            setAppointments(prev => prev.map(a => a.id === selectedAppointment.id ? { ...a, status: s } : a));
+                                            setSelectedAppointment({ ...selectedAppointment, status: s });
+                                        }}
+                                        className={cn("flex-1 py-1.5 text-xs rounded-lg border font-medium transition-all", STATUS_COLORS[s])}
+                                    >
+                                        {STATUS_LABELS[s]}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Create Appointment Modal */}
+            {showCreateModal && selectedDate && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowCreateModal(false)}>
+                    <div className="glass-card p-6 w-full max-w-lg" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Nuovo Appuntamento</h3>
+                                <p className="text-sm text-slate-500">{new Date(selectedDate + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</p>
+                            </div>
+                            <button onClick={() => setShowCreateModal(false)} className="text-slate-500 hover:text-slate-300"><X className="w-5 h-5" /></button>
+                        </div>
+                        <form onSubmit={handleCreateSubmit} className="space-y-4">
+                            <div className="flex gap-3">
+                                {(["incoming", "outgoing"] as const).map(t => (
+                                    <button key={t} type="button"
+                                        onClick={() => setNewAppt(p => ({ ...p, type: t }))}
+                                        className={cn("flex-1 py-2.5 rounded-xl border text-sm font-medium transition-all",
+                                            newAppt.type === t ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-300" : "bg-white/[0.03] border-white/10 text-slate-400 hover:bg-white/[0.06]"
+                                        )}
+                                    >
+                                        {t === "incoming" ? "🏪 In entrata" : "🚗 In uscita"}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Orario *</label>
+                                    <input type="time" className="glass-input w-full" value={newAppt.time} onChange={e => setNewAppt(p => ({ ...p, time: e.target.value }))} required />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Agente *</label>
+                                    <select className="glass-input w-full" value={newAppt.agente} onChange={e => setNewAppt(p => ({ ...p, agente: e.target.value }))} required>
+                                        <option value="">Seleziona...</option>
+                                        {MOCK_AGENTS.map(a => <option key={a} value={a}>{a}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            {newAppt.type === "incoming" ? (
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Negozio destinazione *</label>
+                                    <select className="glass-input w-full" value={newAppt.store} onChange={e => setNewAppt(p => ({ ...p, store: e.target.value }))} required>
+                                        <option value="">Seleziona negozio...</option>
+                                        {MOCK_STORES.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Indirizzo cliente *</label>
+                                    <input type="text" className="glass-input w-full" placeholder="Via, Numero civico, Città" value={newAppt.customerAddress} onChange={e => setNewAppt(p => ({ ...p, customerAddress: e.target.value }))} required />
+                                </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Nome cliente *</label>
+                                    <input type="text" className="glass-input w-full" placeholder="Nome e cognome" value={newAppt.customerName} onChange={e => setNewAppt(p => ({ ...p, customerName: e.target.value }))} required />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Telefono cliente *</label>
+                                    <input type="tel" className="glass-input w-full" placeholder="3001234567" value={newAppt.customerPhone} onChange={e => setNewAppt(p => ({ ...p, customerPhone: e.target.value }))} required />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-slate-400 mb-1.5">Note</label>
+                                <textarea className="glass-input w-full resize-none" rows={2} placeholder="Prodotto di interesse, preferenze..." value={newAppt.notes} onChange={e => setNewAppt(p => ({ ...p, notes: e.target.value }))} />
+                            </div>
+                            <div className="flex gap-3 pt-1">
+                                <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 h-10 rounded-xl font-medium bg-white/5 text-slate-300 hover:bg-white/10 transition-colors text-sm">Annulla</button>
+                                <button type="submit" className="flex-1 primary-btn h-10 text-sm">Salva Appuntamento</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
