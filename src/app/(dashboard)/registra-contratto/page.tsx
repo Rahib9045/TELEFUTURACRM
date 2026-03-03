@@ -18,6 +18,11 @@ const MOCK_STORES = [
     { code: "TO001", name: "Torino Centro" },
 ];
 
+const MOCK_ACTIVATION_CODES = [
+    "ACT-2024-0001", "ACT-2024-0002", "ACT-2024-0003",
+    "ACT-VOD-099", "ACT-WIN-102", "ACT-SKY-045",
+];
+
 const BRANDS = [
     { name: "Vodafone", types: ["Mobile", "Fibra"] },
     { name: "Wind3", types: ["Mobile", "Fibra"] },
@@ -547,14 +552,15 @@ export default function RegistraContratto() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-300 mb-2">Codice di attivazione *</label>
-                            <input
-                                type="text"
+                            <select
                                 className="glass-input w-full font-mono uppercase"
-                                placeholder="es. ACT-2024-0001"
                                 value={negozio}
-                                onChange={e => setNegozio(e.target.value.toUpperCase())}
+                                onChange={e => setNegozio(e.target.value)}
                                 required
-                            />
+                            >
+                                <option value="">Seleziona codice...</option>
+                                {MOCK_ACTIVATION_CODES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
                         </div>
                     </div>
                 </div>
