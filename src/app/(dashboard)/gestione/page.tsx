@@ -174,9 +174,7 @@ export default function GestionePda() {
                                 <th className="px-4 py-4 w-16 text-center">Note</th>
                                 <th className="px-4 py-4">Ragione Sociale</th>
                                 <th className="px-4 py-4">P. IVA</th>
-                                <th className="px-4 py-4">Referente</th>
                                 <th className="px-4 py-4 w-32">Segmento</th>
-                                <th className="px-4 py-4 w-20">POD</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -217,16 +215,9 @@ export default function GestionePda() {
                                             <MessageSquare className="w-4 h-4" />
                                         </button>
                                     </td>
-                                    <td className="px-2 py-3"><input type="text" className="glass-input w-full text-xs py-1.5 px-2 h-auto" defaultValue={row.societa} /></td>
-                                    <td className="px-2 py-3"><input type="text" className="glass-input w-full text-xs py-1.5 px-2 h-auto" defaultValue={row.piva} /></td>
-                                    <td className="px-2 py-3"><input type="text" className="glass-input w-full text-xs py-1.5 px-2 h-auto" defaultValue={row.referente} /></td>
-                                    <td className="px-2 py-3">
-                                        <select className="glass-input w-full text-xs py-1.5 px-2 h-auto" defaultValue={row.segmento}>
-                                            <option>Business</option>
-                                            <option>Consumer</option>
-                                        </select>
-                                    </td>
-                                    <td className="px-2 py-3"><input type="text" className="glass-input w-full text-xs py-1.5 px-2 h-auto text-center" defaultValue={row.pod} /></td>
+                                    <td className="px-4 py-3 text-slate-300">{row.societa}</td>
+                                    <td className="px-4 py-3 text-slate-300 font-mono text-xs">{row.piva}</td>
+                                    <td className="px-4 py-3 text-slate-300">{row.segmento}</td>
                                 </tr>
                             ))}
                         </tbody>
