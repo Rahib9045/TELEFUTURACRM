@@ -3,13 +3,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
-export type Role = "admin" | "agente";
+export type Role = "admin" | "agente" | "venditore" | "store_manager" | "supervisore" | "back_office";
 
 interface User {
     id: string;
     name: string;
     email: string;
     role: Role;
+    negozio?: string;
 }
 
 interface AuthContextType {
@@ -21,20 +22,29 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Hardcoded mock users for the client demo
 const MOCK_USERS: Record<string, User> = {
     "admin@test.com": {
         id: "1",
         name: "Luca Perotta",
         email: "admin@test.com",
         role: "admin",
+        // Admin has global visibility (no specific negozio)
     },
     "agente@test.com": {
         id: "2",
         name: "Venditore 1",
         email: "agente@test.com",
         role: "agente",
+        negozio: "Store Milano Centro"
     },
+    // Adding a test store manager
+    "manager@test.com": {
+        id: "3",
+        name: "Store Manager Roma",
+        email: "manager@test.com",
+        role: "store_manager",
+        negozio: "Store Roma Termini"
+    }
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
