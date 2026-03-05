@@ -122,7 +122,9 @@ export default function InviaPda() {
     const [prodotto, setProdotto] = useState("");
 
     // Step 5 — Files
-    const [files, setFiles] = useState<File[]>([]);
+    const [filesDocId, setFilesDocId] = useState<File[]>([]);
+    const [filesContratti, setFilesContratti] = useState<File[]>([]);
+    const [filesAltro, setFilesAltro] = useState<File[]>([]);
 
     // Submit state
     const [isSubmitted, setIsSubmitted] = useState(false);
@@ -136,7 +138,8 @@ export default function InviaPda() {
         setRagioneSociale(""); setPiva(""); setReferente(""); setFissoB(""); setMobileB("");
         setEmailB(""); setPec(""); setCodiceUnivoco(""); setSedeLegale("");
         setIban(""); setNoteAnagrafica("");
-        setSelectedBrand(null); setProdotto(""); setFiles([]);
+        setSelectedBrand(null); setProdotto("");
+        setFilesDocId([]); setFilesContratti([]); setFilesAltro([]);
     };
 
     const handleLookup = () => {
@@ -168,10 +171,12 @@ export default function InviaPda() {
         }
     };
 
-    const addFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+    const addFiles = (setter: React.Dispatch<React.SetStateAction<File[]>>) => (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) setter(prev => [...prev, ...Array.from(e.target.files!)]);
     };
-    const removeFile = (i: number) => setFiles(prev => prev.filter((_, idx) => idx !== i));
+    const removeFile = (setter: React.Dispatch<React.SetStateAction<File[]>>, i: number) => {
+        setter(prev => prev.filter((_, idx) => idx !== i));
+    };
 
     const handleSubmit = () => {
         setIsSubmitted(true);
@@ -187,7 +192,7 @@ export default function InviaPda() {
         if (s === 2) return !!tipoCliente;
         if (s === 3) return customerFound !== null;
         if (s === 4) return !!selectedBrand;
-        if (s === 5) return files.length > 0;
+        if (s === 5) return (filesDocId.length > 0 || filesContratti.length > 0 || filesAltro.length > 0);
         return false;
     };
 
@@ -488,26 +493,38 @@ export default function InviaPda() {
                         <RecapRow label="Prodotto" value={prodotto} />
                     </div>
 
-                    {/* Upload zone */}
-                    <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-white/12 rounded-xl cursor-pointer hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all">
-                        <Upload className="w-6 h-6 text-slate-500 mb-2" />
-                        <span className="text-sm text-slate-400">Trascina i file qui o <span className="text-cyan-400">scegli dal dispositivo</span></span>
-                        <span className="text-xs text-slate-600 mt-1">PDF, JPG, PNG — max 10MB per file</span>
-                        <input type="file" className="hidden" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={addFiles} />
-                    </label>
-
-                    {files.length > 0 && (
-                        <ul className="space-y-1.5">
-                            {files.map((f, i) => (
-                                <li key={i} className="flex items-center justify-between text-xs text-slate-400 bg-white/[0.03] rounded-lg px-3 py-2 border border-white/8">
-                                    <span className="truncate max-w-[85%]">📎 {f.name}</span>
-                                    <button onClick={() => removeFile(i)} className="text-slate-600 hover:text-rose-400 ml-2 transition-colors">
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
+                    {/* Upload zones grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {([
+                            { label: "Documento d'identità", icon: "🪪", filesVar: filesDocId, setter: setFilesDocId },
+                            { label: "Contratti", icon: "📄", filesVar: filesContratti, setter: setFilesContratti },
+                            { label: "Altro", icon: "📁", filesVar: filesAltro, setter: setFilesAltro },
+                        ] as const).map(cat => (
+                            <div key={cat.label} className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
+                                <div className="text-base mb-1">{cat.icon}</div>
+                                <p className="text-xs font-semibold text-slate-300 mb-0.5">{cat.label}</p>
+                                <label className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-xl h-20 cursor-pointer hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all mt-3">
+                                    <Upload className="w-4 h-4 text-slate-500 mb-1" />
+                                    <span className="text-[10px] text-slate-500">Trascina o <span className="text-cyan-400">scegli</span></span>
+                                    <input type="file" className="hidden" multiple accept=".pdf,.jpg,.jpeg,.png"
+                                        onChange={addFiles(cat.setter as React.Dispatch<React.SetStateAction<File[]>>)} />
+                                </label>
+                                {cat.filesVar.length > 0 && (
+                                    <ul className="mt-2 space-y-1">
+                                        {cat.filesVar.map((f, i) => (
+                                            <li key={i} className="flex items-center justify-between text-[10px] text-slate-400 bg-white/[0.03] rounded px-2 py-1">
+                                                <span className="truncate max-w-[80%]">{f.name}</span>
+                                                <button onClick={() => removeFile(cat.setter as React.Dispatch<React.SetStateAction<File[]>>, i)}
+                                                    className="text-slate-600 hover:text-rose-400 ml-1">
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        ))}
+                    </div>
 
                     <div className="flex gap-3 pt-2">
                         <BackBtn onClick={() => setStep(4)} />
