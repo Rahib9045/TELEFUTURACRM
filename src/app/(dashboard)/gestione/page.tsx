@@ -120,7 +120,6 @@ export default function GestionePda() {
                         <thead className="bg-white/[0.03] text-xs uppercase text-slate-400">
                             <tr>
                                 <th className="px-4 py-4 w-12 text-center"><CheckSquare className="w-4 h-4 mx-auto cursor-pointer" /></th>
-                                <th className="px-4 py-4 w-12">Logo</th>
                                 <th className="px-4 py-4 font-semibold">Brand</th>
                                 <th className="px-4 py-4">Venditore</th>
                                 <th className="px-4 py-4">Inviato il</th>
@@ -140,7 +139,6 @@ export default function GestionePda() {
                                     <td className="px-4 py-3 text-center">
                                         <input type="checkbox" className="w-4 h-4 rounded border-white/20 bg-white/5 accent-primary" />
                                     </td>
-                                    <td className="px-4 py-3 text-2xl">{row.logo}</td>
                                     <td className="px-4 py-3 font-medium text-white">{row.brand}</td>
                                     <td className="px-4 py-3 text-slate-400">{row.venditore}</td>
                                     <td className="px-4 py-3 text-xs text-slate-500">{row.inviato_il}</td>
