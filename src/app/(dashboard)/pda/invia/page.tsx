@@ -113,6 +113,10 @@ export default function InviaPda() {
     const [codiceUnivoco, setCodiceUnivoco] = useState("");
     const [sedeLegale, setSedeLegale] = useState("");
 
+    // Shared Anagrafica Fields
+    const [iban, setIban] = useState("");
+    const [noteAnagrafica, setNoteAnagrafica] = useState("");
+
     // Step 4
     const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
     const [prodotto, setProdotto] = useState("");
@@ -131,6 +135,7 @@ export default function InviaPda() {
         setNome(""); setCognome(""); setCf(""); setEmail(""); setFisso(""); setCellulare(""); setDomicilio("");
         setRagioneSociale(""); setPiva(""); setReferente(""); setFissoB(""); setMobileB("");
         setEmailB(""); setPec(""); setCodiceUnivoco(""); setSedeLegale("");
+        setIban(""); setNoteAnagrafica("");
         setSelectedBrand(null); setProdotto(""); setFiles([]);
     };
 
@@ -343,7 +348,23 @@ export default function InviaPda() {
                                     <Field label="Numero Fisso" type="tel" placeholder="es. 06 1234567" value={fisso} onChange={setFisso} prefilled={!!customerFound} />
                                     <Field label="Recapito Cellulare" type="tel" placeholder="es. 333 1234567" value={cellulare} onChange={setCellulare} prefilled={!!customerFound} />
                                     <div className="col-span-2">
+                                        <Field label="IBAN" placeholder="IT00..." value={iban} onChange={setIban} prefilled={!!customerFound} mono />
+                                    </div>
+                                    <div className="col-span-2">
                                         <Field label="Domicilio" placeholder="Via, Numero, CAP, Città" value={domicilio} onChange={setDomicilio} prefilled={!!customerFound} />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <label className="block text-xs font-medium text-slate-400 mb-1.5">Note</label>
+                                        <textarea
+                                            placeholder="Inserisci eventuali note (es. orari di reperibilità, particolarità contrattuali...)"
+                                            value={noteAnagrafica}
+                                            onChange={e => setNoteAnagrafica(e.target.value)}
+                                            disabled={!!customerFound && Boolean(noteAnagrafica)} /* if prefilled with a note, maybe disabled, else editable */
+                                            className={cn(
+                                                "glass-input w-full text-sm min-h-[80px] resize-y",
+                                                !!customerFound && "border-emerald-500/50 bg-emerald-500/5"
+                                            )}
+                                        />
                                     </div>
                                 </div>
                             ) : (
@@ -357,7 +378,22 @@ export default function InviaPda() {
                                     <Field label="PEC" type="email" placeholder="es. azienda@pec.it" value={pec} onChange={setPec} prefilled={!!customerFound} />
                                     <Field label="Codice Univoco / SDI" placeholder="es. ABC1234" value={codiceUnivoco} onChange={setCodiceUnivoco} prefilled={!!customerFound} mono />
                                     <div className="col-span-2">
+                                        <Field label="IBAN" placeholder="IT00..." value={iban} onChange={setIban} prefilled={!!customerFound} mono />
+                                    </div>
+                                    <div className="col-span-2">
                                         <Field label="Sede Legale" placeholder="Via, Numero, CAP, Città" value={sedeLegale} onChange={setSedeLegale} prefilled={!!customerFound} />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <label className="block text-xs font-medium text-slate-400 mb-1.5">Note</label>
+                                        <textarea
+                                            placeholder="Inserisci eventuali note (es. orari di reperibilità, particolarità contrattuali...)"
+                                            value={noteAnagrafica}
+                                            onChange={e => setNoteAnagrafica(e.target.value)}
+                                            className={cn(
+                                                "glass-input w-full text-sm min-h-[80px] resize-y",
+                                                !!customerFound && "border-emerald-500/50 bg-emerald-500/5"
+                                            )}
+                                        />
                                     </div>
                                 </div>
                             )}
@@ -446,6 +482,8 @@ export default function InviaPda() {
                         <RecapRow label="Venditore" value={venditore} />
                         <RecapRow label="Tipo Cliente" value={tipoCliente === "consumer" ? "Consumer (Privato)" : "Business"} />
                         <RecapRow label="Cliente" value={tipoCliente === "consumer" ? `${nome} ${cognome}` : ragioneSociale} />
+                        <RecapRow label="IBAN" value={iban} />
+                        <RecapRow label="Note" value={noteAnagrafica} />
                         <RecapRow label="Brand" value={BRANDS_PLACEHOLDER.find(b => b.id === selectedBrand)?.name ?? ""} />
                         <RecapRow label="Prodotto" value={prodotto} />
                     </div>
