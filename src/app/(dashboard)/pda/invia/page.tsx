@@ -1,172 +1,539 @@
 ﻿"use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { UploadCloud, CheckCircle, FilePlus, ArrowRight } from "lucide-react";
+import { Search, UserCheck, UserPlus, Upload, X, CheckCircle, Send } from "lucide-react";
+import { cn } from "@/utils";
+
+// ─── MOCK DATA ────────────────────────────────────────────────────────────────
+
+const MOCK_VENDORS = [
+    "Luca Perotta", "Alessandro Sandri", "Marco Bianchi",
+    "Giulia Rossi", "Venditore 1", "Venditore 2",
+];
+
+// Mock customer DB — will be replaced with Supabase queries
+const MOCK_CUSTOMERS_CONSUMER: Record<string, {
+    nome: string; cognome: string; cf: string;
+    email: string; fisso: string; cellulare: string; domicilio: string;
+}> = {
+    "RSSMRA80A01H501U": { nome: "Mario", cognome: "Rossi", cf: "RSSMRA80A01H501U", email: "mario.rossi@email.com", fisso: "06 1234567", cellulare: "333 1234567", domicilio: "Via Roma 12, 00100 Roma" },
+    "VRDANN70B02H502V": { nome: "Anna", cognome: "Verdi", cf: "VRDANN70B02H502V", email: "anna.verdi@email.com", fisso: "", cellulare: "345 9876543", domicilio: "Corso Buenos Aires 5, 20124 Milano" },
+};
+
+const MOCK_CUSTOMERS_BUSINESS: Record<string, {
+    ragioneSociale: string; piva: string; referente: string;
+    fisso: string; mobile: string; email: string;
+    pec: string; codiceUnivoco: string; sedeLegale: string;
+}> = {
+    "12345678901": { ragioneSociale: "Rossi S.r.l.", piva: "12345678901", referente: "Mario Rossi", fisso: "06 9876543", mobile: "333 9876543", email: "info@rossi.it", pec: "rossi@pec.it", codiceUnivoco: "ABC1234", sedeLegale: "Via Milano 45, 00100 Roma" },
+};
+
+// ─── Brand placeholder — will be replaced with full config per brand/product ─
+
+const BRANDS_PLACEHOLDER = [
+    { id: "windtre", name: "WindTre", logo: "🌬️", available: true },
+    { id: "vodafone", name: "Vodafone", logo: "🔴", available: false },
+    { id: "sky", name: "Sky", logo: "🌐", available: false },
+    { id: "iliad", name: "Iliad", logo: "🌸", available: false },
+    { id: "energy", name: "Energy", logo: "⚡", available: false },
+    { id: "fastweb", name: "Fastweb", logo: "🚀", available: false },
+];
+
+// ─── FIELD COMPONENT ──────────────────────────────────────────────────────────
+
+interface FieldProps {
+    label: string;
+    required?: boolean;
+    placeholder?: string;
+    type?: "text" | "email" | "tel";
+    value?: string;
+    onChange?: (v: string) => void;
+    prefilled?: boolean;
+    disabled?: boolean;
+    mono?: boolean;
+}
+
+function Field({ label, required, placeholder, type = "text", value, onChange, prefilled, disabled, mono }: FieldProps) {
+    return (
+        <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                {label} {required && <span className="text-rose-400">*</span>}
+            </label>
+            <input
+                type={type}
+                placeholder={placeholder}
+                value={value ?? ""}
+                onChange={e => onChange?.(e.target.value)}
+                disabled={disabled}
+                readOnly={disabled}
+                className={cn(
+                    "glass-input w-full text-sm",
+                    prefilled && "border-emerald-500/50 bg-emerald-500/5",
+                    mono && "font-mono uppercase",
+                    disabled && "opacity-60 cursor-not-allowed"
+                )}
+            />
+        </div>
+    );
+}
+
+// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 
 export default function InviaPda() {
-    const [categoria, setCategoria] = useState("");
-    const [brand, setBrand] = useState("");
+    // Step tracking: 1=Venditore, 2=TipoCliente, 3=Anagrafica, 4=Brand, 5=Allegati
+    const [step, setStep] = useState(1);
 
-    // Mock form submission
+    // Step 1
+    const [venditore, setVenditore] = useState("");
+
+    // Step 2
+    const [tipoCliente, setTipoCliente] = useState<"consumer" | "business" | null>(null);
+
+    // Step 3 — Lookup
+    const [lookupValue, setLookupValue] = useState("");
+    const [customerFound, setCustomerFound] = useState<boolean | null>(null);
+
+    // Step 3 — Consumer fields
+    const [nome, setNome] = useState("");
+    const [cognome, setCognome] = useState("");
+    const [cf, setCf] = useState("");
+    const [email, setEmail] = useState("");
+    const [fisso, setFisso] = useState("");
+    const [cellulare, setCellulare] = useState("");
+    const [domicilio, setDomicilio] = useState("");
+
+    // Step 3 — Business fields
+    const [ragioneSociale, setRagioneSociale] = useState("");
+    const [piva, setPiva] = useState("");
+    const [referente, setReferente] = useState("");
+    const [fissoB, setFissoB] = useState("");
+    const [mobileB, setMobileB] = useState("");
+    const [emailB, setEmailB] = useState("");
+    const [pec, setPec] = useState("");
+    const [codiceUnivoco, setCodiceUnivoco] = useState("");
+    const [sedeLegale, setSedeLegale] = useState("");
+
+    // Step 4
+    const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+    const [prodotto, setProdotto] = useState("");
+
+    // Step 5 — Files
+    const [files, setFiles] = useState<File[]>([]);
+
+    // Submit state
     const [isSubmitted, setIsSubmitted] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitted(true);
-        setTimeout(() => setIsSubmitted(false), 4000);
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    const reset = () => {
+        setStep(1); setVenditore(""); setTipoCliente(null);
+        setLookupValue(""); setCustomerFound(null);
+        setNome(""); setCognome(""); setCf(""); setEmail(""); setFisso(""); setCellulare(""); setDomicilio("");
+        setRagioneSociale(""); setPiva(""); setReferente(""); setFissoB(""); setMobileB("");
+        setEmailB(""); setPec(""); setCodiceUnivoco(""); setSedeLegale("");
+        setSelectedBrand(null); setProdotto(""); setFiles([]);
     };
 
+    const handleLookup = () => {
+        const key = lookupValue.toUpperCase().trim();
+        if (tipoCliente === "consumer") {
+            const match = MOCK_CUSTOMERS_CONSUMER[key];
+            if (match) {
+                setCustomerFound(true);
+                setNome(match.nome); setCognome(match.cognome); setCf(match.cf);
+                setEmail(match.email); setFisso(match.fisso); setCellulare(match.cellulare); setDomicilio(match.domicilio);
+            } else {
+                setCustomerFound(false);
+                setCf(key);
+                setNome(""); setCognome(""); setEmail(""); setFisso(""); setCellulare(""); setDomicilio("");
+            }
+        } else {
+            const match = MOCK_CUSTOMERS_BUSINESS[key];
+            if (match) {
+                setCustomerFound(true);
+                setRagioneSociale(match.ragioneSociale); setPiva(match.piva); setReferente(match.referente);
+                setFissoB(match.fisso); setMobileB(match.mobile); setEmailB(match.email);
+                setPec(match.pec); setCodiceUnivoco(match.codiceUnivoco); setSedeLegale(match.sedeLegale);
+            } else {
+                setCustomerFound(false);
+                setPiva(key);
+                setRagioneSociale(""); setReferente(""); setFissoB(""); setMobileB("");
+                setEmailB(""); setPec(""); setCodiceUnivoco(""); setSedeLegale("");
+            }
+        }
+    };
+
+    const addFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+    };
+    const removeFile = (i: number) => setFiles(prev => prev.filter((_, idx) => idx !== i));
+
+    const handleSubmit = () => {
+        setIsSubmitted(true);
+        setTimeout(() => { setIsSubmitted(false); reset(); }, 4000);
+    };
+
+    // ── Step config ───────────────────────────────────────────────────────────
+
+    const STEPS = ["Venditore", "Tipo Cliente", "Anagrafica", "Brand & Prodotto", "Allegati"];
+
+    const stepCompleted = (s: number) => {
+        if (s === 1) return !!venditore;
+        if (s === 2) return !!tipoCliente;
+        if (s === 3) return customerFound !== null;
+        if (s === 4) return !!selectedBrand;
+        if (s === 5) return files.length > 0;
+        return false;
+    };
+
+    const canProceed = stepCompleted(step);
+
+    // ─────────────────────────────────────────────────────────────────────────
+
+    if (isSubmitted) {
+        return (
+            <div className="w-full flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                <CheckCircle className="w-16 h-16 text-emerald-400" />
+                <h2 className="text-2xl font-bold text-white">PDA Inviata!</h2>
+                <p className="text-slate-400">La pratica è stata trasmessa al back office con successo.</p>
+                <button onClick={reset} className="primary-btn px-6 py-2.5 mt-2">Nuova PDA</button>
+            </div>
+        );
+    }
+
     return (
-        <div className="w-full">
-            <div className="mb-8">
-                <h2 className="text-3xl font-bold text-white mb-2">Invia PDA</h2>
-                <p className="text-slate-400">Compilare i seguenti dati per trasmettere le pda al back office</p>
+        <div className="w-full max-w-2xl mx-auto">
+
+            {/* Header */}
+            <div className="mb-6 flex items-end justify-between gap-4">
+                <div>
+                    <h2 className="text-3xl font-bold text-white mb-1">Invia PDA</h2>
+                    <p className="text-slate-400 text-sm">Compila i dati per trasmettere la PDA al back office</p>
+                </div>
+                {step > 1 && (
+                    <button onClick={reset} className="text-xs text-slate-500 hover:text-slate-300 border border-white/10 hover:border-white/20 rounded-lg px-3 py-2 transition-all">
+                        ↩ Ricomincia
+                    </button>
+                )}
             </div>
 
-            {isSubmitted && (
-                <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 text-green-400 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
-                    <CheckCircle className="w-5 h-5" />
-                    Pda inviata con successo!
+            {/* Steps bar */}
+            <div className="flex gap-1.5 mb-6">
+                {STEPS.map((s, i) => {
+                    const n = i + 1;
+                    const done = stepCompleted(n) && n < step;
+                    const active = n === step;
+                    return (
+                        <div key={n} className={cn(
+                            "flex-1 text-center py-2 px-1 rounded-lg text-[10px] font-semibold transition-all",
+                            active ? "bg-indigo-600 text-white" :
+                                done ? "bg-emerald-600/80 text-white" :
+                                    "bg-white/[0.04] text-slate-600"
+                        )}>
+                            {done ? "✓ " : ""}{s}
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* ── STEP 1: VENDITORE ─────────────────────────────────────────────── */}
+            {step === 1 && (
+                <div className="glass-card p-6 space-y-5">
+                    <StepHeader n={1} label="Venditore" color="text-indigo-400" />
+                    <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                            Seleziona il tuo nome <span className="text-rose-400">*</span>
+                        </label>
+                        <select
+                            className="glass-input w-full text-sm"
+                            value={venditore}
+                            onChange={e => setVenditore(e.target.value)}
+                        >
+                            <option value="">— Seleziona venditore —</option>
+                            {MOCK_VENDORS.map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                    </div>
+                    <NextBtn disabled={!venditore} onClick={() => setStep(2)} />
                 </div>
             )}
 
-            <div className="glass-card mb-8">
-                <div className="p-6">
-                    <form onSubmit={handleSubmit} className="space-y-8">
-                        {/* Top Selects */}
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-2">Categoria <span className="text-rose-500">*</span></label>
-                                <select
-                                    required
-                                    className="glass-input w-full md:w-1/2"
-                                    value={categoria}
-                                    onChange={(e) => setCategoria(e.target.value)}
-                                >
-                                    <option value=""></option>
-                                    <option value="DIGITAL">DIGITAL</option>
-                                    <option value="ENERGIA">ENERGIA</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-2">Brand (selezionare categoria per visualizzare brand) <span className="text-rose-500">*</span></label>
-                                <select required className="glass-input w-full md:w-1/2" value={brand} onChange={(e) => setBrand(e.target.value)}>
-                                    <option value=""></option>
-                                    {categoria === "ENERGIA" && (
-                                        <>
-                                            <option value="Edison Business">Edison Business</option>
-                                            <option value="Enel Business">Enel Business</option>
-                                            <option value="Edison Consumer">Edison Consumer</option>
-                                        </>
-                                    )}
-                                    {categoria === "DIGITAL" && (
-                                        <option value="Web Services">Web Services</option>
-                                    )}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-2">Venditore <span className="text-rose-500">*</span></label>
-                                <select required className="glass-input w-full md:w-1/2">
-                                    <option value="8">agente</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <hr className="border-white/5" />
-
-                        {/* Customer Details */}
-                        <div>
-                            <h4 className="text-lg font-medium text-white mb-4">Aiuta l'operatore che riceverà la tua pda: inserisci i seguenti dati</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-2">Ragione sociale <span className="text-rose-500">*</span></label>
-                                    <input type="text" required className="glass-input w-full" placeholder="inserire nome società" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-2">Referente <span className="text-rose-500">*</span></label>
-                                    <input type="text" required className="glass-input w-full" placeholder="inserire nominativo referente" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-2">Recapito <span className="text-rose-500">*</span></label>
-                                    <input type="text" required className="glass-input w-full" placeholder="inserire recapito telefonico" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-2">Segmento <span className="text-rose-500">*</span></label>
-                                    <select required className="glass-input w-full">
-                                        <option value=""></option>
-                                        <option value="Business">Business</option>
-                                        <option value="Consumer">Consumer</option>
-                                    </select>
-                                </div>
-                                {/* Dynamically shown fields based on segment/category in original, placed statically for visual replica */}
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-2">Partita iva</label>
-                                    <input type="text" className="glass-input w-full" placeholder="inserire partita iva" maxLength={11} />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-2">Codice fiscale</label>
-                                    <input type="text" className="glass-input w-full" placeholder="inserire codice fiscale" maxLength={16} />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-2">N. pod</label>
-                                    <input type="number" className="glass-input w-full" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <hr className="border-white/5" />
-
-                        {/* File Upload Replica */}
-                        <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">Carica allegati</label>
-                            <div className="border border-dashed border-white/20 rounded-xl p-8 text-center bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
-                                <UploadCloud className="w-10 h-10 text-slate-400 mx-auto mb-3" />
-                                <p className="text-slate-300 font-medium">Click to browse or drag and drop</p>
-                                <p className="text-xs text-slate-500 mt-1">PDF, JPG, PNG, DOCX (Max 30MB)</p>
-                            </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-4 pt-4 border-t border-white/5">
-                            <button type="submit" className="primary-btn">
-                                Invia PDA
+            {/* ── STEP 2: TIPO CLIENTE ──────────────────────────────────────────── */}
+            {step === 2 && (
+                <div className="glass-card p-6 space-y-5">
+                    <StepHeader n={2} label="Tipo Cliente" color="text-purple-400" />
+                    <div className="grid grid-cols-2 gap-4">
+                        {[
+                            { id: "consumer" as const, icon: "👤", label: "Consumer (Privato)", desc: "Persona fisica / Codice Fiscale" },
+                            { id: "business" as const, icon: "🏢", label: "Business (Azienda)", desc: "Azienda / Partita IVA" },
+                        ].map(o => (
+                            <button
+                                key={o.id}
+                                onClick={() => { setTipoCliente(o.id); setCustomerFound(null); setLookupValue(""); }}
+                                className={cn(
+                                    "p-5 rounded-xl border text-center transition-all",
+                                    tipoCliente === o.id
+                                        ? "border-purple-500/60 bg-purple-500/10"
+                                        : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
+                                )}
+                            >
+                                <div className="text-3xl mb-2">{o.icon}</div>
+                                <div className={cn("font-bold text-sm mb-1", tipoCliente === o.id ? "text-purple-300" : "text-white")}>{o.label}</div>
+                                <div className="text-[11px] text-slate-500">{o.desc}</div>
                             </button>
-                            <button type="button" className="px-6 py-2 rounded-lg font-medium bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors">
-                                Annulla
+                        ))}
+                    </div>
+                    <div className="flex gap-3">
+                        <BackBtn onClick={() => setStep(1)} />
+                        <NextBtn disabled={!tipoCliente} onClick={() => setStep(3)} />
+                    </div>
+                </div>
+            )}
+
+            {/* ── STEP 3: ANAGRAFICA ────────────────────────────────────────────── */}
+            {step === 3 && (
+                <div className="glass-card p-6 space-y-5">
+                    <StepHeader n={3} label="Anagrafica Cliente" color="text-blue-400"
+                        sub={tipoCliente === "consumer" ? "Consumer" : "Business"} />
+
+                    {/* Lookup bar */}
+                    <div className="rounded-xl bg-white/[0.03] border border-white/8 p-4 space-y-3">
+                        <p className="text-xs font-semibold text-slate-400">
+                            {tipoCliente === "consumer" ? "Codice Fiscale" : "Partita IVA"} — ricerca cliente esistente
+                        </p>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={lookupValue}
+                                onChange={e => setLookupValue(e.target.value.toUpperCase())}
+                                placeholder={tipoCliente === "consumer" ? "es. RSSMRA80A01H501U" : "es. 12345678901"}
+                                className="glass-input flex-1 font-mono uppercase text-sm"
+                                onKeyDown={e => e.key === "Enter" && handleLookup()}
+                            />
+                            <button onClick={handleLookup} className="primary-btn px-4 py-2 text-xs flex items-center gap-1.5">
+                                <Search className="w-3.5 h-3.5" /> Cerca
+                            </button>
+                            <button
+                                onClick={() => { setCustomerFound(false); setLookupValue(""); }}
+                                className="px-3 py-2 text-xs rounded-lg border border-white/15 text-slate-400 hover:text-white hover:border-white/30 transition-all flex items-center gap-1.5"
+                            >
+                                <UserPlus className="w-3.5 h-3.5" /> Nuovo
                             </button>
                         </div>
+                        {customerFound === true && (
+                            <div className="flex items-center gap-2 text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
+                                <UserCheck className="w-3.5 h-3.5" /> Cliente trovato — dati pre-compilati, verifica e procedi.
+                            </div>
+                        )}
+                        {customerFound === false && (
+                            <div className="flex items-center gap-2 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                                <UserPlus className="w-3.5 h-3.5" /> Nuovo cliente — compila i dati manualmente.
+                            </div>
+                        )}
+                    </div>
 
-                    </form>
-                </div>
-            </div>
+                    {/* Fields — only shown after lookup */}
+                    {customerFound !== null && (
+                        <>
+                            {tipoCliente === "consumer" ? (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Field label="Nome" required value={nome} onChange={setNome} prefilled={!!customerFound} />
+                                    <Field label="Cognome" required value={cognome} onChange={setCognome} prefilled={!!customerFound} />
+                                    <Field label="Codice Fiscale" required value={cf} onChange={setCf} prefilled={!!customerFound} mono />
+                                    <Field label="Email" type="email" value={email} onChange={setEmail} prefilled={!!customerFound} />
+                                    <Field label="Numero Fisso" type="tel" placeholder="es. 06 1234567" value={fisso} onChange={setFisso} prefilled={!!customerFound} />
+                                    <Field label="Recapito Cellulare" type="tel" placeholder="es. 333 1234567" value={cellulare} onChange={setCellulare} prefilled={!!customerFound} />
+                                    <div className="col-span-2">
+                                        <Field label="Domicilio" placeholder="Via, Numero, CAP, Città" value={domicilio} onChange={setDomicilio} prefilled={!!customerFound} />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Field label="Ragione Sociale" required value={ragioneSociale} onChange={setRagioneSociale} prefilled={!!customerFound} />
+                                    <Field label="Partita IVA" required value={piva} onChange={setPiva} prefilled={!!customerFound} mono />
+                                    <Field label="Referente" required value={referente} onChange={setReferente} prefilled={!!customerFound} />
+                                    <Field label="Numero Fisso" type="tel" placeholder="es. 06 1234567" value={fissoB} onChange={setFissoB} prefilled={!!customerFound} />
+                                    <Field label="Numero Mobile" type="tel" placeholder="es. 333 1234567" value={mobileB} onChange={setMobileB} prefilled={!!customerFound} />
+                                    <Field label="Email" type="email" value={emailB} onChange={setEmailB} prefilled={!!customerFound} />
+                                    <Field label="PEC" type="email" placeholder="es. azienda@pec.it" value={pec} onChange={setPec} prefilled={!!customerFound} />
+                                    <Field label="Codice Univoco / SDI" placeholder="es. ABC1234" value={codiceUnivoco} onChange={setCodiceUnivoco} prefilled={!!customerFound} mono />
+                                    <div className="col-span-2">
+                                        <Field label="Sede Legale" placeholder="Via, Numero, CAP, Città" value={sedeLegale} onChange={setSedeLegale} prefilled={!!customerFound} />
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
 
-            {/* Separator */}
-            <div className="relative flex items-center gap-4 my-2">
-                <div className="flex-1 h-px bg-white/10" />
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">oppure</span>
-                <div className="flex-1 h-px bg-white/10" />
-            </div>
+                    <div className="flex gap-3">
+                        <BackBtn onClick={() => setStep(2)} />
+                        <NextBtn disabled={customerFound === null} onClick={() => setStep(4)} />
+                    </div>
+                </div>
+            )}
 
-            {/* Registra Contratto card */}
-            <div className="glass-card p-6 flex flex-col sm:flex-row items-center gap-5">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center">
-                    <FilePlus className="w-6 h-6 text-emerald-400" />
+            {/* ── STEP 4: BRAND & PRODOTTO ──────────────────────────────────────── */}
+            {step === 4 && (
+                <div className="glass-card p-6 space-y-5">
+                    <StepHeader n={4} label="Brand & Prodotto" color="text-orange-400" />
+
+                    <p className="text-xs text-slate-500">Seleziona il brand da attivare.</p>
+
+                    {/* Brand grid */}
+                    <div className="grid grid-cols-3 gap-3">
+                        {BRANDS_PLACEHOLDER.map(b => (
+                            <button
+                                key={b.id}
+                                onClick={() => { if (b.available) { setSelectedBrand(b.id); setProdotto(""); } }}
+                                className={cn(
+                                    "relative flex flex-col items-center gap-1.5 p-4 rounded-xl border transition-all",
+                                    selectedBrand === b.id
+                                        ? "border-indigo-500/60 bg-indigo-500/10"
+                                        : b.available
+                                            ? "border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20"
+                                            : "border-white/5 bg-white/[0.01] opacity-35 cursor-not-allowed"
+                                )}
+                            >
+                                <span className="text-2xl">{b.logo}</span>
+                                <span className={cn("text-xs font-semibold", selectedBrand === b.id ? "text-indigo-300" : "text-slate-300")}>
+                                    {b.name}
+                                </span>
+                                {!b.available && (
+                                    <span className="absolute top-1 right-1 text-[8px] text-slate-600">presto</span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Product placeholder — will be populated per brand */}
+                    {selectedBrand && (
+                        <div className="rounded-xl bg-white/[0.03] border border-white/8 p-4">
+                            <p className="text-xs font-semibold text-slate-400 mb-3">
+                                Prodotto / Servizio <span className="text-rose-400">*</span>
+                            </p>
+                            <select
+                                className="glass-input w-full text-sm"
+                                value={prodotto}
+                                onChange={e => setProdotto(e.target.value)}
+                            >
+                                <option value="">— Seleziona prodotto —</option>
+                                {/* Placeholder options — full product config will be added per brand */}
+                                <option value="Mobile GA">Mobile GA</option>
+                                <option value="Mobile CB">Mobile CB</option>
+                                <option value="Offerta Fisso">Offerta Fisso</option>
+                                <option value="Luce e Gas">Luce e Gas</option>
+                                <option value="Altro">Altro</option>
+                            </select>
+                            <p className="text-[10px] text-slate-600 mt-2">
+                                ℹ La lista prodotti completa verrà configurata per brand nella prossima release.
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="flex gap-3">
+                        <BackBtn onClick={() => setStep(3)} />
+                        <NextBtn disabled={!selectedBrand || !prodotto} onClick={() => setStep(5)} />
+                    </div>
                 </div>
-                <div className="flex-1 text-center sm:text-left">
-                    <h3 className="text-base font-semibold text-white mb-1">Registra Contratto</h3>
-                    <p className="text-sm text-slate-400">Il contratto è già stato attivato in negozio? Registralo direttamente nel CRM per il tracking e la reportistica.</p>
+            )}
+
+            {/* ── STEP 5: ALLEGATI ──────────────────────────────────────────────── */}
+            {step === 5 && (
+                <div className="glass-card p-6 space-y-5">
+                    <StepHeader n={5} label="Carica Allegati" color="text-cyan-400" />
+
+                    {/* Summary recap */}
+                    <div className="rounded-xl bg-white/[0.03] border border-white/8 p-4 grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                        <RecapRow label="Venditore" value={venditore} />
+                        <RecapRow label="Tipo Cliente" value={tipoCliente === "consumer" ? "Consumer (Privato)" : "Business"} />
+                        <RecapRow label="Cliente" value={tipoCliente === "consumer" ? `${nome} ${cognome}` : ragioneSociale} />
+                        <RecapRow label="Brand" value={BRANDS_PLACEHOLDER.find(b => b.id === selectedBrand)?.name ?? ""} />
+                        <RecapRow label="Prodotto" value={prodotto} />
+                    </div>
+
+                    {/* Upload zone */}
+                    <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-white/12 rounded-xl cursor-pointer hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all">
+                        <Upload className="w-6 h-6 text-slate-500 mb-2" />
+                        <span className="text-sm text-slate-400">Trascina i file qui o <span className="text-cyan-400">scegli dal dispositivo</span></span>
+                        <span className="text-xs text-slate-600 mt-1">PDF, JPG, PNG — max 10MB per file</span>
+                        <input type="file" className="hidden" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={addFiles} />
+                    </label>
+
+                    {files.length > 0 && (
+                        <ul className="space-y-1.5">
+                            {files.map((f, i) => (
+                                <li key={i} className="flex items-center justify-between text-xs text-slate-400 bg-white/[0.03] rounded-lg px-3 py-2 border border-white/8">
+                                    <span className="truncate max-w-[85%]">📎 {f.name}</span>
+                                    <button onClick={() => removeFile(i)} className="text-slate-600 hover:text-rose-400 ml-2 transition-colors">
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+
+                    <div className="flex gap-3 pt-2">
+                        <BackBtn onClick={() => setStep(4)} />
+                        <button
+                            onClick={handleSubmit}
+                            className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
+                        >
+                            <Send className="w-4 h-4" /> Invia PDA
+                        </button>
+                    </div>
                 </div>
-                <Link
-                    href="/registra-contratto"
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/25 transition-all font-medium text-sm whitespace-nowrap"
-                >
-                    Registra Contratto
-                    <ArrowRight className="w-4 h-4" />
-                </Link>
-            </div>
+            )}
         </div>
     );
+}
+
+// ─── SMALL REUSABLE COMPONENTS ───────────────────────────────────────────────
+
+function StepHeader({ n, label, color, sub }: { n: number; label: string; color: string; sub?: string }) {
+    return (
+        <div className="flex items-center gap-2 mb-1">
+            <span className={cn("w-6 h-6 rounded-full border flex items-center justify-center text-[11px] font-bold shrink-0", color, "border-current/50")}>
+                {n}
+            </span>
+            <span className={cn("text-xs font-bold uppercase tracking-wider", color)}>
+                Step {n} — {label}
+            </span>
+            {sub && (
+                <span className="text-[10px] text-slate-600 bg-white/[0.04] px-2 py-0.5 rounded">{sub}</span>
+            )}
+        </div>
+    );
+}
+
+function NextBtn({ disabled, onClick }: { disabled: boolean; onClick: () => void }) {
+    return (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            className={cn(
+                "flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all",
+                disabled
+                    ? "bg-white/[0.04] text-slate-600 cursor-not-allowed"
+                    : "primary-btn"
+            )}
+        >
+            Avanti →
+        </button>
+    );
+}
+
+function BackBtn({ onClick }: { onClick: () => void }) {
+    return (
+        <button onClick={onClick} className="px-5 py-2.5 rounded-xl border border-white/15 text-slate-400 hover:text-white hover:border-white/30 text-sm font-semibold transition-all">
+            ← Indietro
+        </button>
+    );
+}
+
+function RecapRow({ label, value }: { label: string; value: string }) {
+    return value ? (
+        <>
+            <span className="text-slate-500">{label}</span>
+            <span className="text-slate-300 font-medium">{value}</span>
+        </>
+    ) : null;
 }
