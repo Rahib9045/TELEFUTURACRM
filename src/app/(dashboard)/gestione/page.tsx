@@ -33,7 +33,7 @@ const mockGestioneData = [
         venditore: "Alessandro Sandri",
         inviato_il: "19/07/2023 15:21",
         operatore: "Alessandro Sandri",
-        stato: "OK caricata EVA",
+        stato: "Inserito",
         societa: "Reesolve Srl",
         piva: "00144768699",
         referente: "Remo",
@@ -156,7 +156,8 @@ export default function GestionePda() {
                                         </select>
                                     </td>
                                     <td className="px-2 py-3">
-                                        <StatusDropdown value={row.stato} />
+                                        {/* isAgent={false} since this is the Back Office (Gestione) page */}
+                                        <StatusDropdown value={row.stato} isAgent={false} />
                                     </td>
                                     <td className="px-2 py-3"><input type="text" className="glass-input w-full text-xs py-1.5 px-2 h-auto" defaultValue={row.societa} /></td>
                                     <td className="px-2 py-3"><input type="text" className="glass-input w-full text-xs py-1.5 px-2 h-auto" defaultValue={row.piva} /></td>

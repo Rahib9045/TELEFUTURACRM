@@ -15,11 +15,12 @@ const trackingColumns = [
     { header: "Nominativo", accessor: "nominativo" },
 ];
 
+// Mock data representing the agent's view of sent PDAs
 const mockTrackingData = [
-    { avatar: "", categoria: "ENERGIA", brand: "Edison Business", venditore: "agente", inviato_il: "2023-05-25 15:29:40", stato: "Assegnata", nominativo: "Reesolve Srl" },
-    { avatar: "", categoria: "ENERGIA", brand: "Enel Business", venditore: "agente", inviato_il: "2023-03-04 13:47:45", stato: "Ricevuta", nominativo: "Telefutura Srl" },
-    { avatar: "", categoria: "ENERGIA", brand: "Edison Consumer", venditore: "agente", inviato_il: "2023-03-04 13:46:53", stato: "KO credito", nominativo: "Anna Maria Copi" },
-    { avatar: "", categoria: "ENERGIA", brand: "Edison Consumer", venditore: "agente", inviato_il: "2023-03-04 13:45:25", stato: "OK caricata EVA", nominativo: "Pietro Salli" },
+    { avatar: "👤", categoria: "ENERGIA", brand: "FASTWEB B...", venditore: "Alessandro Sandri", inviato_il: "13/05/2024 16:30", stato: "Assegnata", nominativo: "Massimetto" },
+    { avatar: "👤", categoria: "DIGITAL", brand: "Edison Business", venditore: "Luca Perotta", inviato_il: "30/08/2023 11:32", stato: "Ricevuta", nominativo: "Test" },
+    { avatar: "👤", categoria: "DIGITAL", brand: "Edison Business", venditore: "Luca Perotta", inviato_il: "30/08/2023 11:27", stato: "Sospeso Mancanza di Documento", nominativo: "Test" },
+    { avatar: "🏢", categoria: "ENERGIA", brand: "Edison Business", venditore: "Luca Perotta", inviato_il: "23/08/2023 10:52", stato: "Attivato", nominativo: "modoc" },
 ];
 
 export default function TrackingPda() {
