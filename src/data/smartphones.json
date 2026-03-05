@@ -1,0 +1,123 @@
+{
+  "Apple": [
+    "iPhone 16 Pro Max",
+    "iPhone 16 Pro",
+    "iPhone 16 Plus",
+    "iPhone 16",
+    "iPhone 15 Pro Max",
+    "iPhone 15 Pro",
+    "iPhone 15 Plus",
+    "iPhone 15"
+  ],
+  "Samsung": [
+    "Galaxy S25 Ultra",
+    "Galaxy S25+",
+    "Galaxy S25",
+    "Galaxy S24 Ultra",
+    "Galaxy S24+",
+    "Galaxy S24",
+    "Galaxy S24 FE",
+    "Galaxy Z Fold6",
+    "Galaxy Z Flip6",
+    "Galaxy A55 5G",
+    "Galaxy A35 5G",
+    "Galaxy A25 5G",
+    "Galaxy A15 5G",
+    "Galaxy A15",
+    "Galaxy S23 Ultra",
+    "Galaxy S23+",
+    "Galaxy S23",
+    "Galaxy S23 FE",
+    "Galaxy Z Fold5",
+    "Galaxy Z Flip5",
+    "Galaxy A54 5G",
+    "Galaxy A34 5G",
+    "Galaxy A14 5G"
+  ],
+  "Xiaomi": [
+    "Xiaomi 14 Ultra",
+    "Xiaomi 14 Pro",
+    "Xiaomi 14",
+    "Xiaomi 14T Pro",
+    "Xiaomi 14T",
+    "Xiaomi 13 Ultra",
+    "Xiaomi 13 Pro",
+    "Xiaomi 13",
+    "Xiaomi 13T Pro",
+    "Xiaomi 13T",
+    "Redmi Note 13 Pro+ 5G",
+    "Redmi Note 13 Pro 5G",
+    "Redmi Note 13 5G",
+    "Redmi Note 13",
+    "POCO X6 Pro 5G",
+    "POCO X6 5G",
+    "POCO M6 Pro"
+  ],
+  "OPPO": [
+    "Find X6 Pro",
+    "Find X6",
+    "Reno11 Pro",
+    "Reno11",
+    "Reno10 Pro+",
+    "Reno10 Pro",
+    "Reno10",
+    "A98 5G",
+    "A79 5G",
+    "A78 5G"
+  ],
+  "realme": [
+    "realme GT5 Pro",
+    "realme GT5",
+    "realme 12 Pro+",
+    "realme 12 Pro",
+    "realme 12",
+    "realme 11 Pro+",
+    "realme 11 Pro",
+    "realme 11"
+  ],
+  "Google": [
+    "Pixel 9 Pro XL",
+    "Pixel 9 Pro",
+    "Pixel 9",
+    "Pixel 9 Pro Fold",
+    "Pixel 8 Pro",
+    "Pixel 8",
+    "Pixel 8a",
+    "Pixel 7a"
+  ],
+  "Motorola": [
+    "razr 50 ultra",
+    "razr 50",
+    "razr 40 ultra",
+    "razr 40",
+    "edge 50 pro",
+    "edge 50 ultra",
+    "edge 50 fusion",
+    "edge 40 pro",
+    "edge 40 neo",
+    "edge 40",
+    "moto g84 5G",
+    "moto g54 5G"
+  ],
+  "Honor": [
+    "Magic V3",
+    "Magic V2",
+    "Magic6 Pro",
+    "Magic6 Lite",
+    "Magic5 Pro",
+    "Honor 200 Pro",
+    "Honor 200",
+    "Honor 90",
+    "Honor 90 Lite"
+  ],
+  "Nothing": [
+    "Phone (2)",
+    "Phone (2a)",
+    "Phone (2a) Plus"
+  ],
+  "Vivo": [
+    "X100 Pro",
+    "X100",
+    "X90 Pro"
+  ]
+}

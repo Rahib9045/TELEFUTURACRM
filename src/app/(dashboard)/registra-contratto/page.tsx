@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { Search, UserCheck, UserPlus, Upload, X, ChevronRight, CheckCircle, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/utils";
+import { PhoneSelect } from "@/components/PhoneSelect";
 
 // ─── TYPES ──────────────────────────────────────────────────────────────────
 
@@ -158,7 +159,7 @@ const W3_CONTRACT_FIELDS: Record<string, ContractFieldDef> = {
                 ) : (
                     <CRMField label="Codice Contratto" required placeholder="es. 1679428185586" />
                 )}
-                <CRMField label="Modello Terminale Venduto" placeholder="es. Samsung S25 Ultra" />
+                <CRMField label="Modello Terminale Venduto" type="phone_select" placeholder="es. Samsung S25 Ultra" />
                 <CRMField label="IMEI" placeholder="15 cifre" note="Supporto barcode 📷" />
             </div>
         )
@@ -168,7 +169,7 @@ const W3_CONTRACT_FIELDS: Record<string, ContractFieldDef> = {
         render: (ctx) => (
             <div className="grid grid-cols-3 gap-3">
                 <CRMField label="Codice Contratto" required placeholder="es. 1679428185586" />
-                <CRMField label="Modello Terminale Venduto" placeholder="es. iPhone 16 Pro" />
+                <CRMField label="Modello Terminale Venduto" type="phone_select" placeholder="es. iPhone 16 Pro" />
                 <CRMField label="IMEI" placeholder="15 cifre" note="Supporto barcode 📷" />
             </div>
         )
@@ -225,7 +226,7 @@ interface CRMFieldProps {
     label: string;
     required?: boolean;
     placeholder?: string;
-    type?: "text" | "select" | "date";
+    type?: "text" | "select" | "date" | "phone_select";
     values?: string[];
     note?: string;
     prefilled?: boolean;
@@ -267,6 +268,13 @@ function CRMField({
             ) : type === "date" ? (
                 <input type="date" defaultValue={today} disabled={disabled}
                     className="glass-input w-full text-sm" />
+            ) : type === "phone_select" ? (
+                <PhoneSelect
+                    value={isControlled ? controlledValue || "" : prefilled ? (prefillVal || "") : ""}
+                    onChange={isControlled ? onChangeValue : undefined}
+                    placeholder={placeholder}
+                    className={disabled ? "opacity-50 pointer-events-none" : ""}
+                />
             ) : (
                 <input
                     type="text"
