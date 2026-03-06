@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, X, Phone, MapPin, User, Clock, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, Phone, MapPin, User, Clock, Search, Bell, Circle, CheckCircle2, PauseCircle, ChevronDown, ChevronUp, CheckSquare } from "lucide-react";
 import { cn } from "@/utils";
 import { useAuth } from "@/context/AuthContext";
 import { DatePickerInput } from "@/components/DatePickerInput";
@@ -26,6 +26,21 @@ interface Appointment {
     status: AppointmentStatus;
 }
 
+// --- TASKS MODULE ---
+type TaskStatus = "da_fare" | "fatta" | "sospesa";
+
+interface CalendarTask {
+    id: number;
+    title: string;
+    date: string; // "YYYY-MM-DD"
+    time?: string; // Optional time -> triggers bell
+    status: TaskStatus;
+    notes?: string;
+    clientRef?: string; // CF or Name + Phone
+    createdBy: string;
+    assignedTo: string;
+}
+
 const MOCK_AGENTS = ["Luca Perotta", "Alessandro Sandri", "Marco Bianchi", "Giulia Rossi", "Venditore 1"];
 const MOCK_STORES = ["Roma Centro (RM001)", "Roma Est (RM002)", "Milano Centrale (MI001)", "Milano Nord (MI002)", "Napoli Centro (NA001)"];
 
@@ -36,6 +51,12 @@ const MOCK_APPOINTMENTS: Appointment[] = [
     { id: 4, date: "2026-03-10", time: "11:00", type: "outgoing", agente: "Giulia Rossi", customerAddress: "Corso Buenos Aires 5, Milano", customerName: "Francesca Bruno", customerPhone: "3401122334", notes: "Nuovo cliente energia", status: "scheduled" },
     { id: 5, date: "2026-03-10", time: "15:00", type: "incoming", agente: "Luca Perotta", store: "Roma Est (RM002)", customerName: "Carlo Neri", customerPhone: "3609988776", notes: "Assicurazione Generali", status: "da_richiamare" },
     { id: 6, date: "2026-03-17", time: "10:30", type: "outgoing", agente: "Venditore 1", customerAddress: "Via Napoli 88, Napoli", customerName: "Lucia Esposito", customerPhone: "3211234567", notes: "", status: "scheduled" },
+];
+
+const MOCK_TASKS: CalendarTask[] = [
+    { id: 1, title: "Richiamare per conferma contratto", date: "2026-03-03", time: "11:30", status: "da_fare", notes: "Controllare se ha inviato i documenti", clientRef: "Mario Rossi", createdBy: "Luca Perotta", assignedTo: "Luca Perotta" },
+    { id: 2, title: "Verifica attivazione linea", date: "2026-03-03", status: "fatta", notes: "Linea OK", clientRef: "Anna Verdi", createdBy: "Alessandro Sandri", assignedTo: "Alessandro Sandri" },
+    { id: 3, title: "Sollecito pagamento", date: "2026-03-05", time: "16:00", status: "sospesa", clientRef: "Giuseppe Ferrari", createdBy: "Marco Bianchi", assignedTo: "Giulia Rossi" },
 ];
 
 const STATUS_COLORS: Record<AppointmentStatus, string> = {
@@ -83,6 +104,11 @@ export default function Calendario() {
     const [showSearchDrawer, setShowSearchDrawer] = useState(false);
     const [appointments, setAppointments] = useState<Appointment[]>(MOCK_APPOINTMENTS);
 
+    // Tasks State
+    const [tasks, setTasks] = useState<CalendarTask[]>(MOCK_TASKS);
+    const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
+    const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
+
     // New appointment form state
     const [newAppt, setNewAppt] = useState({
         time: "10:00",
@@ -94,6 +120,16 @@ export default function Calendario() {
         customerPhone: "",
         cfPiva: "",
         notes: "",
+    });
+
+    // New task form state
+    const [newTask, setNewTask] = useState<Partial<CalendarTask>>({
+        title: "",
+        time: "",
+        status: "da_fare",
+        notes: "",
+        clientRef: "",
+        assignedTo: "", // Will default to current user
     });
 
     // Search Filters State
@@ -125,10 +161,16 @@ export default function Calendario() {
     const apptsByDate = (dateStr: string) =>
         visibleAppointments.filter(a => a.date === dateStr);
 
+    const tasksByDate = (dateStr: string) => {
+        // Simple store scoping isn't strictly defined for tasks in mock, but we'll show all or assigned
+        return tasks.filter(t => t.date === dateStr && (isCallCenter || t.assignedTo === user?.name || t.createdBy === user?.name));
+    };
+
     const handleDayClick = (day: number) => {
         const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
         setSelectedDate(dateStr);
         setShowCreateModal(false);
+        setShowCreateTaskModal(false);
         setSelectedAppointment(null);
     };
 
@@ -149,7 +191,29 @@ export default function Calendario() {
         setNewAppt({ time: "10:00", type: "incoming", agente: "", store: "", customerAddress: "", customerName: "", customerPhone: "", cfPiva: "", notes: "" });
     };
 
+    const handleCreateTaskSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedDate || !newTask.title || !newTask.assignedTo) return;
+
+        const created: CalendarTask = {
+            id: Math.max(...tasks.map(t => t.id), 0) + 1,
+            title: newTask.title,
+            date: selectedDate,
+            time: newTask.time || undefined,
+            status: "da_fare",
+            notes: newTask.notes,
+            clientRef: newTask.clientRef,
+            createdBy: user?.name || "Sconosciuto",
+            assignedTo: newTask.assignedTo,
+        };
+
+        setTasks(prev => [...prev, created]);
+        setShowCreateTaskModal(false);
+        setNewTask({ title: "", time: "", status: "da_fare", notes: "", clientRef: "", assignedTo: user?.name || "" });
+    };
+
     const dateAppts = selectedDate ? apptsByDate(selectedDate) : [];
+    const dateTasks = selectedDate ? tasksByDate(selectedDate) : [];
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     const isCallCenter = user?.role === "admin"; // admin = call center operator
     const isAgent = user?.role !== "admin";
@@ -385,6 +449,7 @@ export default function Calendario() {
                             const day = i + 1;
                             const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                             const dayAppts = apptsByDate(dateStr);
+                            const dayTasks = tasksByDate(dateStr);
                             const isToday = dateStr === todayStr;
                             const isSelected = dateStr === selectedDate;
 
@@ -406,8 +471,8 @@ export default function Calendario() {
                                     )}>
                                         {day}
                                     </span>
-                                    {dayAppts.length > 0 && (
-                                        <div className="flex flex-wrap gap-0.5 mt-1 justify-center">
+                                    {(dayAppts.length > 0 || dayTasks.length > 0) && (
+                                        <div className="flex flex-wrap gap-0.5 mt-1 justify-center items-center">
                                             {dayAppts.slice(0, 3).map(a => (
                                                 <div key={a.id}
                                                     className={cn("w-1.5 h-1.5 rounded-full",
@@ -418,7 +483,10 @@ export default function Calendario() {
                                                 />
                                             ))}
                                             {dayAppts.length > 3 && (
-                                                <span className="text-[9px] text-slate-400">+{dayAppts.length - 3}</span>
+                                                <span className="text-[9px] text-slate-400 pr-0.5">+{dayAppts.length - 3}</span>
+                                            )}
+                                            {dayTasks.length > 0 && (
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 ml-0.5" />
                                             )}
                                         </div>
                                     )}
@@ -428,10 +496,11 @@ export default function Calendario() {
                     </div>
 
                     {/* Legend */}
-                    <div className="mt-4 pt-4 border-t border-white/8 flex gap-5 text-xs text-slate-500">
+                    <div className="mt-4 pt-4 border-t border-white/8 flex flex-wrap gap-5 text-xs text-slate-500">
                         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400" />Inbound</span>
                         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" />Outbound</span>
                         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-purple-400" />Auto-Generato</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" />Task</span>
                     </div>
                 </div>
 
@@ -471,7 +540,7 @@ export default function Calendario() {
                                             className="w-full text-left p-3 rounded-xl bg-white/[0.03] border border-white/8 hover:bg-white/[0.06] transition-all"
                                         >
                                             <div className="flex items-center justify-between mb-1">
-                                                <span className="text-sm font-semibold text-white">{a.time} — {a.customerName}</span>
+                                                <span className="text-sm font-semibold text-white truncate max-w-[200px]">{a.time} — {a.customerName}</span>
                                                 <span className={cn("text-[10px] px-2 py-0.5 rounded-full border font-medium", STATUS_COLORS[a.status])}>
                                                     {STATUS_LABELS[a.status]}
                                                 </span>
@@ -491,6 +560,103 @@ export default function Calendario() {
                                                 </span>
                                             </div>
                                         </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Divider & Tasks Section */}
+                            <hr className="border-white/10 my-4" />
+
+                            <div className="flex items-center justify-between mb-3">
+                                <h4 className="font-semibold text-emerald-400 text-sm flex items-center gap-2">
+                                    <CheckSquare className="w-4 h-4" />
+                                    Task
+                                </h4>
+                                <button
+                                    onClick={() => setShowCreateTaskModal(true)}
+                                    className="p-1.5 px-3 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30 transition-colors text-xs font-medium flex items-center gap-1.5"
+                                >
+                                    <Plus className="w-3 h-3" />
+                                    Nuova Task
+                                </button>
+                            </div>
+
+                            {dateTasks.length === 0 ? (
+                                <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-2">
+                                    <p className="text-sm">Nessuna task per oggi</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-1">
+                                    {dateTasks.map(t => (
+                                        <div key={t.id} className={cn(
+                                            "w-full text-left p-3 rounded-xl border transition-all",
+                                            t.status === "fatta" ? "bg-emerald-500/5 border-emerald-500/10 opacity-70" :
+                                                t.status === "sospesa" ? "bg-amber-500/5 border-amber-500/10" :
+                                                    "bg-white/[0.03] border-white/8"
+                                        )}>
+                                            <div className="flex justify-between items-start mb-2 gap-2">
+                                                <div className="flex items-start gap-2 max-w-[70%]">
+                                                    <div className="mt-1 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                                    <button
+                                                        onClick={() => setExpandedTaskId(expandedTaskId === t.id ? null : t.id)}
+                                                        className="flex-1 text-left"
+                                                    >
+                                                        <span className={cn(
+                                                            "text-sm font-semibold transition-all",
+                                                            t.status === "fatta" ? "text-slate-400 line-through" : "text-white"
+                                                        )}>
+                                                            {t.title}
+                                                        </span>
+                                                        {t.time && (
+                                                            <div className="flex items-center gap-1.5 pl-0.5 mt-1 text-xs text-amber-400 font-medium">
+                                                                <Bell className="w-3 h-3" /> {t.time}
+                                                            </div>
+                                                        )}
+                                                    </button>
+                                                </div>
+
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const nextStatus: Record<TaskStatus, TaskStatus> = {
+                                                            "da_fare": "fatta",
+                                                            "fatta": "sospesa",
+                                                            "sospesa": "da_fare"
+                                                        };
+                                                        setTasks(prev => prev.map(task => task.id === t.id ? { ...task, status: nextStatus[t.status] } : task));
+                                                    }}
+                                                    className={cn(
+                                                        "text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded-full border transition-colors flex items-center gap-1 shrink-0",
+                                                        t.status === "da_fare" ? "bg-white/5 text-slate-300 border-white/10 hover:bg-white/10" :
+                                                            t.status === "fatta" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20" :
+                                                                "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
+                                                    )}
+                                                >
+                                                    {t.status === "da_fare" ? <Circle className="w-3 h-3" /> : t.status === "fatta" ? <CheckCircle2 className="w-3 h-3" /> : <PauseCircle className="w-3 h-3" />}
+                                                    {t.status.replace("_", " ")}
+                                                </button>
+                                            </div>
+
+                                            {expandedTaskId === t.id && (
+                                                <div className="mt-3 pt-3 border-t border-white/5 space-y-2 text-xs animate-in slide-in-from-top-2">
+                                                    <div className="flex justify-between text-slate-400">
+                                                        <span><strong>Creato da:</strong> {t.createdBy}</span>
+                                                        <span><strong>Ass.:</strong> <span className={cn(t.assignedTo === user?.name ? "text-indigo-400 font-medium" : "")}>{t.assignedTo}</span></span>
+                                                    </div>
+                                                    {t.clientRef && (
+                                                        <div className="text-slate-300 bg-white/5 p-2 rounded flex items-center gap-2">
+                                                            <User className="w-3.5 h-3.5 text-slate-500" />
+                                                            {t.clientRef}
+                                                        </div>
+                                                    )}
+                                                    {t.notes && (
+                                                        <div className="text-slate-400 mt-1 italic leading-relaxed">
+                                                            "{t.notes}"
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     ))}
                                 </div>
                             )}
@@ -659,6 +825,66 @@ export default function Calendario() {
                             <div className="flex gap-3 pt-1">
                                 <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 h-10 rounded-xl font-medium bg-white/5 text-slate-300 hover:bg-white/10 transition-colors text-sm">Annulla</button>
                                 <button type="submit" className="flex-1 primary-btn h-10 text-sm">Salva Appuntamento</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Create Task Modal */}
+            {showCreateTaskModal && selectedDate && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowCreateTaskModal(false)}>
+                    <div className="glass-card p-6 w-full max-w-lg animate-in slide-in-from-bottom-4 zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-emerald-400">Nuova Task</h3>
+                                <p className="text-sm text-slate-500">{new Date(selectedDate + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</p>
+                            </div>
+                            <button onClick={() => setShowCreateTaskModal(false)} className="text-slate-500 hover:text-slate-300 transition-colors"><X className="w-5 h-5" /></button>
+                        </div>
+                        <form onSubmit={handleCreateTaskSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-medium text-slate-400 mb-1.5">Titolo Task *</label>
+                                <input type="text" className="glass-input w-full border-emerald-500/30 focus:border-emerald-500/50 focus:ring-emerald-500/20" placeholder="Cosa c'è da fare?" value={newTask.title} onChange={e => setNewTask(p => ({ ...p, title: e.target.value }))} required />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Orario (Opzionale)</label>
+                                    <input type="time" className="glass-input w-full" value={newTask.time || ""} onChange={e => setNewTask(p => ({ ...p, time: e.target.value }))} />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Riferimento Cliente</label>
+                                    <input type="text" className="glass-input w-full" placeholder="Nome, CF o Cellulare" value={newTask.clientRef || ""} onChange={e => setNewTask(p => ({ ...p, clientRef: e.target.value }))} />
+                                </div>
+                            </div>
+
+                            {isCallCenter ? (
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Assegna a *</label>
+                                    <select className="glass-input w-full" value={newTask.assignedTo} onChange={e => setNewTask(p => ({ ...p, assignedTo: e.target.value }))} required>
+                                        <option value="">Seleziona operatore...</option>
+                                        <option value={user?.name}>{user?.name} (Tu)</option>
+                                        <optgroup label="Altri">
+                                            {MOCK_AGENTS.filter(a => a !== user?.name).map(a => <option key={a} value={a}>{a}</option>)}
+                                        </optgroup>
+                                    </select>
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Assegna a</label>
+                                    <input className="glass-input w-full text-slate-400 bg-white/5" value={newTask.assignedTo || user?.name || ""} readOnly />
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-xs font-medium text-slate-400 mb-1.5">Note</label>
+                                <textarea className="glass-input w-full resize-none" rows={2} placeholder="Dettagli aggiuntivi..." value={newTask.notes || ""} onChange={e => setNewTask(p => ({ ...p, notes: e.target.value }))} />
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button type="button" onClick={() => setShowCreateTaskModal(false)} className="flex-1 h-10 rounded-xl font-medium bg-white/5 text-slate-300 hover:bg-white/10 transition-colors text-sm">Annulla</button>
+                                <button type="submit" className="flex-1 h-10 rounded-xl font-medium bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20 text-sm">Salva Task</button>
                             </div>
                         </form>
                     </div>
