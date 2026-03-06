@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Save, Trash2, Paperclip, CheckSquare, MessageSquare, X } from "lucide-react";
+import { Search, FolderOpen, Archive, Paperclip, CheckSquare, MessageSquare, X } from "lucide-react";
 import { cn } from "@/utils";
 import { StatusDropdown, STATUS_OPTIONS } from "@/components/StatusDropdown";
 import { DatePickerInput } from "@/components/DatePickerInput";
@@ -191,9 +191,9 @@ export default function GestionePda() {
                                     <td className="px-4 py-3 text-xs text-slate-500">{row.inviato_il}</td>
                                     <td className="px-4 py-3">
                                         <div className="flex gap-1 justify-center">
+                                            <button className="p-1.5 rounded bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 transition-colors" title="Apri pratica"><FolderOpen className="w-4 h-4" /></button>
                                             <button className="p-1.5 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors" title="Allegati"><Paperclip className="w-4 h-4" /></button>
-                                            <button className="p-1.5 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors" title="Salva"><Save className="w-4 h-4" /></button>
-                                            <button className="p-1.5 rounded bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 transition-colors" title="Elimina"><Trash2 className="w-4 h-4" /></button>
+                                            <button className="p-1.5 rounded bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors" title="Archivia"><Archive className="w-4 h-4" /></button>
                                         </div>
                                     </td>
                                     <td className="px-2 py-3">
