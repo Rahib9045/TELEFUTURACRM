@@ -151,6 +151,9 @@ export default function Calendario() {
     const daysInMonth = getDaysInMonth(viewYear, viewMonth);
     const firstDay = getFirstDayOfMonth(viewYear, viewMonth);
 
+    const isCallCenter = user?.role === "admin"; // admin = call center operator
+    const isAgent = user?.role !== "admin";
+
     // Role-based visibility filter
     const visibleAppointments = appointments.filter(a => {
         if (user?.role === "admin") return true;
@@ -217,8 +220,6 @@ export default function Calendario() {
     const dateAppts = selectedDate ? apptsByDate(selectedDate) : [];
     const dateTasks = selectedDate ? tasksByDate(selectedDate) : [];
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    const isCallCenter = user?.role === "admin"; // admin = call center operator
-    const isAgent = user?.role !== "admin";
 
     // Search result chronological list (includes RBAC store-based filtering implicitly from visibleAppointments)
     const searchResults = visibleAppointments.filter(a => {
