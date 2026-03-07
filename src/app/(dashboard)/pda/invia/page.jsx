@@ -2,20 +2,20 @@
 
 import { useState, useCallback } from "react";
 
-// â”€â”€ COSTANTI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── COSTANTI ──────────────────────────────────────────────────────────────────
 
 const VENDITORI = ["Alberto","Alex","Alin","Asad","Ben Aziza","Cristhian","Cristi","Damiano","Daniel","Daniele2","Denise","Dimitri","Eloise","Eros","Fadel","Federico","Francesca","Francesco","George","Giacomo","Gian","Giulia","Giuseppe B.","Ilaria","Lorenzo","Manu","Marta","Marta2","Marta3","Matteo","Michele","Riccardo","Roberto","Samantha","Sheekell","Tommaso","Veronica"];
 const NEGOZI    = ["Magliana","Donna","Libia","Collatina","Mazzini","San Paolo","Garbatella","Promontori","Acilia","Baleniere","Castani","Merulana","Telefonico"];
 
 const ALL_BRANDS = [
-  { id:"w3",      label:"WindTre", badge:"W3",  color:"#2E75B6", bg:"#EBF3FB", desc:"Mobile Â· Fisso Â· Luce&Gas Â· Multi-Servizi", onlyBusiness:false },
-  { id:"sky",     label:"Sky",     badge:"SKY", color:"#0072CE", bg:"#E6F2FB", desc:"Fisso Â· Abbonamenti TV",                    onlyBusiness:false },
-  { id:"fastweb", label:"Fastweb", badge:"FW",  color:"#00A651", bg:"#E6F7EE", desc:"Mobile Â· Fisso Â· Luce&Gas",                onlyBusiness:false },
+  { id:"w3",      label:"WindTre", badge:"W3",  color:"#2E75B6", bg:"#EBF3FB", desc:"Mobile · Fisso · Luce&Gas · Multi-Servizi", onlyBusiness:false },
+  { id:"sky",     label:"Sky",     badge:"SKY", color:"#0072CE", bg:"#E6F2FB", desc:"Fisso · Abbonamenti TV",                    onlyBusiness:false },
+  { id:"fastweb", label:"Fastweb", badge:"FW",  color:"#00A651", bg:"#E6F7EE", desc:"Mobile · Fisso · Luce&Gas",                onlyBusiness:false },
   { id:"energy",  label:"Energy",  badge:"NRG", color:"#fd7e14", bg:"#FFF3E6", desc:"Luce e Gas",                               onlyBusiness:false },
-  { id:"dojo",    label:"Dojo",    badge:"DJ",  color:"#6f42c1", bg:"#F3EEFB", desc:"POS Â· Terminali di pagamento",             onlyBusiness:true  },
+  { id:"dojo",    label:"Dojo",    badge:"DJ",  color:"#6f42c1", bg:"#F3EEFB", desc:"POS · Terminali di pagamento",             onlyBusiness:true  },
 ];
 
-// â”€â”€ PRODOTTI PER BRAND â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── PRODOTTI PER BRAND ────────────────────────────────────────────────────────
 
 const PRODOTTI = {
   w3: {
@@ -64,7 +64,7 @@ const PRODOTTI = {
   },
 };
 
-// â”€â”€ CAMPI POST-SELEZIONE (MENU A COMPARSA) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── CAMPI POST-SELEZIONE (MENU A COMPARSA) ────────────────────────────────────
 
 const CAT_FIELDS = {
   "Mobile": [
@@ -80,7 +80,7 @@ const CAT_FIELDS = {
     { key:"codMigr1",     label:"Codice Migrazione L.1",    type:"text",   ph:"es. MIG123456" },
     { key:"gnpLinea2",    label:"N. Telefono GNP Linea 2",  type:"text",   ph:"es. 0612345679" },
     { key:"codMigr2",     label:"Codice Migrazione L.2",    type:"text",   ph:"es. MIG654321" },
-    { key:"convergenza",  label:"Convergenza",              type:"select", opts:["","SÃ¬","No"] },
+    { key:"convergenza",  label:"Convergenza",              type:"select", opts:["","Sì","No"] },
     { key:"serviziDig",   label:"Servizi Digitali",         type:"text",   ph:"es. Netflix" },
   ],
   "Luce & Gas": [
@@ -92,10 +92,10 @@ const CAT_FIELDS = {
     { key:"tensione",     label:"Tensione",                 type:"select", opts:["","BT 220v","BT 380v","MT"] },
     { key:"destinazL",    label:"Destinazione d'uso",       type:"select", opts:["","Domestico residente","Domestico non residente","Altri usi"] },
     { key:"consumoL",     label:"Consumo Annuo (kWh)",      type:"text",   ph:"es. 2700" },
-    { key:"residente",    label:"Residente",                type:"select", opts:["","SÃ¬","No"] },
+    { key:"residente",    label:"Residente",                type:"select", opts:["","Sì","No"] },
     // Gas
     { key:"pdr",          label:"PDR",                      type:"text",   ph:"es. 3582757092302395U02" },
-    { key:"tipologiaUso", label:"Tipologia d'uso Gas",      type:"select", opts:["","AttivitÃ  di servizio pubblico","Autotrazione","Commercio e servizi","Condominio con uso domestico","Domestico","Industria","Generazione elettrica"] },
+    { key:"tipologiaUso", label:"Tipologia d'uso Gas",      type:"select", opts:["","Attività di servizio pubblico","Autotrazione","Commercio e servizi","Condominio con uso domestico","Domestico","Industria","Generazione elettrica"] },
     { key:"destinazG",    label:"Destinazione d'uso Gas",   type:"select", opts:["","C1 - Riscaldamento","C2 - Cottura cibi / acqua sanitaria","C3 - Riscaldamento + cottura","C4 - Condizionamento","C5 - Condizionamento + riscaldamento","T1 - Uso tecnologico","T2 - Uso tecnologico + riscaldamento"] },
     { key:"consumoG",     label:"Consumo Annuo (Smc)",      type:"text",   ph:"es. 1400" },
     { key:"fornitPrec",   label:"Fornitore Precedente",     type:"text",   ph:"es. Enel / Eni Gas" },
@@ -107,8 +107,8 @@ const CAT_FIELDS = {
 
 // Sezioni Luce & Gas: diviso visivamente
 const LUCE_GAS_SECTIONS = [
-  { title:"ðŸ’¡ Luce", keys:["tipologiaC","indirizzoF","pod","potenzaImp","tensione","destinazL","consumoL","residente"] },
-  { title:"ðŸ”¥ Gas",  keys:["tipologiaC","indirizzoF","pdr","tipologiaUso","destinazG","consumoG","fornitPrec"] },
+  { title:"💡 Luce", keys:["tipologiaC","indirizzoF","pod","potenzaImp","tensione","destinazL","consumoL","residente"] },
+  { title:"🔥 Gas",  keys:["tipologiaC","indirizzoF","pdr","tipologiaUso","destinazG","consumoG","fornitPrec"] },
 ];
 
 // Sky
@@ -116,13 +116,13 @@ const SKY_TV_PRODUCTS = ["Sky TV","Sky Glass","Sky Uffici","Sky Bar","Sky Hotel"
 const SKY_PACCHETTI   = ["Netflix","Cinema","Calcio","Sport","Multivision","4K"];
 const SKY_TECNOLOGIA  = ["Parabola","Fibra"];
 
-const CAT_ICONS  = { "Mobile":"ðŸ“±","Fisso":"ðŸ ","Luce & Gas":"âš¡","Multi-servizi":"ðŸ›¡ï¸","Abbonamenti SKY":"ðŸ“º","POS":"ðŸ’³" };
+const CAT_ICONS  = { "Mobile":"📱","Fisso":"🏠","Luce & Gas":"⚡","Multi-servizi":"🛡️","Abbonamenti SKY":"📺","POS":"💳" };
 const CAT_COLORS = { "Mobile":"#2E75B6","Fisso":"#28a745","Luce & Gas":"#fd7e14","Multi-servizi":"#6f42c1","Abbonamenti SKY":"#0072CE","POS":"#6f42c1" };
 
 const STEP_LABELS = ["Venditore","Cliente + Anagrafica","Brand","Prodotti","Allegati","Note"];
 
 
-// â”€â”€ CartItem â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── CartItem ──────────────────────────────────────────────────────────────────
 function CartItem({ it, ii, gi, total, expI, setExpI }) {
   const exp  = expI[gi + "_" + ii];
   const dets = it.details ? Object.entries(it.details).filter(([k,v]) => v && k !== "hasContract") : [];
@@ -131,20 +131,20 @@ function CartItem({ it, ii, gi, total, expI, setExpI }) {
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0"}}>
         <span style={{fontSize:14}}>{it.macroIcon}</span>
         <span style={{fontSize:12,fontWeight:600,color:it.macroColor}}>{it.macro}</span>
-        <span style={{color:"#ccc"}}>â€º</span>
+        <span style={{color:"#ccc"}}>›</span>
         <span style={{fontSize:12,color:"#333"}}>{it.sub}</span>
         <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
           <span style={{fontSize:10,color:"#bbb"}}>V.#{it.saleNum}</span>
           <button onClick={()=>setExpI(p=>({...p,[gi+"_"+ii]:!p[gi+"_"+ii]}))}
             style={{background:exp?"#f0f7ff":"#f8f9fa",border:exp?"1px solid #2E75B6":"1px solid #e0e0e0",borderRadius:5,padding:"3px 10px",fontSize:10,fontWeight:600,cursor:"pointer",color:exp?"#2E75B6":"#888"}}>
-            {exp ? "â–² Chiudi" : "ðŸ‘ Dettagli"}
+            {exp ? "▲ Chiudi" : "👁 Dettagli"}
           </button>
         </div>
       </div>
       {exp && (
         <div style={{padding:"8px 12px 12px 32px"}}>
           <div style={{background:"#f8fafc",borderRadius:8,padding:12,border:"1px solid #e8edf2"}}>
-            <div style={{fontSize:11,fontWeight:700,color:it.macroColor,marginBottom:8}}>ðŸ“‹ {it.sub}</div>
+            <div style={{fontSize:11,fontWeight:700,color:it.macroColor,marginBottom:8}}>📋 {it.sub}</div>
             {dets.length > 0
               ? <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 16px"}}>
                   {dets.map(([k,v])=>(
@@ -163,7 +163,7 @@ function CartItem({ it, ii, gi, total, expI, setExpI }) {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════════════════
 export default function InviaPda() {
   const [step, setStep] = useState(1);
   const [venditore, setVenditore] = useState("");
@@ -196,7 +196,7 @@ export default function InviaPda() {
   const setSkyDec     = (ck, si, v)  => updSale(ck, si, { skyDec:v });
   const setLgSez      = (ck, si, v)  => updSale(ck, si, { lgSez:v });
   // Collaps helper per i toggle blocks pre-campi
-  const isTogCollapsed = (key) => collapsedToggles[key] !== false; // default collapsed se giÃ  compilato
+  const isTogCollapsed = (key) => collapsedToggles[key] !== false; // default collapsed se già compilato
   const expandToggle   = (key) => setCollapsedToggles(p => ({...p, [key]: false}));
   const collapseToggle = (key) => setCollapsedToggles(p => ({...p, [key]: true}));
 
@@ -224,7 +224,7 @@ export default function InviaPda() {
         items.push({
           macro:      categoria,
           macroColor: CAT_COLORS[categoria] || bObj.color,
-          macroIcon:  CAT_ICONS[categoria]  || "ðŸ“¦",
+          macroIcon:  CAT_ICONS[categoria]  || "📦",
           sub:        sale.product,
           saleNum:    si + 1,
           details:    det,
@@ -240,7 +240,7 @@ export default function InviaPda() {
     if (items.length > 0 && bObj) {
       const snap = { allSales: JSON.parse(JSON.stringify(allSales)), brand, tipoCliente };
       setCart(p => [...p, { brandId:brand, brandLabel:bObj.label, brandColor:bObj.color, brandIcon:bObj.badge||bObj.label, items, sv:snap }]);
-      showToast("âœ… " + items.length + " prodott" + (items.length===1?"o":"i") + " " + bObj.label + " aggiunti al carrello");
+      showToast("✅ " + items.length + " prodott" + (items.length===1?"o":"i") + " " + bObj.label + " aggiunti al carrello");
     }
     setBrand(null); setAllSales({});
     setStep(3);
@@ -254,7 +254,7 @@ export default function InviaPda() {
     setCart(p => p.filter((_, i) => i !== idx));
     setShowCart(false);
     setStep(4);
-    showToast("âœï¸ Modifica " + g.brandLabel);
+    showToast("✏️ Modifica " + g.brandLabel);
   };
 
   const rmCG = (idx) => setCart(p => p.filter((_, i) => i !== idx));
@@ -275,7 +275,7 @@ export default function InviaPda() {
     if (cur.length > 0 && bObj)
       fc.push({ brandId:brand, brandLabel:bObj.label, brandColor:bObj.color, items:cur });
     const totProd = fc.reduce((s, g) => s + g.items.length, 0);
-    showToast("ðŸŽ‰ Inviato! " + fc.length + " brand Â· " + totProd + " prodotti");
+    showToast("🎉 Inviato! " + fc.length + " brand · " + totProd + " prodotti");
     setTimeout(fullReset, 2500);
   };
 
@@ -296,7 +296,7 @@ export default function InviaPda() {
   const goNext = () => { if (canProceed() && step<6) setStep(s=>s+1); };
   const goBack = () => { if (step>1) setStep(s=>s-1); };
 
-  // â”€â”€ Render campi MENU A COMPARSA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Render campi MENU A COMPARSA ─────────────────────────────────────────────
   const renderCatFields = (categoria, catKey, si, sale) => {
     if (!sale.product) return null;
 
@@ -305,8 +305,8 @@ export default function InviaPda() {
       if (!sale.product) return null;
       const allFields  = CAT_FIELDS["Luce & Gas"];
       const color      = CAT_COLORS["Luce & Gas"];
-      // Fastweb vende solo energia (Luce) â€” usa sempre campi Luce
-      // W3: "Luce" o "Gas" espliciti â€” Gas aggiornato senza remi/matricola
+      // Fastweb vende solo energia (Luce) — usa sempre campi Luce
+      // W3: "Luce" o "Gas" espliciti — Gas aggiornato senza remi/matricola
       const luceKeys = ["tipologiaC","indirizzoF","pod","potenzaImp","tensione","destinazL","consumoL","residente"];
       const gasKeys  = ["tipologiaC","indirizzoF","pdr","tipologiaUso","destinazG","consumoG","fornitPrec"];
       const isLuce   = brand==="fastweb" || sale.product==="Luce" || sale.product?.toUpperCase().includes("LUCE");
@@ -315,7 +315,7 @@ export default function InviaPda() {
       const ibanAna    = tipoCliente==="business" ? anBusiness.iban : anConsumer.iban;
       const ibanLG     = sale.fields?.ibanLG || "";
 
-      // â”€â”€ FASTWEB: metodo pagamento + IBAN condizionale â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ── FASTWEB: metodo pagamento + IBAN condizionale ──────────────────────
       if (brand === "fastweb") {
         const payMeth = sale.fields?.payMeth || "";
         return (
@@ -323,11 +323,11 @@ export default function InviaPda() {
             {/* Metodo pagamento + IBAN */}
             <div style={{marginBottom:14,paddingBottom:14,borderBottom:"1px dashed #e0e0e0"}}>
               <div style={{fontSize:11,fontWeight:700,color:color,marginBottom:6}}>
-                ðŸ’³ Metodo di pagamento <span style={{color:"#dc3545"}}>*</span>
+                💳 Metodo di pagamento <span style={{color:"#dc3545"}}>*</span>
                 <span style={{fontSize:10,fontWeight:400,color:"#888",marginLeft:6}}>Richiesto da Fastweb</span>
               </div>
               <div style={{display:"flex",gap:8,marginBottom:payMeth==="IBAN"?10:0}}>
-                {[["ðŸ¦ IBAN","IBAN"],["ðŸ’³ Carta di Credito","CC"]].map(([lbl,val]) => {
+                {[["🏦 IBAN","IBAN"],["💳 Carta di Credito","CC"]].map(([lbl,val]) => {
                   const sel = payMeth===val;
                   return <button key={val} onClick={()=>setField(catKey,si,"payMeth",sel?"":val)}
                     style={{flex:1,padding:"10px 12px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
@@ -341,7 +341,7 @@ export default function InviaPda() {
                     <button onClick={()=>setField(catKey,si,"ibanLG",ibanAna)}
                       style={{marginBottom:8,padding:"6px 14px",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",
                         border:`1px solid ${color}`,background:"white",color:color,display:"flex",alignItems:"center",gap:6}}>
-                      ðŸ“‹ Copia da anagrafica {ibanLG===ibanAna && <span style={{color:"#28a745"}}>âœ“</span>}
+                      📋 Copia da anagrafica {ibanLG===ibanAna && <span style={{color:"#28a745"}}>✓</span>}
                     </button>
                   )}
                   <input type="text" value={ibanLG}
@@ -351,7 +351,7 @@ export default function InviaPda() {
                       fontFamily:"monospace",letterSpacing:1.2,
                       border:ibanLG?"2px solid #28a745":"1px solid #d0d0d0",
                       background:ibanLG?"#f0fff0":"white"}} />
-                  {!ibanAna && <div style={{fontSize:10,color:"#888",marginTop:3}}>Nessun IBAN in anagrafica â€” inseriscilo manualmente</div>}
+                  {!ibanAna && <div style={{fontSize:10,color:"#888",marginTop:3}}>Nessun IBAN in anagrafica — inseriscilo manualmente</div>}
                 </div>
               )}
             </div>
@@ -365,7 +365,7 @@ export default function InviaPda() {
                   {f.type==="select" ? (
                     <select value={sale.fields?.[f.key]||""} onChange={e=>setField(catKey,si,f.key,e.target.value)}
                       style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid #d0d0d0",fontSize:12}}>
-                      {f.opts.map(o=><option key={o} value={o}>{o||"â€” Seleziona â€”"}</option>)}
+                      {f.opts.map(o=><option key={o} value={o}>{o||"— Seleziona —"}</option>)}
                     </select>
                   ) : (
                     <input type="text" value={sale.fields?.[f.key]||""} onChange={e=>setField(catKey,si,f.key,e.target.value)}
@@ -379,15 +379,15 @@ export default function InviaPda() {
         );
       }
 
-      // â”€â”€ W3 (e altri): toggle Domiciliazione â†’ IBAN condizionale â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ── W3 (e altri): toggle Domiciliazione → IBAN condizionale ──────────────
       const domicil = sale.fields?.domiciliazione || "";
       return (
         <div style={{marginTop:12}}>
           {/* Domiciliazione */}
           <div style={{padding:"12px 14px",borderRadius:8,background:"#f8f9fa",border:"1px solid #e0e0e0",marginBottom:10}}>
-            <div style={{fontSize:11,fontWeight:700,color:color,marginBottom:8}}>ðŸ¦ Domiciliazione?</div>
-            <div style={{display:"flex",gap:8,marginBottom:domicil==="SÃ¬"?12:0}}>
-              {["SÃ¬","No"].map(v => {
+            <div style={{fontSize:11,fontWeight:700,color:color,marginBottom:8}}>🏦 Domiciliazione?</div>
+            <div style={{display:"flex",gap:8,marginBottom:domicil==="Sì"?12:0}}>
+              {["Sì","No"].map(v => {
                 const sel = domicil===v;
                 return (
                   <button key={v} onClick={()=>setField(catKey,si,"domiciliazione",sel?"":v)}
@@ -399,13 +399,13 @@ export default function InviaPda() {
                 );
               })}
             </div>
-            {domicil==="SÃ¬" && (() => {
+            {domicil==="Sì" && (() => {
               const payMeth = sale.fields?.payMeth || "";
               return (
                 <div style={{marginTop:10}}>
-                  <div style={{fontSize:11,fontWeight:700,color:color,marginBottom:8}}>ðŸ’³ Metodo di pagamento <span style={{color:"#dc3545"}}>*</span></div>
+                  <div style={{fontSize:11,fontWeight:700,color:color,marginBottom:8}}>💳 Metodo di pagamento <span style={{color:"#dc3545"}}>*</span></div>
                   <div style={{display:"flex",gap:8,marginBottom:payMeth==="IBAN"?10:0}}>
-                    {[["ðŸ¦ IBAN","IBAN"],["ðŸ’³ Carta di Credito","CC"]].map(([lbl,val]) => {
+                    {[["🏦 IBAN","IBAN"],["💳 Carta di Credito","CC"]].map(([lbl,val]) => {
                       const sel = payMeth===val;
                       return <button key={val} onClick={()=>setField(catKey,si,"payMeth",sel?"":val)}
                         style={{flex:1,padding:"10px 12px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
@@ -419,7 +419,7 @@ export default function InviaPda() {
                         <button onClick={()=>setField(catKey,si,"ibanLG",ibanAna)}
                           style={{marginBottom:8,padding:"6px 14px",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",
                             border:`1px solid ${color}`,background:"white",color:color,display:"flex",alignItems:"center",gap:6}}>
-                          ðŸ“‹ Copia da anagrafica {ibanLG===ibanAna && <span style={{color:"#28a745"}}>âœ“</span>}
+                          📋 Copia da anagrafica {ibanLG===ibanAna && <span style={{color:"#28a745"}}>✓</span>}
                         </button>
                       )}
                       <input type="text" value={ibanLG}
@@ -429,15 +429,15 @@ export default function InviaPda() {
                           fontFamily:"monospace",letterSpacing:1.2,
                           border:ibanLG?"2px solid #28a745":"1px solid #d0d0d0",
                           background:ibanLG?"#f0fff0":"white"}} />
-                      {!ibanAna && <div style={{fontSize:10,color:"#888",marginTop:3}}>Nessun IBAN in anagrafica â€” inseriscilo manualmente</div>}
+                      {!ibanAna && <div style={{fontSize:10,color:"#888",marginTop:3}}>Nessun IBAN in anagrafica — inseriscilo manualmente</div>}
                     </div>
                   )}
                 </div>
               );
             })()}
           </div>
-          {/* Campi fornitura â€” visibili solo dopo aver risposto alla domiciliazione */}
-          {(domicil==="No" || (domicil==="SÃ¬" && (sale.fields?.payMeth==="CC" || (sale.fields?.payMeth==="IBAN")))) && (
+          {/* Campi fornitura — visibili solo dopo aver risposto alla domiciliazione */}
+          {(domicil==="No" || (domicil==="Sì" && (sale.fields?.payMeth==="CC" || (sale.fields?.payMeth==="IBAN")))) && (
             <div style={{padding:"12px 14px",borderRadius:8,background:"white",border:`1px solid ${color}30`,borderLeft:`3px solid ${color}`}}>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"10px 16px"}}>
                 {visible.map(f => (
@@ -448,7 +448,7 @@ export default function InviaPda() {
                     {f.type==="select" ? (
                       <select value={sale.fields?.[f.key]||""} onChange={e=>setField(catKey,si,f.key,e.target.value)}
                         style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid #d0d0d0",fontSize:12}}>
-                        {f.opts.map(o=><option key={o} value={o}>{o||"â€” Seleziona â€”"}</option>)}
+                        {f.opts.map(o=><option key={o} value={o}>{o||"— Seleziona —"}</option>)}
                       </select>
                     ) : (
                       <input type="text" value={sale.fields?.[f.key]||""} onChange={e=>setField(catKey,si,f.key,e.target.value)}
@@ -464,7 +464,7 @@ export default function InviaPda() {
       );
     }
 
-    // Dojo POS â€” campi custom, niente in CAT_FIELDS
+    // Dojo POS — campi custom, niente in CAT_FIELDS
     if (brand==="dojo" && categoria==="POS") {
       const dc   = "#6f42c1";
       const addr = sale.fields?.dojoAddr || "";
@@ -487,7 +487,7 @@ export default function InviaPda() {
                 disabled={!canDec}
                 style={{width:34,height:34,borderRadius:8,border:`2px solid ${canDec?dc:"#ddd"}`,
                   background:canDec?dc:"#f5f5f5",color:canDec?"white":"#bbb",fontSize:20,fontWeight:700,
-                  cursor:canDec?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>âˆ’</button>
+                  cursor:canDec?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>−</button>
               <div style={{flex:1}}>
                 <div style={{textAlign:"center",marginBottom:5}}>
                   <span style={{fontSize:20,fontWeight:800,color:dc}}>{value.toFixed(decimals)}</span>
@@ -515,7 +515,7 @@ export default function InviaPda() {
         <div style={{marginTop:12,padding:"14px",borderRadius:8,background:"white",border:`1px solid ${dc}30`,borderLeft:`3px solid ${dc}`}}>
           <div style={{marginBottom:14}}>
             <div style={{fontSize:11,fontWeight:600,color:"#555",marginBottom:5}}>
-              ðŸ“ Indirizzo installazione <span style={{color:"#dc3545"}}>*</span>
+              📍 Indirizzo installazione <span style={{color:"#dc3545"}}>*</span>
             </div>
             <input type="text" value={addr}
               onChange={e=>setField(catKey,si,"dojoAddr",e.target.value)}
@@ -523,8 +523,8 @@ export default function InviaPda() {
               style={{width:"100%",padding:"8px 10px",borderRadius:6,fontSize:12,boxSizing:"border-box",
                 border:addr?`2px solid ${dc}`:"1px solid #d0d0d0",background:addr?"#FAF5FF":"white"}} />
           </div>
-          <Stepper label="ðŸ’¶ Costo mensile" value={cost} min={COST_MIN} max={COST_MAX} step={COST_STEP} fieldKey="dojoCost" unit="â‚¬/mese" decimals={2}/>
-          <Stepper label="ðŸ“Š Commissione transazioni" value={comm} min={COMM_MIN} max={COMM_MAX} step={COMM_STEP} fieldKey="dojoComm" unit="%" decimals={2}/>
+          <Stepper label="💶 Costo mensile" value={cost} min={COST_MIN} max={COST_MAX} step={COST_STEP} fieldKey="dojoCost" unit="€/mese" decimals={2}/>
+          <Stepper label="📊 Commissione transazioni" value={comm} min={COMM_MIN} max={COMM_MAX} step={COMM_STEP} fieldKey="dojoComm" unit="%" decimals={2}/>
         </div>
       );
     }
@@ -532,26 +532,26 @@ export default function InviaPda() {
     // Categorie generiche
     let fields = CAT_FIELDS[categoria];
     if (!fields || fields.length===0) return null;
-    // Mobile: rimuovi MNP e Donating se PortabilitÃ  = No
+    // Mobile: rimuovi MNP e Donating se Portabilità = No
     if (categoria==="Mobile") {
       if (sale.fields?.portMob==="No")
         fields = fields.filter(f => f.key!=="numeroMnp" && f.key!=="serialeDon");
     }
     if (categoria==="Fisso") {
-      // Nascondi Linea 1 (GNP + migrazione) se portabilitÃ  = No
+      // Nascondi Linea 1 (GNP + migrazione) se portabilità = No
       if (sale.fields?.portabilita==="No")
         fields = fields.filter(f => f.key!=="gnpLinea1" && f.key!=="codMigr1");
 
       // Nascondi Linea 2: W3 consumer sempre | W3 business se secondaLinea=No |
-      //                   Sky Wi-Fi/3P sempre | W3 business con secondaLinea=SÃ¬ ma portabilita2=No
+      //                   Sky Wi-Fi/3P sempre | W3 business con secondaLinea=Sì ma portabilita2=No
       const hideL2 = (brand==="w3" && tipoCliente!=="business")
                   || (brand==="fastweb" && tipoCliente!=="business")
                   || sale.fields?.secondaLinea==="No"
                   || (brand==="sky" && (sale.product==="Sky 3P" || sale.product==="Sky Wi-Fi"))
-                  || (brand==="w3" && tipoCliente==="business" && sale.fields?.secondaLinea==="SÃ¬" && sale.fields?.portabilita2==="No");
+                  || (brand==="w3" && tipoCliente==="business" && sale.fields?.secondaLinea==="Sì" && sale.fields?.portabilita2==="No");
       if (hideL2) fields = fields.filter(f => f.key!=="gnpLinea2" && f.key!=="codMigr2");
 
-      // Sky Wi-Fi e Sky 3P: niente convergenza nÃ© servizi digitali
+      // Sky Wi-Fi e Sky 3P: niente convergenza né servizi digitali
       if (brand==="sky" && (sale.product==="Sky Wi-Fi" || sale.product==="Sky 3P"))
         fields = fields.filter(f => f.key!=="convergenza" && f.key!=="serviziDig");
       // Fastweb: niente convergenza
@@ -565,7 +565,7 @@ export default function InviaPda() {
     const ibanSky3P= sale.fields?.ibanSky3P || "";
     return (
       <div style={{marginTop:12,padding:"12px 14px",borderRadius:8,background:"white",border:`1px solid ${color}30`,borderLeft:`3px solid ${color}`}}>
-        {/* IBAN W3 Business FISSO â€” PayPicker + collassabile */}
+        {/* IBAN W3 Business FISSO — PayPicker + collassabile */}
         {brand==="w3" && tipoCliente==="business" && categoria==="Fisso" && (() => {
           const ibanBus = anBusiness.iban;
           const ibanW3B = sale.fields?.ibanW3B || "";
@@ -577,16 +577,16 @@ export default function InviaPda() {
             <div onClick={()=>expandToggle(kIban)}
               style={{marginBottom:10,display:"inline-flex",alignItems:"center",gap:6,padding:"4px 10px 4px 8px",
                 borderRadius:20,background:"#edfaf1",border:"1px solid #b2dfca",cursor:"pointer",userSelect:"none"}}>
-              <span style={{fontSize:11,color:"#444"}}>{payMeth==="CC"?"ðŸ’³ Carta di Credito":"ðŸ¦ IBAN"}</span>
-              {payMeth==="IBAN" && <span style={{fontSize:10,color:"#28a745",fontFamily:"monospace",fontWeight:700}}>Â·Â·Â·{ibanW3B.slice(-4)}</span>}
-              <span style={{fontSize:10,color:"#28a745"}}>âœŽ</span>
+              <span style={{fontSize:11,color:"#444"}}>{payMeth==="CC"?"💳 Carta di Credito":"🏦 IBAN"}</span>
+              {payMeth==="IBAN" && <span style={{fontSize:10,color:"#28a745",fontFamily:"monospace",fontWeight:700}}>···{ibanW3B.slice(-4)}</span>}
+              <span style={{fontSize:10,color:"#28a745"}}>✎</span>
             </div>
           );
           return (
             <div style={{marginBottom:14,paddingBottom:14,borderBottom:"1px dashed #e0e0e0"}}>
-              <div style={{fontSize:11,fontWeight:700,color:"#28a745",marginBottom:8}}>ðŸ’³ Metodo di pagamento <span style={{color:"#dc3545"}}>*</span></div>
+              <div style={{fontSize:11,fontWeight:700,color:"#28a745",marginBottom:8}}>💳 Metodo di pagamento <span style={{color:"#dc3545"}}>*</span></div>
               <div style={{display:"flex",gap:8,marginBottom:payMeth==="IBAN"?10:0}}>
-                {[["ðŸ¦ IBAN","IBAN"],["ðŸ’³ Carta di Credito","CC"]].map(([lbl,val]) => {
+                {[["🏦 IBAN","IBAN"],["💳 Carta di Credito","CC"]].map(([lbl,val]) => {
                   const sel = payMeth===val;
                   return <button key={val} onClick={()=>{setField(catKey,si,"payMeth",sel?"":val);if(val==="CC")collapseToggle(kIban);}}
                     style={{flex:1,padding:"10px 12px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
@@ -600,7 +600,7 @@ export default function InviaPda() {
                     <button onClick={()=>{setField(catKey,si,"ibanW3B",ibanBus);collapseToggle(kIban);}}
                       style={{marginBottom:8,padding:"6px 14px",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",
                         border:"1px solid #28a745",background:"white",color:"#28a745",display:"flex",alignItems:"center",gap:6}}>
-                      ðŸ“‹ Copia da anagrafica {ibanW3B===ibanBus&&<span style={{color:"#28a745"}}>âœ“</span>}
+                      📋 Copia da anagrafica {ibanW3B===ibanBus&&<span style={{color:"#28a745"}}>✓</span>}
                     </button>
                   )}
                   <input type="text" value={ibanW3B}
@@ -609,13 +609,13 @@ export default function InviaPda() {
                     style={{width:"100%",padding:"8px 10px",borderRadius:6,fontSize:12,boxSizing:"border-box",
                       fontFamily:"monospace",letterSpacing:1.2,
                       border:ibanW3B?"2px solid #28a745":"1px solid #d0d0d0",background:ibanW3B?"#f0fff0":"white"}} />
-                  {!ibanBus&&<div style={{fontSize:10,color:"#888",marginTop:3}}>Nessun IBAN in anagrafica â€” inseriscilo manualmente</div>}
+                  {!ibanBus&&<div style={{fontSize:10,color:"#888",marginTop:3}}>Nessun IBAN in anagrafica — inseriscilo manualmente</div>}
                 </div>
               )}
             </div>
           );
         })()}
-        {/* IBAN SKY (Wi-Fi / 3P) â€” PayPicker + collassabile */}
+        {/* IBAN SKY (Wi-Fi / 3P) — PayPicker + collassabile */}
         {brand==="sky" && (sale.product==="Sky 3P" || sale.product==="Sky Wi-Fi") && (() => {
           const payMeth = sale.fields?.payMeth || "";
           const kIban   = `${catKey}_${si}_ibanSky`;
@@ -625,16 +625,16 @@ export default function InviaPda() {
             <div onClick={()=>expandToggle(kIban)}
               style={{marginBottom:10,display:"inline-flex",alignItems:"center",gap:6,padding:"4px 10px 4px 8px",
                 borderRadius:20,background:"#E8F4FF",border:"1px solid #9DCBF0",cursor:"pointer",userSelect:"none"}}>
-              <span style={{fontSize:11,color:"#444"}}>{payMeth==="CC"?"ðŸ’³ Carta di Credito":"ðŸ¦ IBAN"}</span>
-              {payMeth==="IBAN" && <span style={{fontSize:10,color:"#0072CE",fontFamily:"monospace",fontWeight:700}}>Â·Â·Â·{ibanSky3P.slice(-4)}</span>}
-              <span style={{fontSize:10,color:"#0072CE"}}>âœŽ</span>
+              <span style={{fontSize:11,color:"#444"}}>{payMeth==="CC"?"💳 Carta di Credito":"🏦 IBAN"}</span>
+              {payMeth==="IBAN" && <span style={{fontSize:10,color:"#0072CE",fontFamily:"monospace",fontWeight:700}}>···{ibanSky3P.slice(-4)}</span>}
+              <span style={{fontSize:10,color:"#0072CE"}}>✎</span>
             </div>
           );
           return (
             <div style={{marginBottom:14,paddingBottom:14,borderBottom:"1px dashed #e0e0e0"}}>
-              <div style={{fontSize:11,fontWeight:700,color:"#0072CE",marginBottom:8}}>ðŸ’³ Metodo di pagamento <span style={{color:"#dc3545"}}>*</span></div>
+              <div style={{fontSize:11,fontWeight:700,color:"#0072CE",marginBottom:8}}>💳 Metodo di pagamento <span style={{color:"#dc3545"}}>*</span></div>
               <div style={{display:"flex",gap:8,marginBottom:payMeth==="IBAN"?10:0}}>
-                {[["ðŸ¦ IBAN","IBAN"],["ðŸ’³ Carta di Credito","CC"]].map(([lbl,val]) => {
+                {[["🏦 IBAN","IBAN"],["💳 Carta di Credito","CC"]].map(([lbl,val]) => {
                   const sel = payMeth===val;
                   return <button key={val} onClick={()=>{setField(catKey,si,"payMeth",sel?"":val);if(val==="CC")collapseToggle(kIban);}}
                     style={{flex:1,padding:"10px 12px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
@@ -648,7 +648,7 @@ export default function InviaPda() {
                     <button onClick={()=>{setField(catKey,si,"ibanSky3P",ibanAnaG);collapseToggle(kIban);}}
                       style={{marginBottom:8,padding:"6px 14px",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",
                         border:"1px solid #0072CE",background:"white",color:"#0072CE",display:"flex",alignItems:"center",gap:6}}>
-                      ðŸ“‹ Copia da anagrafica {ibanSky3P===ibanAnaG&&<span style={{color:"#28a745"}}>âœ“</span>}
+                      📋 Copia da anagrafica {ibanSky3P===ibanAnaG&&<span style={{color:"#28a745"}}>✓</span>}
                     </button>
                   )}
                   <input type="text" value={ibanSky3P}
@@ -657,13 +657,13 @@ export default function InviaPda() {
                     style={{width:"100%",padding:"8px 10px",borderRadius:6,fontSize:12,boxSizing:"border-box",
                       fontFamily:"monospace",letterSpacing:1.2,
                       border:ibanSky3P?"2px solid #28a745":"1px solid #d0d0d0",background:ibanSky3P?"#f0fff0":"white"}} />
-                  {!ibanAnaG&&<div style={{fontSize:10,color:"#888",marginTop:3}}>Nessun IBAN in anagrafica â€” inseriscilo manualmente</div>}
+                  {!ibanAnaG&&<div style={{fontSize:10,color:"#888",marginTop:3}}>Nessun IBAN in anagrafica — inseriscilo manualmente</div>}
                 </div>
               )}
             </div>
           );
         })()}
-        {/* IBAN Fastweb â€” PayPicker + collassabile */}
+        {/* IBAN Fastweb — PayPicker + collassabile */}
         {brand==="fastweb" && (() => {
           const payMeth = sale.fields?.payMeth || "";
           const kIban   = `${catKey}_${si}_ibanFW`;
@@ -673,19 +673,19 @@ export default function InviaPda() {
             <div onClick={()=>expandToggle(kIban)}
               style={{marginBottom:10,display:"inline-flex",alignItems:"center",gap:6,padding:"4px 10px 4px 8px",
                 borderRadius:20,background:"#edfaf4",border:"1px solid #99dbb4",cursor:"pointer",userSelect:"none"}}>
-              <span style={{fontSize:11,color:"#444"}}>{payMeth==="CC"?"ðŸ’³ Carta di Credito":"ðŸ¦ IBAN"}</span>
-              {payMeth==="IBAN" && <span style={{fontSize:10,color:"#00A651",fontFamily:"monospace",fontWeight:700}}>Â·Â·Â·{ibanFW.slice(-4)}</span>}
-              <span style={{fontSize:10,color:"#00A651"}}>âœŽ</span>
+              <span style={{fontSize:11,color:"#444"}}>{payMeth==="CC"?"💳 Carta di Credito":"🏦 IBAN"}</span>
+              {payMeth==="IBAN" && <span style={{fontSize:10,color:"#00A651",fontFamily:"monospace",fontWeight:700}}>···{ibanFW.slice(-4)}</span>}
+              <span style={{fontSize:10,color:"#00A651"}}>✎</span>
             </div>
           );
           return (
             <div style={{marginBottom:14,paddingBottom:14,borderBottom:"1px dashed #e0e0e0"}}>
               <div style={{fontSize:11,fontWeight:700,color:"#00A651",marginBottom:8}}>
-                ðŸ’³ Metodo di pagamento <span style={{color:"#dc3545"}}>*</span>
+                💳 Metodo di pagamento <span style={{color:"#dc3545"}}>*</span>
                 <span style={{fontSize:10,fontWeight:400,color:"#888",marginLeft:6}}>Richiesto da Fastweb</span>
               </div>
               <div style={{display:"flex",gap:8,marginBottom:payMeth==="IBAN"?10:0}}>
-                {[["ðŸ¦ IBAN","IBAN"],["ðŸ’³ Carta di Credito","CC"]].map(([lbl,val]) => {
+                {[["🏦 IBAN","IBAN"],["💳 Carta di Credito","CC"]].map(([lbl,val]) => {
                   const sel = payMeth===val;
                   return <button key={val} onClick={()=>{setField(catKey,si,"payMeth",sel?"":val);if(val==="CC")collapseToggle(kIban);}}
                     style={{flex:1,padding:"10px 12px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
@@ -699,7 +699,7 @@ export default function InviaPda() {
                     <button onClick={()=>{setField(catKey,si,"ibanFW",ibanAnaG);collapseToggle(kIban);}}
                       style={{marginBottom:8,padding:"6px 14px",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",
                         border:"1px solid #00A651",background:"white",color:"#00A651",display:"flex",alignItems:"center",gap:6}}>
-                      ðŸ“‹ Copia da anagrafica {ibanFW===ibanAnaG&&<span style={{color:"#28a745"}}>âœ“</span>}
+                      📋 Copia da anagrafica {ibanFW===ibanAnaG&&<span style={{color:"#28a745"}}>✓</span>}
                     </button>
                   )}
                   <input type="text" value={ibanFW}
@@ -708,7 +708,7 @@ export default function InviaPda() {
                     style={{width:"100%",padding:"8px 10px",borderRadius:6,fontSize:12,boxSizing:"border-box",
                       fontFamily:"monospace",letterSpacing:1.2,
                       border:ibanFW?"2px solid #28a745":"1px solid #d0d0d0",background:ibanFW?"#f0fff0":"white"}} />
-                  {!ibanAnaG&&<div style={{fontSize:10,color:"#888",marginTop:3}}>Nessun IBAN in anagrafica â€” inseriscilo manualmente</div>}
+                  {!ibanAnaG&&<div style={{fontSize:10,color:"#888",marginTop:3}}>Nessun IBAN in anagrafica — inseriscilo manualmente</div>}
                 </div>
               )}
             </div>
@@ -723,7 +723,7 @@ export default function InviaPda() {
               {f.type==="select" ? (
                 <select value={sale.fields?.[f.key]||""} onChange={e=>setField(catKey,si,f.key,e.target.value)}
                   style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid #d0d0d0",fontSize:12}}>
-                  {f.opts.map(o=><option key={o} value={o}>{o||"â€” Seleziona â€”"}</option>)}
+                  {f.opts.map(o=><option key={o} value={o}>{o||"— Seleziona —"}</option>)}
                 </select>
               ) : (
                 <input type="text" value={sale.fields?.[f.key]||""} onChange={e=>setField(catKey,si,f.key,e.target.value)}
@@ -737,7 +737,7 @@ export default function InviaPda() {
     );
   };
 
-  // â”€â”€ Render pacchetti Sky â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Render pacchetti Sky ──────────────────────────────────────────────────────
   const renderSkyTvFields = (catKey, si, sale) => {
     if (!sale.product || !SKY_TV_PRODUCTS.includes(sale.product)) return null;
     const color   = "#0072CE";
@@ -748,7 +748,7 @@ export default function InviaPda() {
       <div style={{marginTop:12}}>
         {/* Pacchetti */}
         <div style={{padding:"12px 14px",borderRadius:8,background:"white",border:`1px solid ${color}30`,borderLeft:`3px solid ${color}`,marginBottom:10}}>
-          <div style={{fontSize:10,fontWeight:700,color,marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>ðŸ“º Pacchetti TV</div>
+          <div style={{fontSize:10,fontWeight:700,color,marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>📺 Pacchetti TV</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
             {SKY_PACCHETTI.map(p => {
               const sel = pkt.includes(p);
@@ -765,7 +765,7 @@ export default function InviaPda() {
           {/* Decoder aggiuntivi se Multivision */}
           {hasMult && (
             <div style={{marginTop:12,padding:"10px 12px",borderRadius:8,background:"#EBF3FB",border:`1px dashed ${color}`}}>
-              <div style={{fontSize:11,fontWeight:600,color,marginBottom:8}}>ðŸ”¢ Quanti decoder aggiuntivi? (Multivision)</div>
+              <div style={{fontSize:11,fontWeight:600,color,marginBottom:8}}>🔢 Quanti decoder aggiuntivi? (Multivision)</div>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 {[1,2,3,4,5].map(n => (
                   <button key={n} onClick={()=>setSkyDec(catKey,si,sale.skyDec===String(n)?"":String(n))}
@@ -783,14 +783,14 @@ export default function InviaPda() {
           )}
           {pkt.length>0 && (
             <div style={{marginTop:8,fontSize:11,color,background:"#EBF3FB",padding:"5px 10px",borderRadius:6}}>
-              âœ“ {pkt.join(" Â· ")}
-              {hasMult && sale.skyDec ? <span style={{marginLeft:6}}>Â· <b>{sale.skyDec} decoder agg.</b></span> : null}
+              ✓ {pkt.join(" · ")}
+              {hasMult && sale.skyDec ? <span style={{marginLeft:6}}>· <b>{sale.skyDec} decoder agg.</b></span> : null}
             </div>
           )}
         </div>
         {/* Tecnologia */}
         <div style={{padding:"12px 14px",borderRadius:8,background:"white",border:`1px solid ${color}30`,borderLeft:`3px solid ${color}`}}>
-          <div style={{fontSize:10,fontWeight:700,color,marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>ðŸ“¡ Tecnologia</div>
+          <div style={{fontSize:10,fontWeight:700,color,marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>📡 Tecnologia</div>
           <div style={{display:"flex",gap:8}}>
             {SKY_TECNOLOGIA.map(t => (
               <button key={t} onClick={()=>setSkyTech(catKey,si,tech===t?"":t)}
@@ -798,15 +798,15 @@ export default function InviaPda() {
                   border:tech===t?`2px solid ${color}`:"2px solid #e0e0e0",
                   background:tech===t?color:"white",color:tech===t?"white":"#444",
                   display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-                {t==="Parabola"?"ðŸ“¡":"ðŸŒ"} {t}
+                {t==="Parabola"?"📡":"🌐"} {t}
               </button>
             ))}
           </div>
         </div>
-        {/* Indirizzo installazione â€” visibile dopo aver selezionato la tecnologia */}
+        {/* Indirizzo installazione — visibile dopo aver selezionato la tecnologia */}
         {tech && (
           <div style={{padding:"12px 14px",borderRadius:8,background:"white",border:`1px solid ${color}30`,borderLeft:`3px solid ${color}`}}>
-            <div style={{fontSize:10,fontWeight:700,color,marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>ðŸ“ Indirizzo installazione</div>
+            <div style={{fontSize:10,fontWeight:700,color,marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>📍 Indirizzo installazione</div>
             <input type="text"
               value={sale.fields?.indirizzoInstallazione||""}
               onChange={e=>setField(catKey,si,"indirizzoInstallazione",e.target.value)}
@@ -818,12 +818,12 @@ export default function InviaPda() {
     );
   };
 
-  // â”€â”€ Render categoria prodotti (uguale per tutti i brand) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Render categoria prodotti (uguale per tutti i brand) ──────────────────────
   const renderCategoria = (categoria, prodotti) => {
     const catKey   = `${brand}_${categoria}`;
     const catSales = getSales(catKey);
     const catColor = CAT_COLORS[categoria] || currentBrand?.color || "#555";
-    const catIcon  = CAT_ICONS[categoria] || "ðŸ“¦";
+    const catIcon  = CAT_ICONS[categoria] || "📦";
     const filled   = catSales.filter(s => s.product).length;
     const hasF     = (CAT_FIELDS[categoria]||[]).length > 0 || categoria==="Luce & Gas" || (categoria==="POS" && brand==="dojo");
     const isSkyTV  = categoria === "Abbonamenti SKY";
@@ -834,7 +834,7 @@ export default function InviaPda() {
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
           <span style={{fontSize:18}}>{catIcon}</span>
           <span style={{fontSize:13,fontWeight:700,color:catColor,textTransform:"uppercase",letterSpacing:0.5}}>{categoria}</span>
-          {filled>0 && <Tag c="#155724" bg="#d4edda">âœ“ {filled} vendita{filled===1?"":"e"}</Tag>}
+          {filled>0 && <Tag c="#155724" bg="#d4edda">✓ {filled} vendita{filled===1?"":"e"}</Tag>}
         </div>
 
         {catSales.map((sale, si) => (
@@ -859,7 +859,7 @@ export default function InviaPda() {
                 {si>0 && (
                   <button onClick={()=>removeSale(catKey,si)}
                     style={{padding:"4px 10px",borderRadius:6,border:"1px solid #dc3545",background:"white",color:"#dc3545",fontSize:10,fontWeight:700,cursor:"pointer"}}>
-                    âœ• Rimuovi
+                    ✕ Rimuovi
                   </button>
                 )}
               </div>
@@ -882,7 +882,7 @@ export default function InviaPda() {
               })}
             </div>
 
-            {/* â”€â”€â”€ MOBILE: blocco toggle pre-campi â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            {/* ─── MOBILE: blocco toggle pre-campi ────────────────── */}
             {sale.product && categoria==="Mobile" && (() => {
               const gc       = "#2E75B6";
               const ibanAnaM = tipoCliente==="business" ? anBusiness.iban : anConsumer.iban;
@@ -898,9 +898,9 @@ export default function InviaPda() {
                   return (
                     <div key={tkKey} onClick={onExpand} style={{marginTop:8,display:"inline-flex",alignItems:"center",gap:6,padding:"4px 10px 4px 8px",borderRadius:20,background:"#EBF3FB",border:"1px solid #b8d4f0",cursor:"pointer",userSelect:"none"}}>
                       <span style={{fontSize:11,color:"#555"}}>{label}</span>
-                      <span style={{fontSize:11,fontWeight:700,color:answer==="SÃ¬"?"#28a745":"#dc3545",background:answer==="SÃ¬"?"#d4edda":"#f8d7da",padding:"1px 7px",borderRadius:10}}>{answer}</span>
+                      <span style={{fontSize:11,fontWeight:700,color:answer==="Sì"?"#28a745":"#dc3545",background:answer==="Sì"?"#d4edda":"#f8d7da",padding:"1px 7px",borderRadius:10}}>{answer}</span>
                       {extra && <span style={{fontSize:10,color:"#666",fontFamily:"monospace"}}>{extra}</span>}
-                      <span style={{fontSize:10,color:"#2E75B6"}}>âœŽ</span>
+                      <span style={{fontSize:10,color:"#2E75B6"}}>✎</span>
                     </div>
                   );
                 }
@@ -910,10 +910,10 @@ export default function InviaPda() {
               const fullBlock = (tkKey, label, cur, onSet, ibanField, ibanSetKey) => {
                 const collapsed = collapsedToggles[tkKey] !== false;
                 const payMethVal = sale.fields?.payMeth || "";
-                const isDone    = !!cur && (cur==="No" || !ibanSetKey || (cur==="SÃ¬" && (payMethVal==="CC" || (payMethVal==="IBAN" && !!ibanField))));
+                const isDone    = !!cur && (cur==="No" || !ibanSetKey || (cur==="Sì" && (payMethVal==="CC" || (payMethVal==="IBAN" && !!ibanField))));
                 // auto-collapse when done
                 if (isDone && collapsed) return null; // handled by chip above
-                const ibanSummary = ibanField ? "Â·Â·Â·"+ibanField.slice(-4) : null;
+                const ibanSummary = ibanField ? "···"+ibanField.slice(-4) : null;
 
                 // onSet wrapper that auto-collapses when complete
                 const handleSet = (v) => {
@@ -927,8 +927,8 @@ export default function InviaPda() {
                 return (
                   <div style={{marginTop:10,padding:"12px 14px",borderRadius:8,background:"#f8f9fa",border:"1px solid #cce0f5",borderLeft:`3px solid ${gc}`}}>
                     <div style={{fontSize:11,fontWeight:700,color:gc,marginBottom:8}}>{label}</div>
-                    <div style={{display:"flex",gap:8,marginBottom:ibanSetKey&&cur==="SÃ¬"?10:0}}>
-                      {["SÃ¬","No"].map(v=>{
+                    <div style={{display:"flex",gap:8,marginBottom:ibanSetKey&&cur==="Sì"?10:0}}>
+                      {["Sì","No"].map(v=>{
                         const s=cur===v;
                         return <button key={v} onClick={()=>handleSet(s?"":v)}
                           style={{flex:1,padding:"10px 12px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",
@@ -936,14 +936,14 @@ export default function InviaPda() {
                             background:s?gc:"white",color:s?"white":"#555"}}>{v}</button>;
                       })}
                     </div>
-                    {ibanSetKey && cur==="SÃ¬" && (() => {
+                    {ibanSetKey && cur==="Sì" && (() => {
                       const payMeth = sale.fields?.payMeth || "";
                       const payDone = payMeth==="CC" || (payMeth==="IBAN" && !!ibanField);
                       return (
                         <div style={{marginTop:8}}>
-                          <div style={{fontSize:11,fontWeight:700,color:gc,marginBottom:8}}>ðŸ’³ Metodo di pagamento <span style={{color:"#dc3545"}}>*</span></div>
+                          <div style={{fontSize:11,fontWeight:700,color:gc,marginBottom:8}}>💳 Metodo di pagamento <span style={{color:"#dc3545"}}>*</span></div>
                           <div style={{display:"flex",gap:8,marginBottom:payMeth==="IBAN"?10:0}}>
-                            {[["ðŸ¦ IBAN","IBAN"],["ðŸ’³ Carta di Credito","CC"]].map(([lbl,val]) => {
+                            {[["🏦 IBAN","IBAN"],["💳 Carta di Credito","CC"]].map(([lbl,val]) => {
                               const sel = payMeth===val;
                               return <button key={val} onClick={()=>{setField(catKey,si,"payMeth",sel?"":val);if(val==="CC")collapseToggle(tkKey);}}
                                 style={{flex:1,padding:"10px 12px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
@@ -957,14 +957,14 @@ export default function InviaPda() {
                                 <button onClick={()=>{setField(catKey,si,ibanSetKey,ibanAnaM);collapseToggle(tkKey);}}
                                   style={{marginBottom:8,padding:"5px 12px",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",
                                     border:`1px solid ${gc}`,background:"white",color:gc,display:"flex",alignItems:"center",gap:6}}>
-                                  ðŸ“‹ Copia da anagrafica {ibanField===ibanAnaM&&<span style={{color:"#28a745"}}>âœ“</span>}
+                                  📋 Copia da anagrafica {ibanField===ibanAnaM&&<span style={{color:"#28a745"}}>✓</span>}
                                 </button>
                               )}
                               <input type="text" value={ibanField} onChange={e=>handleIban(e.target.value)}
                                 placeholder="IT00 X000 0000 0000 0000 0000 000"
                                 style={{width:"100%",padding:"8px 10px",borderRadius:6,fontSize:12,boxSizing:"border-box",fontFamily:"monospace",letterSpacing:1.2,
                                   border:ibanField?"2px solid #28a745":"1px solid #d0d0d0",background:ibanField?"#f0fff0":"white"}} />
-                              {!ibanAnaM&&<div style={{fontSize:10,color:"#888",marginTop:3}}>Nessun IBAN in anagrafica â€” inseriscilo manualmente</div>}
+                              {!ibanAnaM&&<div style={{fontSize:10,color:"#888",marginTop:3}}>Nessun IBAN in anagrafica — inseriscilo manualmente</div>}
                             </div>
                           )}
                         </div>
@@ -985,14 +985,14 @@ export default function InviaPda() {
                     {/* PayPicker block */}
                     {ibanDone && ibanCollapsed
                       ? <div onClick={()=>expandToggle(kIban)} style={{marginTop:8,display:"inline-flex",alignItems:"center",gap:6,padding:"4px 10px 4px 8px",borderRadius:20,background:"#EBF3FB",border:"1px solid #b8d4f0",cursor:"pointer",userSelect:"none"}}>
-                          <span style={{fontSize:11,color:"#555"}}>{payMeth==="CC"?"ðŸ’³ Carta di Credito":"ðŸ¦ IBAN"}</span>
-                          {payMeth==="IBAN" && <span style={{fontSize:10,color:"#28a745",fontFamily:"monospace",fontWeight:700}}>Â·Â·Â·{ibanMob.slice(-4)}</span>}
-                          <span style={{fontSize:10,color:gc}}>âœŽ</span>
+                          <span style={{fontSize:11,color:"#555"}}>{payMeth==="CC"?"💳 Carta di Credito":"🏦 IBAN"}</span>
+                          {payMeth==="IBAN" && <span style={{fontSize:10,color:"#28a745",fontFamily:"monospace",fontWeight:700}}>···{ibanMob.slice(-4)}</span>}
+                          <span style={{fontSize:10,color:gc}}>✎</span>
                         </div>
                       : <div style={{marginTop:10,padding:"12px 14px",borderRadius:8,background:"#f8f9fa",border:"1px solid #cce0f5",borderLeft:`3px solid ${gc}`}}>
-                          <div style={{fontSize:11,fontWeight:700,color:gc,marginBottom:8}}>ðŸ’³ Metodo di pagamento <span style={{color:"#dc3545",fontWeight:400}}>*</span></div>
+                          <div style={{fontSize:11,fontWeight:700,color:gc,marginBottom:8}}>💳 Metodo di pagamento <span style={{color:"#dc3545",fontWeight:400}}>*</span></div>
                           <div style={{display:"flex",gap:8,marginBottom:payMeth==="IBAN"?10:0}}>
-                            {[["ðŸ¦ IBAN","IBAN"],["ðŸ’³ Carta di Credito","CC"]].map(([lbl,val]) => {
+                            {[["🏦 IBAN","IBAN"],["💳 Carta di Credito","CC"]].map(([lbl,val]) => {
                               const sel = payMeth===val;
                               return <button key={val} onClick={()=>{setField(catKey,si,"payMeth",sel?"":val);if(val==="CC")collapseToggle(kIban);}}
                                 style={{flex:1,padding:"10px 12px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
@@ -1003,7 +1003,7 @@ export default function InviaPda() {
                           {payMeth==="IBAN" && (<>
                             {ibanAnaM && <button onClick={()=>{setField(catKey,si,"ibanMob",ibanAnaM);collapseToggle(kIban);}}
                               style={{marginBottom:8,padding:"5px 12px",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",border:`1px solid ${gc}`,background:"white",color:gc,display:"flex",alignItems:"center",gap:6}}>
-                              ðŸ“‹ Copia da anagrafica {ibanMob===ibanAnaM&&<span style={{color:"#28a745"}}>âœ“</span>}
+                              📋 Copia da anagrafica {ibanMob===ibanAnaM&&<span style={{color:"#28a745"}}>✓</span>}
                             </button>}
                             <input type="text" value={ibanMob} onChange={e=>setField(catKey,si,"ibanMob",e.target.value)}
                               placeholder="IT00 X000 0000 0000 0000 0000 000"
@@ -1013,9 +1013,9 @@ export default function InviaPda() {
                           </>)}
                         </div>
                     }
-                    {/* PortabilitÃ  */}
-                    {chip(`${catKey}_${si}_portMob`, "ðŸ“ž PortabilitÃ ", port, null, ()=>expandToggle(`${catKey}_${si}_portMob`))}
-                    {fullBlock(`${catKey}_${si}_portMob`, "ðŸ“ž PortabilitÃ ?", port, v=>setField(catKey,si,"portMob",v), null, null)}
+                    {/* Portabilità */}
+                    {chip(`${catKey}_${si}_portMob`, "📞 Portabilità", port, null, ()=>expandToggle(`${catKey}_${si}_portMob`))}
+                    {fullBlock(`${catKey}_${si}_portMob`, "📞 Portabilità?", port, v=>setField(catKey,si,"portMob",v), null, null)}
                   </div>
                 );
               }
@@ -1023,45 +1023,45 @@ export default function InviaPda() {
               const kDom  = `${catKey}_${si}_domMob`;
               const kPort = `${catKey}_${si}_portMob`;
               const domPayMeth = sale.fields?.payMeth || "";
-              const domDone  = !!domMob && (domMob==="No" || (domMob==="SÃ¬" && (domPayMeth==="CC" || (domPayMeth==="IBAN" && !!ibanMob))));
-              const ibanSummary = ibanMob ? "Â·Â·Â·"+ibanMob.slice(-4) : null;
+              const domDone  = !!domMob && (domMob==="No" || (domMob==="Sì" && (domPayMeth==="CC" || (domPayMeth==="IBAN" && !!ibanMob))));
+              const ibanSummary = ibanMob ? "···"+ibanMob.slice(-4) : null;
               return (
                 <div>
-                  {chip(kDom, "ðŸ¦ Domiciliazione", domMob, domMob==="SÃ¬"&&ibanSummary?ibanSummary:null, ()=>expandToggle(kDom))}
-                  {fullBlock(kDom, "ðŸ¦ Domiciliazione?", domMob, v=>setField(catKey,si,"domMob",v), ibanMob, "ibanMob")}
+                  {chip(kDom, "🏦 Domiciliazione", domMob, domMob==="Sì"&&ibanSummary?ibanSummary:null, ()=>expandToggle(kDom))}
+                  {fullBlock(kDom, "🏦 Domiciliazione?", domMob, v=>setField(catKey,si,"domMob",v), ibanMob, "ibanMob")}
                   {domMob && (
                     <>
-                      {chip(kPort, "ðŸ“ž PortabilitÃ ", port, null, ()=>expandToggle(kPort))}
-                      {fullBlock(kPort, "ðŸ“ž PortabilitÃ ?", port, v=>setField(catKey,si,"portMob",v), null, null)}
+                      {chip(kPort, "📞 Portabilità", port, null, ()=>expandToggle(kPort))}
+                      {fullBlock(kPort, "📞 Portabilità?", port, v=>setField(catKey,si,"portMob",v), null, null)}
                     </>
                   )}
                 </div>
               );
             })()}
 
-            {/* â”€â”€â”€ FISSO: blocco toggle pre-campi â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            {/* ─── FISSO: blocco toggle pre-campi ─────────────────── */}
             {sale.product && categoria==="Fisso" && (() => {
               const gc = "#28a745";
 
-              // Chip pill: mostra risposta collassata, click â†’ espandi
+              // Chip pill: mostra risposta collassata, click → espandi
               const Chip = ({tkKey, label, answer, extra}) => (
                 <div onClick={()=>expandToggle(tkKey)}
                   style={{marginTop:8,display:"inline-flex",alignItems:"center",gap:6,padding:"4px 10px 4px 8px",
                     borderRadius:20,background:"#edfaf1",border:"1px solid #b2dfca",cursor:"pointer",userSelect:"none"}}>
                   <span style={{fontSize:11,color:"#444"}}>{label}</span>
                   <span style={{fontSize:11,fontWeight:700,
-                    color:answer==="SÃ¬"?"#155724":"#721c24",
-                    background:answer==="SÃ¬"?"#d4edda":"#f8d7da",
+                    color:answer==="Sì"?"#155724":"#721c24",
+                    background:answer==="Sì"?"#d4edda":"#f8d7da",
                     padding:"1px 8px",borderRadius:10}}>{answer}</span>
                   {extra && <span style={{fontSize:10,color:"#555",fontFamily:"monospace"}}>{extra}</span>}
-                  <span style={{fontSize:10,color:gc}}>âœŽ</span>
+                  <span style={{fontSize:10,color:gc}}>✎</span>
                 </div>
               );
 
               // Blocco toggle pieno con opzionale IBAN interno
               const TBlock = ({tkKey, label, cur, onSet, ibanField, ibanSetKey, ibanAna}) => {
                 const collapsed = collapsedToggles[tkKey] !== false;
-                const isDone    = !!cur && (cur==="No" || !ibanSetKey || (cur==="SÃ¬" && !!ibanField));
+                const isDone    = !!cur && (cur==="No" || !ibanSetKey || (cur==="Sì" && !!ibanField));
                 if (isDone && collapsed) return null; // mostrato come chip sopra
                 const autoClose = (v) => {
                   onSet(v);
@@ -1074,22 +1074,22 @@ export default function InviaPda() {
                   <div style={{marginTop:10,padding:"12px 14px",borderRadius:8,background:"#f8f9fa",
                     border:"1px solid #c3e6cb",borderLeft:`3px solid ${gc}`}}>
                     <div style={{fontSize:11,fontWeight:700,color:gc,marginBottom:8}}>{label}</div>
-                    <div style={{display:"flex",gap:8,marginBottom:ibanSetKey&&cur==="SÃ¬"?10:0}}>
-                      {["SÃ¬","No"].map(v=>{const s=cur===v;return(
+                    <div style={{display:"flex",gap:8,marginBottom:ibanSetKey&&cur==="Sì"?10:0}}>
+                      {["Sì","No"].map(v=>{const s=cur===v;return(
                         <button key={v} onClick={()=>autoClose(s?"":v)}
                           style={{flex:1,padding:"10px 12px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",
                             border:s?`2px solid ${gc}`:"2px solid #e0e0e0",
                             background:s?gc:"white",color:s?"white":"#555"}}>{v}</button>
                       );})}
                     </div>
-                    {ibanSetKey && cur==="SÃ¬" && (
+                    {ibanSetKey && cur==="Sì" && (
                       <div>
                         <div style={{fontSize:11,fontWeight:600,color:"#555",marginBottom:6}}>IBAN <span style={{color:"#dc3545"}}>*</span></div>
                         {ibanAna && (
                           <button onClick={()=>{setField(catKey,si,ibanSetKey,ibanAna);collapseToggle(tkKey);}}
                             style={{marginBottom:8,padding:"5px 12px",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",
                               border:`1px solid ${gc}`,background:"white",color:gc,display:"flex",alignItems:"center",gap:6}}>
-                            ðŸ“‹ Copia da anagrafica {ibanField===ibanAna&&<span style={{color:gc}}>âœ“</span>}
+                            📋 Copia da anagrafica {ibanField===ibanAna&&<span style={{color:gc}}>✓</span>}
                           </button>
                         )}
                         <input type="text" value={ibanField||""} onChange={e=>handleIban(e.target.value)}
@@ -1098,14 +1098,14 @@ export default function InviaPda() {
                             fontFamily:"monospace",letterSpacing:1.2,
                             border:ibanField?"2px solid #28a745":"1px solid #d0d0d0",
                             background:ibanField?"#f0fff0":"white"}} />
-                        {!ibanAna&&<div style={{fontSize:10,color:"#888",marginTop:3}}>Nessun IBAN in anagrafica â€” inseriscilo manualmente</div>}
+                        {!ibanAna&&<div style={{fontSize:10,color:"#888",marginTop:3}}>Nessun IBAN in anagrafica — inseriscilo manualmente</div>}
                       </div>
                     )}
                   </div>
                 );
               };
 
-              // â”€â”€ W3 / FASTWEB BUSINESS: PortabilitÃ  â†’ Seconda linea â†’ 2Â° Linea Port. â”€â”€
+              // ── W3 / FASTWEB BUSINESS: Portabilità → Seconda linea → 2° Linea Port. ──
               if ((brand==="w3" || brand==="fastweb") && tipoCliente==="business") {
                 const port1 = sale.fields?.portabilita  || "";
                 const sec   = sale.fields?.secondaLinea || "";
@@ -1113,56 +1113,56 @@ export default function InviaPda() {
                 const k1=`${catKey}_${si}_port1`, k2=`${catKey}_${si}_sec`, k3=`${catKey}_${si}_port2`;
                 return (
                   <div>
-                    {port1 && collapsedToggles[k1]!==false && <Chip tkKey={k1} label="ðŸ“ž PortabilitÃ " answer={port1}/>}
-                    <TBlock tkKey={k1} label="ðŸ“ž PortabilitÃ ?" cur={port1} onSet={v=>setField(catKey,si,"portabilita",v)}/>
+                    {port1 && collapsedToggles[k1]!==false && <Chip tkKey={k1} label="📞 Portabilità" answer={port1}/>}
+                    <TBlock tkKey={k1} label="📞 Portabilità?" cur={port1} onSet={v=>setField(catKey,si,"portabilita",v)}/>
                     {port1 && (<>
-                      {sec && collapsedToggles[k2]!==false && <Chip tkKey={k2} label="ðŸ”Œ Seconda linea" answer={sec}/>}
-                      <TBlock tkKey={k2} label="ðŸ”Œ Seconda linea?" cur={sec} onSet={v=>setField(catKey,si,"secondaLinea",v)}/>
+                      {sec && collapsedToggles[k2]!==false && <Chip tkKey={k2} label="🔌 Seconda linea" answer={sec}/>}
+                      <TBlock tkKey={k2} label="🔌 Seconda linea?" cur={sec} onSet={v=>setField(catKey,si,"secondaLinea",v)}/>
                     </>)}
-                    {port1 && sec==="SÃ¬" && (<>
-                      {port2 && collapsedToggles[k3]!==false && <Chip tkKey={k3} label="ðŸ“ž 2Â° Linea Port." answer={port2}/>}
-                      <TBlock tkKey={k3} label="ðŸ“ž 2Â° Linea, PortabilitÃ ?" cur={port2} onSet={v=>setField(catKey,si,"portabilita2",v)}/>
+                    {port1 && sec==="Sì" && (<>
+                      {port2 && collapsedToggles[k3]!==false && <Chip tkKey={k3} label="📞 2° Linea Port." answer={port2}/>}
+                      <TBlock tkKey={k3} label="📞 2° Linea, Portabilità?" cur={port2} onSet={v=>setField(catKey,si,"portabilita2",v)}/>
                     </>)}
                   </div>
                 );
               }
 
-              // â”€â”€ W3 CONSUMER: Domiciliazione (IBAN) â†’ PortabilitÃ  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // ── W3 CONSUMER: Domiciliazione (IBAN) → Portabilità ─────────────────
               if (brand==="w3" && tipoCliente!=="business") {
                 const domFisso  = sale.fields?.domFisso    || "";
                 const ibanFisso = sale.fields?.ibanFisso   || "";
                 const port1     = sale.fields?.portabilita || "";
                 const ibanAnaF  = anConsumer.iban;
                 const kDom=`${catKey}_${si}_domF`, kPort=`${catKey}_${si}_portF`;
-                const domDone = !!domFisso && (domFisso==="No"||(domFisso==="SÃ¬"&&!!ibanFisso));
+                const domDone = !!domFisso && (domFisso==="No"||(domFisso==="Sì"&&!!ibanFisso));
                 return (
                   <div>
                     {domDone && collapsedToggles[kDom]!==false &&
-                      <Chip tkKey={kDom} label="ðŸ¦ Domiciliazione" answer={domFisso}
-                        extra={domFisso==="SÃ¬"&&ibanFisso?"Â·Â·Â·"+ibanFisso.slice(-4):null}/>}
-                    <TBlock tkKey={kDom} label="ðŸ¦ Domiciliazione?" cur={domFisso}
+                      <Chip tkKey={kDom} label="🏦 Domiciliazione" answer={domFisso}
+                        extra={domFisso==="Sì"&&ibanFisso?"···"+ibanFisso.slice(-4):null}/>}
+                    <TBlock tkKey={kDom} label="🏦 Domiciliazione?" cur={domFisso}
                       onSet={v=>setField(catKey,si,"domFisso",v)}
                       ibanField={ibanFisso} ibanSetKey="ibanFisso" ibanAna={ibanAnaF}/>
                     {domFisso && (<>
-                      {port1 && collapsedToggles[kPort]!==false && <Chip tkKey={kPort} label="ðŸ“ž PortabilitÃ " answer={port1}/>}
-                      <TBlock tkKey={kPort} label="ðŸ“ž PortabilitÃ ?" cur={port1} onSet={v=>setField(catKey,si,"portabilita",v)}/>
+                      {port1 && collapsedToggles[kPort]!==false && <Chip tkKey={kPort} label="📞 Portabilità" answer={port1}/>}
+                      <TBlock tkKey={kPort} label="📞 Portabilità?" cur={port1} onSet={v=>setField(catKey,si,"portabilita",v)}/>
                     </>)}
                   </div>
                 );
               }
 
-              // â”€â”€ TUTTI GLI ALTRI BRAND (Sky, Fastwebâ€¦): solo PortabilitÃ  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // ── TUTTI GLI ALTRI BRAND (Sky, Fastweb…): solo Portabilità ──────────
               const port1 = sale.fields?.portabilita || "";
               const kPort = `${catKey}_${si}_portF`;
               return (
                 <div>
-                  {port1 && collapsedToggles[kPort]!==false && <Chip tkKey={kPort} label="ðŸ“ž PortabilitÃ " answer={port1}/>}
-                  <TBlock tkKey={kPort} label="ðŸ“ž PortabilitÃ ?" cur={port1} onSet={v=>setField(catKey,si,"portabilita",v)}/>
+                  {port1 && collapsedToggles[kPort]!==false && <Chip tkKey={kPort} label="📞 Portabilità" answer={port1}/>}
+                  <TBlock tkKey={kPort} label="📞 Portabilità?" cur={port1} onSet={v=>setField(catKey,si,"portabilita",v)}/>
                 </div>
               );
             })()}
 
-            {/* Campi post-selezione â€” attendono i toggle obbligatori */}
+            {/* Campi post-selezione — attendono i toggle obbligatori */}
             {hasF
                   // Mobile gates
                   && !(categoria==="Mobile" && tipoCliente==="business"  && sale.product && !sale.fields?.portMob)
@@ -1176,7 +1176,7 @@ export default function InviaPda() {
             {isSkyTV && renderSkyTvFields(catKey, si, sale)}
             {!hasF && !isSkyTV && sale.product && (
               <div style={{marginTop:10,background:"white",borderRadius:6,padding:"7px 12px",fontSize:11,color:catColor,borderLeft:`2px solid ${catColor}`}}>
-                âœ“ Selezionato: <b>{sale.product}</b>
+                ✓ Selezionato: <b>{sale.product}</b>
               </div>
             )}
           </div>
@@ -1185,8 +1185,8 @@ export default function InviaPda() {
     );
   };
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  // â”€â”€ CART VIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ════════════════════════════════════════════════════════════════════════════
+  // ── CART VIEW ──────────────────────────────────────────────────────────────
   if (showCart) {
     const curI = colItems();
     const bObj = ALL_BRANDS.find(b => b.id === brand);
@@ -1195,8 +1195,8 @@ export default function InviaPda() {
       allG.push({ brandId:brand, brandLabel:bObj.label, brandColor:bObj.color, brandIcon:bObj.badge||bObj.label, items:curI, isCurrent:true });
     const tp = allG.reduce((s,g) => s + g.items.length, 0);
     const clienteLabel = tipoCliente==="privato"
-      ? (anConsumer.nome + " " + anConsumer.cognome).trim() || "â€”"
-      : anBusiness.ragioneSociale || "â€”";
+      ? (anConsumer.nome + " " + anConsumer.cognome).trim() || "—"
+      : anBusiness.ragioneSociale || "—";
     return (
       <div style={{fontFamily:"Inter,-apple-system,sans-serif",background:"#f0f2f5",minHeight:"100vh",padding:16,maxWidth:960,margin:"0 auto"}}>
         {toast && <div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",background:"#28a745",color:"#fff",padding:"12px 28px",borderRadius:10,fontSize:14,fontWeight:700,boxShadow:"0 6px 20px rgba(0,0,0,.2)",zIndex:9999}}>{toast}</div>}
@@ -1204,8 +1204,8 @@ export default function InviaPda() {
         <div style={{background:"linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)",borderRadius:16,padding:"20px 24px",marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <div>
-              <div style={{color:"#fff",fontWeight:800,fontSize:20,marginBottom:4}}>ðŸ›’ Carrello ordini</div>
-              <div style={{color:"rgba(255,255,255,.6)",fontSize:12}}>{clienteLabel} Â· {lookupValue||"â€”"}</div>
+              <div style={{color:"#fff",fontWeight:800,fontSize:20,marginBottom:4}}>🛒 Carrello ordini</div>
+              <div style={{color:"rgba(255,255,255,.6)",fontSize:12}}>{clienteLabel} · {lookupValue||"—"}</div>
             </div>
             <div style={{display:"flex",gap:8}}>
               <div style={{background:"rgba(255,255,255,.15)",borderRadius:10,padding:"8px 16px",textAlign:"center"}}>
@@ -1222,7 +1222,7 @@ export default function InviaPda() {
         {/* Cart groups */}
         {allG.length === 0
           ? <div style={{background:"#fff",borderRadius:12,padding:40,textAlign:"center",color:"#999"}}>
-              <div style={{fontSize:40}}>ðŸ›’</div>
+              <div style={{fontSize:40}}>🛒</div>
               <div style={{fontSize:15,fontWeight:600,marginTop:10}}>Carrello vuoto</div>
             </div>
           : allG.map((g, gi) => (
@@ -1236,12 +1236,12 @@ export default function InviaPda() {
                 <div style={{display:"flex",gap:6}}>
                   <button onClick={()=>g.isCurrent?setShowCart(false):editCG(gi)}
                     style={{background:"rgba(255,255,255,.25)",border:"none",borderRadius:6,padding:"5px 14px",color:"#fff",fontSize:11,cursor:"pointer",fontWeight:700}}>
-                    âœï¸ Modifica
+                    ✏️ Modifica
                   </button>
                   {!g.isCurrent && (
                     <button onClick={()=>rmCG(gi)}
                       style={{background:"rgba(255,0,0,.25)",border:"none",borderRadius:6,padding:"5px 14px",color:"#fff",fontSize:11,cursor:"pointer",fontWeight:600}}>
-                      âœ• Rimuovi
+                      ✕ Rimuovi
                     </button>
                   )}
                 </div>
@@ -1256,7 +1256,7 @@ export default function InviaPda() {
         <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
           <button onClick={()=>setShowCart(false)}
             style={{padding:"11px 22px",borderRadius:10,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:13,fontWeight:600,cursor:"pointer"}}>
-            â† Torna al form
+            ← Torna al form
           </button>
           <button onClick={()=>{ addCart(); setShowCart(false); }}
             style={{padding:"11px 22px",borderRadius:10,border:"2px solid #6f42c1",background:"#F3EEFB",color:"#6f42c1",fontSize:13,fontWeight:700,cursor:"pointer"}}>
@@ -1264,7 +1264,7 @@ export default function InviaPda() {
           </button>
           <button onClick={finalSubmit} disabled={tp===0}
             style={{padding:"11px 36px",borderRadius:10,border:"none",background:tp>0?"linear-gradient(135deg,#28a745,#20c997)":"#ccc",color:"#fff",fontSize:14,fontWeight:800,cursor:tp>0?"pointer":"not-allowed",marginLeft:"auto"}}>
-            ðŸ“¨ Invia tutto ({tp} prodotti)
+            📨 Invia tutto ({tp} prodotti)
           </button>
         </div>
       </div>
@@ -1280,30 +1280,30 @@ export default function InviaPda() {
       {/* HEADER */}
       <div style={{background:"linear-gradient(135deg,#1B3A5C 0%,#2E75B6 100%)",borderRadius:12,padding:"14px 20px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:36,height:36,background:"rgba(255,255,255,0.2)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>ðŸ“‹</div>
+          <div style={{width:36,height:36,background:"rgba(255,255,255,0.2)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>📋</div>
           <div>
-            <div style={{color:"white",fontWeight:700,fontSize:16}}>CRM â€” Inserimento Contratto</div>
+            <div style={{color:"white",fontWeight:700,fontSize:16}}>CRM — Inserimento Contratto</div>
             <div style={{color:"rgba(255,255,255,0.7)",fontSize:11,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-              Multi-Brand Â· v5.5
-              {venditore    && <Pill>ðŸ‘¤ {venditore}</Pill>}
-              {tipoCliente  && <Pill>{tipoCliente==="privato"?"ðŸ‘¤ Consumer":"ðŸ¢ Business"}</Pill>}
-              {currentBrand && <Pill>ðŸ· {currentBrand.label}</Pill>}
+              Multi-Brand · v5.5
+              {venditore    && <Pill>👤 {venditore}</Pill>}
+              {tipoCliente  && <Pill>{tipoCliente==="privato"?"👤 Consumer":"🏢 Business"}</Pill>}
+              {currentBrand && <Pill>🏷 {currentBrand.label}</Pill>}
             </div>
           </div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
           <button onClick={()=>setShowCart(true)}
             style={{background:tCI>0?"rgba(255,255,255,.25)":"rgba(255,255,255,.1)",border:"none",borderRadius:8,padding:"6px 14px",color:"white",fontSize:12,cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
-            ðŸ›’
+            🛒
             {tCI>0 && <span style={{background:"#FFD800",color:"#333",borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:800}}>{tCI}</span>}
           </button>
           {brand && step===4 && (
             <button onClick={addCart}
               style={{background:"rgba(255,255,255,.15)",border:"none",borderRadius:6,padding:"6px 12px",color:"white",fontSize:11,cursor:"pointer",fontWeight:600}}>
-              ðŸ“¦ Cambia brand
+              📦 Cambia brand
             </button>
           )}
-          <button onClick={reset} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:6,padding:"6px 12px",color:"white",fontSize:11,cursor:"pointer"}}>â†© Ricomincia</button>
+          <button onClick={reset} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:6,padding:"6px 12px",color:"white",fontSize:11,cursor:"pointer"}}>↩ Ricomincia</button>
         </div>
       </div>
 
@@ -1317,18 +1317,18 @@ export default function InviaPda() {
                 background:active?"#2E75B6":done?"#28a745":"#e9ecef",
                 color:active||done?"white":"#aaa",cursor:done?"pointer":"default",
                 overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-              {done?"âœ“ ":""}{s}
+              {done?"✓ ":""}{s}
             </div>
           );
         })}
       </div>
 
-      {/* CART BAR â€” visibile quando il carrello ha qualcosa */}
+      {/* CART BAR — visibile quando il carrello ha qualcosa */}
       {cart.length > 0 && (
         <div onClick={()=>setShowCart(true)}
           style={{background:"linear-gradient(90deg,#1a1a2e,#16213e)",borderRadius:10,padding:"10px 16px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-            <span>ðŸ›’</span>
+            <span>🛒</span>
             <span style={{color:"#fff",fontSize:12,fontWeight:600}}>Carrello:</span>
             {cart.map((g,i) => (
               <span key={i} style={{background:g.brandColor,color:"#fff",borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700}}>
@@ -1336,19 +1336,19 @@ export default function InviaPda() {
               </span>
             ))}
           </div>
-          <span style={{color:"rgba(255,255,255,.5)",fontSize:11}}>Vedi â†’ </span>
+          <span style={{color:"rgba(255,255,255,.5)",fontSize:11}}>Vedi → </span>
         </div>
       )}
 
-      {/* â•â• STEP 1 â•â• */}
+      {/* ══ STEP 1 ══ */}
       {step===1 && (
-        <StepCard title="Step 1 â€” Venditore" color="#e83e8c" icon="ðŸ‘¤">
+        <StepCard title="Step 1 — Venditore" color="#e83e8c" icon="👤">
           <div style={{maxWidth:360}}>
             <Label text="Seleziona il tuo nome" required note="Pre-compilato dal login" />
             <select value={venditore} onChange={e=>setVenditore(e.target.value)}
               style={{width:"100%",padding:"10px 12px",borderRadius:8,fontSize:13,
                 border:venditore?"2px solid #28a745":"1px solid #d0d0d0",background:venditore?"#f0fff0":"white"}}>
-              <option value="">â€” Seleziona venditore â€”</option>
+              <option value="">— Seleziona venditore —</option>
               {VENDITORI.map(v=><option key={v}>{v}</option>)}
             </select>
           </div>
@@ -1356,11 +1356,11 @@ export default function InviaPda() {
         </StepCard>
       )}
 
-      {/* â•â• STEP 2 â•â• */}
+      {/* ══ STEP 2 ══ */}
       {step===2 && (
-        <StepCard title="Step 2 â€” Tipo Cliente e Anagrafica" color="#6f42c1" icon="ðŸ§‘â€ðŸ’¼">
+        <StepCard title="Step 2 — Tipo Cliente e Anagrafica" color="#6f42c1" icon="🧑‍💼">
           <div style={{display:"flex",gap:12,marginBottom:16}}>
-            {[{id:"privato",icon:"ðŸ‘¤",label:"Consumer",desc:"Persona fisica"},{id:"business",icon:"ðŸ¢",label:"Business",desc:"Azienda / P.IVA"}].map(o=>(
+            {[{id:"privato",icon:"👤",label:"Consumer",desc:"Persona fisica"},{id:"business",icon:"🏢",label:"Business",desc:"Azienda / P.IVA"}].map(o=>(
               <button key={o.id}
                 onClick={()=>{setTipoCliente(o.id);setLookupDone(false);setClienteFound(false);setLookupValue("");setBrand(null);setAllSales({});}}
                 style={{flex:1,padding:12,borderRadius:10,
@@ -1375,24 +1375,24 @@ export default function InviaPda() {
           {tipoCliente && (
             <div style={{background:"#f8f9fa",borderRadius:8,padding:14,marginBottom:16}}>
               <div style={{fontSize:12,fontWeight:600,color:"#555",marginBottom:8}}>
-                {tipoCliente==="privato"?"Codice Fiscale â€” ricerca cliente esistente":"Partita IVA â€” ricerca cliente esistente"}
+                {tipoCliente==="privato"?"Codice Fiscale — ricerca cliente esistente":"Partita IVA — ricerca cliente esistente"}
               </div>
               <div style={{display:"flex",gap:8}}>
                 <input type="text" placeholder={tipoCliente==="privato"?"Es. Rssmra80a01h501u":"Es. 12345678901"}
                   value={lookupValue} onChange={e=>setLookupValue(e.target.value)}
                   style={{flex:1,padding:"10px 12px",borderRadius:8,border:"1px solid #d0d0d0",fontSize:13,fontFamily:"monospace",letterSpacing:1.5}} />
                 <button onClick={()=>{setClienteFound(true);setLookupDone(true);}}
-                  style={{padding:"10px 18px",borderRadius:8,border:"none",background:"#6f42c1",color:"white",fontSize:12,fontWeight:700,cursor:"pointer"}}>ðŸ” Cerca</button>
+                  style={{padding:"10px 18px",borderRadius:8,border:"none",background:"#6f42c1",color:"white",fontSize:12,fontWeight:700,cursor:"pointer"}}>🔍 Cerca</button>
                 <button onClick={()=>{setClienteFound(false);setLookupDone(true);}}
-                  style={{padding:"10px 14px",borderRadius:8,border:"1px solid #ccc",background:"white",color:"#555",fontSize:12,cursor:"pointer"}}>ðŸ‘¤ Nuovo</button>
+                  style={{padding:"10px 14px",borderRadius:8,border:"1px solid #ccc",background:"white",color:"#555",fontSize:12,cursor:"pointer"}}>👤 Nuovo</button>
               </div>
-              {clienteFound    && <div style={{marginTop:8,background:"#d4edda",borderRadius:6,padding:"8px 12px",fontSize:12,color:"#155724"}}>âœ… Cliente trovato! Dati pre-compilati.</div>}
-              {lookupDone&&!clienteFound && <div style={{marginTop:8,background:"#fff3cd",borderRadius:6,padding:"8px 12px",fontSize:12,color:"#856404"}}>ðŸ‘¤ Nuovo cliente â€” compila i dati manualmente.</div>}
+              {clienteFound    && <div style={{marginTop:8,background:"#d4edda",borderRadius:6,padding:"8px 12px",fontSize:12,color:"#155724"}}>✅ Cliente trovato! Dati pre-compilati.</div>}
+              {lookupDone&&!clienteFound && <div style={{marginTop:8,background:"#fff3cd",borderRadius:6,padding:"8px 12px",fontSize:12,color:"#856404"}}>👤 Nuovo cliente — compila i dati manualmente.</div>}
             </div>
           )}
           {tipoCliente==="privato"&&lookupDone && (
             <div>
-              <SectionTitle>ðŸ“ Dati Anagrafici <Tag c="#6f42c1" bg="#F3EEFB">Consumer</Tag></SectionTitle>
+              <SectionTitle>📝 Dati Anagrafici <Tag c="#6f42c1" bg="#F3EEFB">Consumer</Tag></SectionTitle>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px 16px"}}>
                 <AField label="Nome"    required value={anConsumer.nome}    onChange={v=>setAnConsumer(p=>({...p,nome:v}))}    pf={clienteFound} ph="es. Mario" />
                 <AField label="Cognome" required value={anConsumer.cognome} onChange={v=>setAnConsumer(p=>({...p,cognome:v}))} pf={clienteFound} ph="es. Rossi" />
@@ -1401,7 +1401,7 @@ export default function InviaPda() {
                 <AField label="Numero Fisso"       value={anConsumer.numeroFisso} onChange={v=>setAnConsumer(p=>({...p,numeroFisso:v}))} pf={clienteFound} ph="06 1234567" />
                 <AField label="Recapito Cellulare" value={anConsumer.cellulare}   onChange={v=>setAnConsumer(p=>({...p,cellulare:v}))}   pf={clienteFound} ph="333 1234567" />
                 <AField label="IBAN"      value={anConsumer.iban}     onChange={v=>setAnConsumer(p=>({...p,iban:v}))}     pf={clienteFound} ph="It00..." mono span2 />
-                <AField label="Domicilio" value={anConsumer.domicilio} onChange={v=>setAnConsumer(p=>({...p,domicilio:v}))} pf={clienteFound} ph="Via, Numero, CAP, CittÃ " span2 />
+                <AField label="Domicilio" value={anConsumer.domicilio} onChange={v=>setAnConsumer(p=>({...p,domicilio:v}))} pf={clienteFound} ph="Via, Numero, CAP, Città" span2 />
                 <div style={{gridColumn:"1 / -1"}}>
                   <div style={{fontSize:11,fontWeight:600,color:"#555",marginBottom:3}}>Note</div>
                   <textarea value={anConsumer.note} onChange={e=>setAnConsumer(p=>({...p,note:e.target.value}))} placeholder="Note..." rows={3}
@@ -1412,7 +1412,7 @@ export default function InviaPda() {
           )}
           {tipoCliente==="business"&&lookupDone && (
             <div>
-              <SectionTitle>ðŸ“ Dati Anagrafici <Tag c="#6f42c1" bg="#F3EEFB">Business</Tag></SectionTitle>
+              <SectionTitle>📝 Dati Anagrafici <Tag c="#6f42c1" bg="#F3EEFB">Business</Tag></SectionTitle>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px 16px"}}>
                 <AField label="Ragione Sociale"    required value={anBusiness.ragioneSociale} onChange={v=>setAnBusiness(p=>({...p,ragioneSociale:v}))} pf={clienteFound} ph="Rossi S.r.l." />
                 <AField label="Partita IVA"         required value={anBusiness.piva}           onChange={v=>setAnBusiness(p=>({...p,piva:v}))}           pf={clienteFound} ph="12345678901" mono />
@@ -1423,7 +1423,7 @@ export default function InviaPda() {
                 <AField label="Pec"                          value={anBusiness.pec}            onChange={v=>setAnBusiness(p=>({...p,pec:v}))}            pf={clienteFound} ph="azienda@pec.it" />
                 <AField label="Codice Univoco / SDI"         value={anBusiness.codiceUnivoco}  onChange={v=>setAnBusiness(p=>({...p,codiceUnivoco:v}))}  pf={clienteFound} ph="Abc1234" mono />
                 <AField label="IBAN"        value={anBusiness.iban}       onChange={v=>setAnBusiness(p=>({...p,iban:v}))}       pf={clienteFound} ph="It00..." mono span2 />
-                <AField label="Sede Legale" value={anBusiness.sedeLegale} onChange={v=>setAnBusiness(p=>({...p,sedeLegale:v}))} pf={clienteFound} ph="Via, Numero, CAP, CittÃ " span2 />
+                <AField label="Sede Legale" value={anBusiness.sedeLegale} onChange={v=>setAnBusiness(p=>({...p,sedeLegale:v}))} pf={clienteFound} ph="Via, Numero, CAP, Città" span2 />
                 <div style={{gridColumn:"1 / -1"}}>
                   <div style={{fontSize:11,fontWeight:600,color:"#555",marginBottom:3}}>Note</div>
                   <textarea value={anBusiness.note} onChange={e=>setAnBusiness(p=>({...p,note:e.target.value}))} placeholder="Note..." rows={3}
@@ -1436,12 +1436,12 @@ export default function InviaPda() {
         </StepCard>
       )}
 
-      {/* â•â• STEP 3 â•â• */}
+      {/* ══ STEP 3 ══ */}
       {step===3 && (
-        <StepCard title="Step 3 â€” Seleziona Brand" color="#2E75B6" icon="ðŸ·ï¸">
+        <StepCard title="Step 3 — Seleziona Brand" color="#2E75B6" icon="🏷️">
           {tipoCliente==="business" && (
             <div style={{background:"#F3EEFB",borderRadius:6,padding:"6px 12px",fontSize:11,color:"#6f42c1",marginBottom:12,fontWeight:600}}>
-              ðŸ¢ ModalitÃ  Business â€” tutti i brand disponibili incluso Dojo
+              🏢 Modalità Business — tutti i brand disponibili incluso Dojo
             </div>
           )}
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
@@ -1456,8 +1456,8 @@ export default function InviaPda() {
                 </div>
                 <div style={{fontSize:9,color:"#999",lineHeight:1.5,marginBottom:4}}>{b.desc}</div>
                 <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                  {b.onlyBusiness && <Tag c="#6f42c1" bg="#F3EEFB">ðŸ”’ Solo Business</Tag>}
-                  {brand===b.id   && <Tag c="#155724" bg="#d4edda">âœ“ Selezionato</Tag>}
+                  {b.onlyBusiness && <Tag c="#6f42c1" bg="#F3EEFB">🔒 Solo Business</Tag>}
+                  {brand===b.id   && <Tag c="#155724" bg="#d4edda">✓ Selezionato</Tag>}
                 </div>
               </button>
             ))}
@@ -1466,15 +1466,15 @@ export default function InviaPda() {
         </StepCard>
       )}
 
-      {/* â•â• STEP 4 â€” PRODOTTI (identico per tutti i brand) â•â• */}
+      {/* ══ STEP 4 — PRODOTTI (identico per tutti i brand) ══ */}
       {step===4 && (
-        <StepCard title="Step 4 â€” Prodotti" color={currentBrand?.color||"#2E75B6"} icon="ðŸ“‚"
-          badge={`${currentBrand?.label} Â· ${tipoCliente==="business"?"Business":"Consumer"}`}>
+        <StepCard title="Step 4 — Prodotti" color={currentBrand?.color||"#2E75B6"} icon="📂"
+          badge={`${currentBrand?.label} · ${tipoCliente==="business"?"Business":"Consumer"}`}>
           {Object.keys(brandProdotti).length>0
             ? Object.entries(brandProdotti).map(([cat, prods]) => renderCategoria(cat, prods))
             : (
               <div style={{textAlign:"center",padding:"40px 20px"}}>
-                <div style={{fontSize:36,marginBottom:8}}>ðŸš§</div>
+                <div style={{fontSize:36,marginBottom:8}}>🚧</div>
                 <div style={{fontSize:14,fontWeight:600,color:"#666"}}>Nessun prodotto configurato per questo profilo.</div>
               </div>
             )
@@ -1483,11 +1483,11 @@ export default function InviaPda() {
         </StepCard>
       )}
 
-      {/* â•â• STEP 5 â•â• */}
+      {/* ══ STEP 5 ══ */}
       {step===5 && (
-        <StepCard title="Step 5 â€” Allegati" color="#17a2b8" icon="ðŸ“Ž">
+        <StepCard title="Step 5 — Allegati" color="#17a2b8" icon="📎">
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
-            {[{label:"Documento d'identitÃ ",icon:"ðŸªª"},{label:"Contratti",icon:"ðŸ“„"},{label:"Altro",icon:"ðŸ“"}].map(a=>(
+            {[{label:"Documento d'identità",icon:"🪪"},{label:"Contratti",icon:"📄"},{label:"Altro",icon:"📁"}].map(a=>(
               <div key={a.label} style={{border:"2px dashed #ccc",borderRadius:10,padding:"20px 12px",textAlign:"center",background:"#fafbfc",cursor:"pointer"}}>
                 <div style={{fontSize:32,marginBottom:6}}>{a.icon}</div>
                 <div style={{fontSize:12,fontWeight:700,color:"#333",marginBottom:4}}>{a.label}</div>
@@ -1500,17 +1500,17 @@ export default function InviaPda() {
         </StepCard>
       )}
 
-      {/* â•â• STEP 6 â•â• */}
+      {/* ══ STEP 6 ══ */}
       {step===6 && (
-        <StepCard title="Step 6 â€” Note / Promemoria" color="#e83e8c" icon="ðŸ“">
+        <StepCard title="Step 6 — Note / Promemoria" color="#e83e8c" icon="📝">
           <NoteStep />
           <div style={{background:"#f8f9fa",borderRadius:8,padding:14,marginTop:16}}>
-            <div style={{fontSize:11,fontWeight:700,color:"#333",marginBottom:10,textTransform:"uppercase"}}>ðŸª Attribuzione vendita</div>
+            <div style={{fontSize:11,fontWeight:700,color:"#333",marginBottom:10,textTransform:"uppercase"}}>🏪 Attribuzione vendita</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 16px"}}>
               <div>
                 <Label text="Negozio" required note="Pre-compilato dal login" />
                 <select style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid #d0d0d0",fontSize:12}}>
-                  <option value="">â€” Seleziona negozio â€”</option>
+                  <option value="">— Seleziona negozio —</option>
                   {NEGOZI.map(n=><option key={n}>{n}</option>)}
                 </select>
               </div>
@@ -1522,19 +1522,19 @@ export default function InviaPda() {
             </div>
           </div>
           <div style={{display:"flex",gap:10,justifyContent:"space-between",marginTop:16,paddingTop:14,borderTop:"1px solid #f0f0f0",flexWrap:"wrap"}}>
-            <button onClick={goBack} style={{padding:"9px 22px",borderRadius:8,border:"1px solid #ccc",background:"white",color:"#555",fontSize:13,fontWeight:600,cursor:"pointer"}}>â† Torna indietro</button>
+            <button onClick={goBack} style={{padding:"9px 22px",borderRadius:8,border:"1px solid #ccc",background:"white",color:"#555",fontSize:13,fontWeight:600,cursor:"pointer"}}>← Torna indietro</button>
             <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
               <button onClick={addCart}
                 style={{padding:"9px 20px",borderRadius:8,border:"2px solid #6f42c1",background:"#F3EEFB",color:"#6f42c1",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                ðŸ“¦ Aggiungi e cambia brand
+                📦 Aggiungi e cambia brand
               </button>
               <button onClick={()=>setShowCart(true)}
                 style={{padding:"9px 20px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#1a1a2e,#0f3460)",color:"white",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                ðŸ›’ Carrello{tCI>0?" ("+tCI+")":""}
+                🛒 Carrello{tCI>0?" ("+tCI+")":""}
               </button>
               <button onClick={finalSubmit}
                 style={{padding:"9px 28px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#28a745,#20c997)",color:"white",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 2px 8px rgba(40,167,69,0.3)"}}>
-                ðŸ“¨ Invia tutto
+                📨 Invia tutto
               </button>
             </div>
           </div>
@@ -1543,18 +1543,18 @@ export default function InviaPda() {
 
       {/* FOOTER */}
       <div style={{background:"#EBF3FB",borderRadius:10,padding:12,border:"1px solid #BDD9F2",marginTop:6}}>
-        <div style={{fontSize:10,fontWeight:700,color:"#1B3A5C",marginBottom:4}}>V5.5 â€” STRUTTURA UNIFICATA TUTTI I BRAND Â· LUCE & GAS ACCORPATE Â· MENU A COMPARSA INTEGRATO</div>
+        <div style={{fontSize:10,fontWeight:700,color:"#1B3A5C",marginBottom:4}}>V5.5 — STRUTTURA UNIFICATA TUTTI I BRAND · LUCE & GAS ACCORPATE · MENU A COMPARSA INTEGRATO</div>
         <div style={{fontSize:10,color:"#2E75B6",lineHeight:1.8}}>
-          <div>â€¢ Tutti i brand usano la stessa struttura: riquadri prodotto â†’ campi MENU A COMPARSA â†’ piÃ¹ vendite per categoria</div>
-          <div>â€¢ W3: Mobile Â· Fisso Â· Luce &amp; Gas (accorpate, selezione ðŸ’¡Luce / ðŸ”¥Gas) Â· Multi-Servizi</div>
-          <div>â€¢ Sky Abbonamenti: prodotto â†’ Pacchetti TV â†’ Multivision (decoder) â†’ Tecnologia (Parabola/Fibra)</div>
+          <div>• Tutti i brand usano la stessa struttura: riquadri prodotto → campi MENU A COMPARSA → più vendite per categoria</div>
+          <div>• W3: Mobile · Fisso · Luce &amp; Gas (accorpate, selezione 💡Luce / 🔥Gas) · Multi-Servizi</div>
+          <div>• Sky Abbonamenti: prodotto → Pacchetti TV → Multivision (decoder) → Tecnologia (Parabola/Fibra)</div>
         </div>
       </div>
     </div>
   );
 }
 
-// â”€â”€ HELPERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── HELPERS ───────────────────────────────────────────────────────────────────
 
 function StepCard({title,color,icon,badge,children}) {
   return (
@@ -1571,13 +1571,13 @@ function StepCard({title,color,icon,badge,children}) {
 function NavBar({onBack,onNext,canNext,isFirst}) {
   return (
     <div style={{display:"flex",gap:10,justifyContent:isFirst?"flex-end":"space-between",marginTop:20,paddingTop:14,borderTop:"1px solid #f0f0f0"}}>
-      {!isFirst && <button onClick={onBack} style={{padding:"9px 22px",borderRadius:8,border:"1px solid #ccc",background:"white",color:"#555",fontSize:13,fontWeight:600,cursor:"pointer"}}>â† Torna indietro</button>}
+      {!isFirst && <button onClick={onBack} style={{padding:"9px 22px",borderRadius:8,border:"1px solid #ccc",background:"white",color:"#555",fontSize:13,fontWeight:600,cursor:"pointer"}}>← Torna indietro</button>}
       <button onClick={onNext} disabled={!canNext}
         style={{padding:"9px 26px",borderRadius:8,border:"none",
           background:canNext?"linear-gradient(135deg,#1B3A5C,#2E75B6)":"#ccc",
           color:"white",fontSize:13,fontWeight:700,cursor:canNext?"pointer":"not-allowed",
           boxShadow:canNext?"0 2px 6px rgba(46,117,182,0.3)":"none"}}>
-        Vai avanti â†’
+        Vai avanti →
       </button>
     </div>
   );
@@ -1626,7 +1626,7 @@ function NoteStep() {
       <div style={{textAlign:"center",marginBottom:show?16:0}}>
         <div style={{fontSize:13,fontWeight:600,color:"#333",marginBottom:10}}>Vuoi aggiungere una nota o fissare un promemoria?</div>
         <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-          <button onClick={()=>setShow(true)}  style={{padding:"8px 28px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",border:show?"2px solid #28a745":"2px solid #e0e0e0",background:show?"#d4edda":"white",color:show?"#155724":"#666"}}>SÃ¬</button>
+          <button onClick={()=>setShow(true)}  style={{padding:"8px 28px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",border:show?"2px solid #28a745":"2px solid #e0e0e0",background:show?"#d4edda":"white",color:show?"#155724":"#666"}}>Sì</button>
           <button onClick={()=>setShow(false)} style={{padding:"8px 28px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",border:!show?"2px solid #dc3545":"2px solid #e0e0e0",background:!show?"#f8d7da":"white",color:!show?"#721c24":"#666"}}>No</button>
         </div>
       </div>
@@ -1634,7 +1634,7 @@ function NoteStep() {
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginTop:16}}>
           <div style={{border:"1px solid #e0e0e0",borderRadius:10,padding:14,background:"#fafbfc"}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-              <span style={{fontSize:18}}>ðŸ“‹</span>
+              <span style={{fontSize:18}}>📋</span>
               <div><div style={{fontSize:13,fontWeight:700}}>Nota</div><div style={{fontSize:10,color:"#999"}}>Archiviata nella vendita</div></div>
             </div>
             <textarea placeholder="Scrivi una nota..." rows={3}
@@ -1642,7 +1642,7 @@ function NoteStep() {
           </div>
           <div style={{border:"1px solid #e0e0e0",borderRadius:10,padding:14,background:"#fafbfc"}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-              <span style={{fontSize:18}}>ðŸ“…</span>
+              <span style={{fontSize:18}}>📅</span>
               <div><div style={{fontSize:13,fontWeight:700}}>Promemoria</div><div style={{fontSize:10,color:"#999"}}>Fissa nel calendario</div></div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
