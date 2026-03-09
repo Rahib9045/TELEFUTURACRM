@@ -917,17 +917,25 @@ export default function InviaPda() {
                 <button onClick={() => removeSale(catKey, si)} className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center bg-rose-500/10 text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-500 hover:text-white text-xs">✕</button>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-                <div>
-                  <Label text={`Prodotto ${si + 1}`} required />
-                  <select
-                    value={sale.product}
-                    onChange={e => setProd(catKey, si, e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-sm text-slate-100 outline-none focus:border-violet-500/50"
-                  >
-                    <option value="">— Scegli Prodotto —</option>
-                    {prodotti.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
+              <div className="mb-2">
+                <Label text={`Prodotto ${si + 1}`} required />
+                <div className="flex flex-wrap gap-3 mt-3">
+                  {prodotti.map(p => {
+                    const sel = sale.product === p;
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => setProd(catKey, si, sel ? "" : p)}
+                        style={sel ? { backgroundColor: catColor, borderColor: catColor, color: "white" } : {}}
+                        className={`py-2.5 px-5 rounded-xl text-sm font-bold transition-all border ${sel
+                            ? "shadow-lg shadow-black/20"
+                            : "bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:text-white"
+                          }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
