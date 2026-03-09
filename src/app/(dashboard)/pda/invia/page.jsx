@@ -70,6 +70,7 @@ const PRODOTTI = {
 const CAT_FIELDS = {
   "Mobile": [
     { key: "serialeSim", label: "Seriale SIM Operatore", type: "text", ph: "89398808...", required: true },
+    { key: "operatoreDon", label: "Operatore di provenienza", type: "select", opts: [], fallbackOpts: "DONOR_MOBILE", required: true },
     { key: "numeroMnp", label: "Numero Telefono MNP", type: "text", ph: "es. 3331234567" },
     { key: "serialeDon", label: "Seriale SIM Donating", type: "text", ph: "893910..." },
     { key: "device", label: "Device", type: "text", ph: "es. Samsung S25" },
@@ -77,6 +78,7 @@ const CAT_FIELDS = {
   ],
   "Fisso": [
     { key: "indirizzoImp", label: "Indirizzo Impianto", type: "text", ph: "es. Via Roma 1, 00100 Roma", required: true, span2: true },
+    { key: "operatoreDon", label: "Operatore di provenienza", type: "select", opts: [], fallbackOpts: "DONOR_FISSO", required: true },
     { key: "gnpLinea1", label: "N. Telefono GNP Linea 1", type: "text", ph: "es. 0612345678" },
     { key: "codMigr1", label: "Codice Migrazione L.1", type: "text", ph: "es. MIG123456" },
     { key: "gnpLinea2", label: "N. Telefono GNP Linea 2", type: "text", ph: "es. 0612345679" },
@@ -119,6 +121,9 @@ const SKY_TECNOLOGIA = ["Parabola", "Fibra"];
 
 const CAT_ICONS = { "Mobile": "📱", "Fisso": "🏠", "Luce & Gas": "⚡", "Multi-servizi": "🛡️", "Abbonamenti SKY": "📺", "POS": "💳" };
 const CAT_COLORS = { "Mobile": "#2E75B6", "Fisso": "#28a745", "Luce & Gas": "#fd7e14", "Multi-servizi": "#6f42c1", "Abbonamenti SKY": "#0072CE", "POS": "#6f42c1" };
+
+const DONOR_MOBILE = ["", "TIM", "Vodafone", "WindTre", "Iliad", "Fastweb Mobile", "PosteMobile", "ho. Mobile", "Kena Mobile", "Very Mobile", "CoopVoce", "Spusu", "Lyca Mobile", "1Mobile", "Tiscali Mobile", "Digi Mobil", "Noitel", "Optima Mobile", "Feder Mobile", "Rabona Mobile", "Elimobile", "BT Italia", "Segnoverde Mobile", "Uno Mobile", "Saily", "Visitel", "Ops! Mobile"];
+const DONOR_FISSO = ["", "TIM", "Vodafone", "WindTre", "Fastweb", "Iliad", "Tiscali", "Aruba", "PosteMobile", "Vianova", "Linkem", "Eolo", "BT Italia", "Retelit", "Unidata", "Uno Communications"];
 
 const STEP_LABELS = ["Venditore", "Cliente + Anagrafica", "Brand", "Prodotti", "Allegati", "Note"];
 
@@ -416,7 +421,7 @@ export default function InviaPda() {
                     onChange={e => setField(catKey, si, f.key, e.target.value)}
                     className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-sm text-slate-300 outline-none focus:border-violet-500/50"
                   >
-                    {f.opts.map(o => <option key={o} value={o}>{o || "— Seleziona —"}</option>)}
+                    {(f.fallbackOpts === "DONOR_MOBILE" ? DONOR_MOBILE : f.fallbackOpts === "DONOR_FISSO" ? DONOR_FISSO : f.opts).map(o => <option key={o} value={o}>{o || "— Seleziona —"}</option>)}
                   </select>
                 ) : (
                   <input
@@ -589,7 +594,17 @@ export default function InviaPda() {
           )}
 
           {lineeSet && portSet && payDone && numPort > 0 && (
-            <div className="pt-4 animate-in fade-in duration-200">
+            <div className="pt-4 border-t border-white/5 animate-in fade-in duration-200">
+              <div className="mb-6">
+                <Label text="Operatore di provenienza" required color={smeColor} />
+                <select
+                  value={sale.fields?.smeOperatoreDon || ""}
+                  onChange={e => setField(catKey, si, "smeOperatoreDon", e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-sm text-slate-300 outline-none focus:border-emerald-500/50 mt-2"
+                >
+                  {DONOR_FISSO.map(o => <option key={o} value={o}>{o || "— Seleziona —"}</option>)}
+                </select>
+              </div>
               <div className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-4 px-2">
                 📞 Dati portabilità per {numPort} linee
               </div>
@@ -629,13 +644,15 @@ export default function InviaPda() {
     if (!fields || fields.length === 0) return null;
     // Mobile: rimuovi MNP e Donating se Portabilità = No
     if (categoria === "Mobile") {
-      if (sale.fields?.portMob === "No")
-        fields = fields.filter(f => f.key !== "numeroMnp" && f.key !== "serialeDon");
+      if (sale.fields?.portMob === "No") {
+        fields = fields.filter(f => f.key !== "numeroMnp" && f.key !== "serialeDon" && f.key !== "operatoreDon");
+      }
     }
     if (categoria === "Fisso") {
       // Nascondi Linea 1 (GNP + migrazione) se portabilità = No
-      if (sale.fields?.portabilita === "No")
-        fields = fields.filter(f => f.key !== "gnpLinea1" && f.key !== "codMigr1");
+      if (sale.fields?.portabilita === "No") {
+        fields = fields.filter(f => f.key !== "gnpLinea1" && f.key !== "codMigr1" && f.key !== "operatoreDon");
+      }
 
       // Nascondi Linea 2: W3 consumer sempre | W3 business se secondaLinea=No |
       //                   Sky Wi-Fi/3P sempre | W3 business con secondaLinea=Sì ma portabilita2=No
@@ -928,8 +945,8 @@ export default function InviaPda() {
                         onClick={() => setProd(catKey, si, sel ? "" : p)}
                         style={sel ? { backgroundColor: catColor, borderColor: catColor, color: "white" } : {}}
                         className={`py-2.5 px-5 rounded-xl text-sm font-bold transition-all border ${sel
-                            ? "shadow-lg shadow-black/20"
-                            : "bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:text-white"
+                          ? "shadow-lg shadow-black/20"
+                          : "bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:text-white"
                           }`}
                       >
                         {p}

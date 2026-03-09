@@ -1,0 +1,168 @@
+﻿
+> replica@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.1.6 (Turbopack)
+
+  Creating an optimized production build ...
+node.exe : 
+At C:\Program Files\nodejs\npm.ps1:29 char:3
++   & $NODE_EXE $NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+> Build error occurred
+Error: Turbopack build failed with 4 errors:
+./src/app/(dashboard)/pda/invia/page.jsx:1037:9
+Ecmascript file had an error
+[0m [90m 1035 |[39m   [36mconst[39m currentBrand [33m=[39m 
+[33mALL_BRANDS[39m[33m.[39mfind(b [33m=>[39m b[33m.[39mid 
+[33m===[39m brand)[33m;[39m
+ [90m 1036 |[39m   [36mconst[39m visibleBrands [33m=[39m 
+[33mALL_BRANDS[39m[33m.[39mfilter(b [33m=>[39m tipoCliente 
+[33m===[39m [32m"business"[39m [33m||[39m 
+[33m![39mb[33m.[39monlyBusiness)[33m;[39m
+[31m[1m>[22m[39m[90m 1037 |[39m   [36mconst[39m brandProdotti 
+[33m=[39m brand [33m?[39m 
+([33mPRODOTTI[39m[brand][33m?[39m[33m.[39m[tipoCliente] [33m||[39m 
+{}) [33m:[39m {}[33m;[39m
+ [90m      |[39m         [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 1038 |[39m   [36mconst[39m tCI [33m=[39m 
+cart[33m.[39mreduce((s[33m,[39m g) [33m=>[39m s [33m+[39m 
+g[33m.[39mitems[33m.[39mlength[33m,[39m [35m0[39m) [33m+[39m 
+colItems()[33m.[39mlength[33m;[39m
+ [90m 1039 |[39m
+ [90m 1040 |[39m   [36mreturn[39m ([0m
+
+the name `brandProdotti` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./src/app/(dashboard)/pda/invia/page.jsx [Client Component Browser]
+    ./src/app/(dashboard)/pda/invia/page.jsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/(dashboard)/pda/invia/page.jsx [Client Component SSR]
+    ./src/app/(dashboard)/pda/invia/page.jsx [Server Component]
+
+
+./src/app/(dashboard)/pda/invia/page.jsx:1035:9
+Ecmascript file had an error
+[0m [90m 1033 |[39m   [90m// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò
+ÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ[39m
+ [90m 1034 |[39m   [90m// ΓöÇΓöÇ Main Render ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓ
+öÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö
+ÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ΓöÇΓöÇ[39m
+[31m[1m>[22m[39m[90m 1035 |[39m   [36mconst[39m currentBrand 
+[33m=[39m [33mALL_BRANDS[39m[33m.[39mfind(b [33m=>[39m 
+b[33m.[39mid [33m===[39m brand)[33m;[39m
+ [90m      |[39m         [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 1036 |[39m   [36mconst[39m visibleBrands [33m=[39m 
+[33mALL_BRANDS[39m[33m.[39mfilter(b [33m=>[39m tipoCliente 
+[33m===[39m [32m"business"[39m [33m||[39m 
+[33m![39mb[33m.[39monlyBusiness)[33m;[39m
+ [90m 1037 |[39m   [36mconst[39m brandProdotti [33m=[39m brand 
+[33m?[39m ([33mPRODOTTI[39m[brand][33m?[39m[33m.[39m[tipoCliente] 
+[33m||[39m {}) [33m:[39m {}[33m;[39m
+ [90m 1038 |[39m   [36mconst[39m tCI [33m=[39m 
+cart[33m.[39mreduce((s[33m,[39m g) [33m=>[39m s [33m+[39m 
+g[33m.[39mitems[33m.[39mlength[33m,[39m [35m0[39m) [33m+[39m 
+colItems()[33m.[39mlength[33m;[39m[0m
+
+the name `currentBrand` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./src/app/(dashboard)/pda/invia/page.jsx [Client Component Browser]
+    ./src/app/(dashboard)/pda/invia/page.jsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/(dashboard)/pda/invia/page.jsx [Client Component SSR]
+    ./src/app/(dashboard)/pda/invia/page.jsx [Server Component]
+
+
+./src/app/(dashboard)/pda/invia/page.jsx:1038:9
+Ecmascript file had an error
+[0m [90m 1036 |[39m   [36mconst[39m visibleBrands [33m=[39m 
+[33mALL_BRANDS[39m[33m.[39mfilter(b [33m=>[39m tipoCliente 
+[33m===[39m [32m"business"[39m [33m||[39m 
+[33m![39mb[33m.[39monlyBusiness)[33m;[39m
+ [90m 1037 |[39m   [36mconst[39m brandProdotti [33m=[39m brand 
+[33m?[39m ([33mPRODOTTI[39m[brand][33m?[39m[33m.[39m[tipoCliente] 
+[33m||[39m {}) [33m:[39m {}[33m;[39m
+[31m[1m>[22m[39m[90m 1038 |[39m   [36mconst[39m tCI [33m=[39m 
+cart[33m.[39mreduce((s[33m,[39m g) [33m=>[39m s [33m+[39m 
+g[33m.[39mitems[33m.[39mlength[33m,[39m [35m0[39m) [33m+[39m 
+colItems()[33m.[39mlength[33m;[39m
+ [90m      |[39m         
+[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 1039 |[39m
+ [90m 1040 |[39m   [36mreturn[39m (
+ [90m 1041 |[39m     [33m<[39m[33mdiv[39m 
+className[33m=[39m[32m"p-6 md:p-8 max-w-[1600px] mx-auto space-y-6 
+text-slate-300"[39m[33m>[39m[0m
+
+the name `tCI` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./src/app/(dashboard)/pda/invia/page.jsx [Client Component Browser]
+    ./src/app/(dashboard)/pda/invia/page.jsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/(dashboard)/pda/invia/page.jsx [Client Component SSR]
+    ./src/app/(dashboard)/pda/invia/page.jsx [Server Component]
+
+
+./src/app/(dashboard)/pda/invia/page.jsx:1036:9
+Ecmascript file had an error
+[0m [90m 1034 |[39m   [90m// ΓöÇΓöÇ Main Render ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓ
+öÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö
+ÇΓöÇΓöÇΓöÇ[39m
+ [90m 1035 |[39m   [36mconst[39m currentBrand [33m=[39m 
+[33mALL_BRANDS[39m[33m.[39mfind(b [33m=>[39m b[33m.[39mid 
+[33m===[39m brand)[33m;[39m
+[31m[1m>[22m[39m[90m 1036 |[39m   [36mconst[39m visibleBrands 
+[33m=[39m [33mALL_BRANDS[39m[33m.[39mfilter(b [33m=>[39m 
+tipoCliente [33m===[39m [32m"business"[39m [33m||[39m 
+[33m![39mb[33m.[39monlyBusiness)[33m;[39m
+ [90m      |[39m         [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 1037 |[39m   [36mconst[39m brandProdotti [33m=[39m brand 
+[33m?[39m ([33mPRODOTTI[39m[brand][33m?[39m[33m.[39m[tipoCliente] 
+[33m||[39m {}) [33m:[39m {}[33m;[39m
+ [90m 1038 |[39m   [36mconst[39m tCI [33m=[39m 
+cart[33m.[39mreduce((s[33m,[39m g) [33m=>[39m s [33m+[39m 
+g[33m.[39mitems[33m.[39mlength[33m,[39m [35m0[39m) [33m+[39m 
+colItems()[33m.[39mlength[33m;[39m
+ [90m 1039 |[39m[0m
+
+the name `visibleBrands` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./src/app/(dashboard)/pda/invia/page.jsx [Client Component Browser]
+    ./src/app/(dashboard)/pda/invia/page.jsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/(dashboard)/pda/invia/page.jsx [Client Component SSR]
+    ./src/app/(dashboard)/pda/invia/page.jsx [Server Component]
+
+
+    at <unknown> (./src/app/(dashboard)/pda/invia/page.jsx:1037:9)
+    at <unknown> (./src/app/(dashboard)/pda/invia/page.jsx:1035:9)
+    at <unknown> (./src/app/(dashboard)/pda/invia/page.jsx:1038:9)
+    at <unknown> (./src/app/(dashboard)/pda/invia/page.jsx:1036:9)
