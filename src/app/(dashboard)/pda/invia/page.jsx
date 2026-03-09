@@ -327,7 +327,66 @@ export default function InviaPda() {
 
       return (
         <div className="mt-4 p-5 rounded-2xl bg-white/[0.03] border border-white/5 space-y-6">
-          {(brand === "fastweb" || (brand === "w3" && sale.fields?.domiciliazione === "Sì")) && (
+          {(brand === "w3" || brand === "energy") && (
+            <div className="pb-6 border-b border-white/5 space-y-4">
+              <div>
+                <Label text="🏦 Domiciliazione?" color="#fd7e14" />
+                <div className="flex gap-3 mt-2">
+                  {["Sì", "No"].map(opt => (
+                    <button
+                      key={opt}
+                      onClick={() => {
+                        setField(catKey, si, "domiciliazione", sale.fields?.domiciliazione === opt ? "" : opt);
+                        if (opt === "No") {
+                          setField(catKey, si, "payMeth", "");
+                          setField(catKey, si, "ibanLG", "");
+                        }
+                      }}
+                      className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all ${sale.fields?.domiciliazione === opt ? "bg-[#fd7e14] text-white shadow-lg" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {sale.fields?.domiciliazione === "Sì" && (
+                <div className="pt-4 border-t border-white/5 animate-in fade-in duration-200">
+                  <Label text="💳 Metodo di pagamento *" color="#fd7e14" />
+                  <div className="flex gap-3 mt-2">
+                    {[["🏦 IBAN", "IBAN"], ["💳 Carta di Credito", "CC"]].map(([lbl, val]) => (
+                      <button
+                        key={val}
+                        onClick={() => setField(catKey, si, "payMeth", sale.fields?.payMeth === val ? "" : val)}
+                        className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all ${sale.fields?.payMeth === val ? "bg-[#fd7e14] text-white shadow-lg" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}
+                      >
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
+
+                  {sale.fields?.payMeth === "IBAN" && (
+                    <div className="mt-4 flex gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <input
+                        type="text"
+                        value={ibanLG}
+                        onChange={e => setField(catKey, si, "ibanLG", e.target.value)}
+                        placeholder="IT00 X000 0000 0000 0000 0000 000"
+                        className="flex-1 glass-input text-xs font-mono py-2.5 px-4 rounded-xl focus:border-[#fd7e14]/50"
+                      />
+                      {ibanAna && (
+                        <button onClick={() => setField(catKey, si, "ibanLG", ibanAna)} className="px-4 py-2 bg-[#fd7e14]/10 text-[#fd7e14] border border-[#fd7e14]/20 rounded-xl text-[10px] font-bold uppercase transition-all hover:bg-[#fd7e14]/20 flex items-center gap-2">
+                          📋 Copia Ana
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {brand === "fastweb" && (
             <div className="pb-6 border-b border-white/5">
               <Label text="Metodo di Pagamento dal Carrello / IBAN" required />
               <div className="flex gap-3 mt-3">
@@ -1512,8 +1571,8 @@ function SearchableSelect({ options, value, onChange, placeholder, icon }) {
                     setSearch("");
                   }}
                   className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-all duration-200 flex items-center justify-between group ${value === opt
-                      ? "bg-violet-500/20 text-violet-300 border border-violet-500/30"
-                      : "hover:bg-white/5 text-slate-400 hover:text-white"
+                    ? "bg-violet-500/20 text-violet-300 border border-violet-500/30"
+                    : "hover:bg-white/5 text-slate-400 hover:text-white"
                     }`}
                 >
                   <span className={value === opt ? "font-bold" : "font-medium"}>{opt}</span>
