@@ -310,15 +310,13 @@ export default function Calendario() {
                         <Plus className="w-4 h-4" />
                         Nuova Task
                     </button>
-                    {selectedDate && (
-                        <button
-                            onClick={openCreateModal}
-                            className="primary-btn h-10 px-5 flex items-center gap-2"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Nuovo appuntamento
-                        </button>
-                    )}
+                    <button
+                        onClick={openCreateModal}
+                        className="primary-btn h-10 px-5 flex items-center gap-2"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Nuovo appuntamento
+                    </button>
                 </div>
             </div>
 
@@ -643,19 +641,21 @@ export default function Calendario() {
                             {/* Divider & Tasks Section */}
                             <hr className="border-white/10 my-4" />
 
-                            <div className="flex items-center justify-between mb-3">
-                                <h4 className="font-semibold text-emerald-400 text-sm flex items-center gap-2">
-                                    <CheckSquare className="w-4 h-4" />
-                                    Task
+                            <div className="flex items-center justify-between mb-1">
+                                <h4 className="font-semibold text-white text-base">
+                                    {new Date(selectedDate + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}
                                 </h4>
                                 <button
-                                    onClick={() => openCreateTaskModal(selectedDate || undefined)}
-                                    className="p-1.5 px-3 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30 transition-colors text-xs font-medium flex items-center gap-1.5"
+                                    onClick={() => openCreateTaskModal(selectedDate)}
+                                    className="p-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
                                 >
-                                    <Plus className="w-3 h-3" />
-                                    Nuova Task
+                                    <Plus className="w-4 h-4" />
                                 </button>
                             </div>
+                            <h4 className="font-medium text-emerald-400 text-sm flex items-center gap-1.5 mb-3">
+                                <CheckSquare className="w-3.5 h-3.5" />
+                                Task
+                            </h4>
 
                             {dateTasks.length === 0 ? (
                                 <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-2">
