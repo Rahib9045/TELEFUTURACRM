@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, X, Phone, MapPin, User, Clock, Search, Bell, Circle, CheckCircle2, PauseCircle, ChevronDown, ChevronUp, CheckSquare } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, Phone, MapPin, User, Clock, Search, Bell, Circle, CheckCircle2, PauseCircle, ChevronDown, ChevronUp, CheckSquare, Calendar } from "lucide-react";
 import { cn } from "@/utils";
 import { useAuth } from "@/context/AuthContext";
 import { DatePickerInput } from "@/components/DatePickerInput";
@@ -582,7 +582,7 @@ export default function Calendario() {
                 <div className="glass-card p-5 flex flex-col">
                     {selectedDate ? (
                         <>
-                            <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center justify-between mb-1">
                                 <h4 className="font-semibold text-white text-base">
                                     {new Date(selectedDate + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}
                                 </h4>
@@ -595,6 +595,10 @@ export default function Calendario() {
                                     </button>
                                 )}
                             </div>
+                            <h4 className="font-medium text-indigo-400 text-sm flex items-center gap-1.5 mb-3">
+                                <Calendar className="w-3.5 h-3.5" />
+                                Appuntamento
+                            </h4>
 
                             {dateAppts.length === 0 ? (
                                 <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-2">
