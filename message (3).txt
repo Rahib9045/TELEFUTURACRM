@@ -1,0 +1,140 @@
+TECHNICAL SPECIFICATION — "Chiusura Negozio" Section
+Reference JSX: chiusura_negozio_v3.jsx
+Priority: New section to add to the CRM sidebar navigation
+UI Language: Italian (all labels, buttons, placeholders)
+
+1. OVERVIEW
+New CRM section called "Chiusura Negozio" for managing end-of-day store closure documentation. Store staff submit daily closing documents to administration. Administration reviews, tracks, and manages all incoming closures and invoices.
+The section has three views:
+
+Home (Gestione) — default landing page, read-only dashboard of all submitted closures
+Invio e Chiusura — overlay form for submitting a new closure (accessible via button)
+Fatture — overlay for administration to manage invoices received from closures (accessible via button, admin only)
+
+
+2. NAVIGATION & ACCESS
+Add "Chiusura Negozio" as a new entry in the CRM sidebar menu.
+The Home page (Gestione) is the default view when entering the section. Two action buttons are placed in the top-right header bar:
+ButtonLabelVisibilityActionPrimary (blue)"📤 Invio e Chiusura"All rolesOpens the closure submission overlaySecondary (purple outline)"🧾 Fatture"Admin onlyOpens the invoice management overlay
+The "Fatture" button must be positioned to the left of "Invio e Chiusura".
+
+3. COMPANY SPLIT — "Telefutura" / "Telefutura 2SRL"
+Some stores operate under two legal entities. Every closure submission must be scoped to a specific company. A single store may need to submit two separate closures in the same evening — one per company.
+This applies to:
+
+The submission form (user selects which company/companies to submit for)
+The gestione table (each row is one closure for one company)
+The fatture view (each invoice is tied to the company from its parent closure)
+
+The two companies are: Telefutura and Telefutura 2SRL. Display them with distinct visual badges (e.g. blue for Telefutura, purple for Telefutura 2SRL).
+
+4. INVIO E CHIUSURA (Submission Form)
+Full-screen overlay opened by clicking "📤 Invio e Chiusura".
+4.1 Header Fields (auto-populated)
+FieldLabelSourceDate"Data"Current date (auto)Store"Negozio"Logged-in user's assigned storeOperator"Operatore"Logged-in user's name
+4.2 Company Selection
+Two selectable cards, toggle-style. User can activate one or both:
+
+Telefutura — blue accent
+Telefutura 2SRL — purple accent
+
+Each activated company renders its own independent upload block with all 5 document categories and a separate notes field. When deactivated, its files and notes are cleared.
+If no company is selected, display a placeholder message: "Seleziona almeno una società per iniziare".
+4.3 Document Categories
+Each company block contains 5 upload areas:
+KeyLabelIconRequiredcassaChiusura Cassa💰YESposChiusura POS💳YESddt_w3DDT WindTre📦Noddt_vfDDT Vodafone📦NofattureFatture Clienti🧾No
+
+Cassa and POS are mandatory. Display a red "OBBLIGATORIO" badge on these two cards.
+Each category supports multiple file uploads (PDF, JPG, PNG).
+Users can remove individual files before submission.
+
+4.4 Progress Indicator
+Per-company progress bar tracking only mandatory categories (2/2 = cassa + POS). Bar turns green when both are filled. Display: "{n}/2 obbligatori · {total} file".
+4.5 Notes
+One textarea per company, label: "Note {company name} (opzionale)". Free text for operator comments to administration.
+4.6 Submission
+Button in the sticky header: "📤 Invia Chiusura".
+
+Disabled until at least one file is attached across all active companies.
+Validation before submit: both mandatory categories (cassa, POS) must have at least one file for each active company. If not, show an inline warning and block submission.
+On success, show a confirmation screen with total files count and company names, then a "Torna alla Gestione" button to return to Home.
+
+4.7 Backend Payload
+Each submission creates one record per company. Example payload:
+json{
+  "store_id": "...",
+  "societa": "Telefutura",
+  "date": "2026-03-10",
+  "operator_id": "...",
+  "note": "...",
+  "attachments": [
+    { "category": "cassa", "file": "..." },
+    { "category": "pos", "file": "..." },
+    { "category": "fatture", "file": "..." }
+  ]
+}
+If the user activated both companies, two separate records are created.
+
+5. HOME — GESTIONE (Closure Dashboard)
+Default view when entering the section. Displays all submitted closures in a filterable table.
+5.1 Role-Based Visibility
+RoleData ScopeCan Expand RowsCan ModifyAdminAll stores, all closuresYes — full detail + downloadYesPunto VenditaOwn store onlyYes — view attachments only, no modificationNo
+When Punto Vendita role is active, display an info banner: "🔒 Stai visualizzando solo le chiusure di {store name}".
+5.2 KPI Strip (top)
+Only two KPI cards:
+KPILabelScopeVisibilityClosures today"Chiusure Oggi"Count of closures submitted todayAll rolesMissing stores"Negozi Mancanti"Count of stores with zero closures todayAdmin only
+No "Complete" or "Incomplete" KPIs. No status tracking at all.
+5.3 Filters
+FilterLabelTypeVisibilityStore"Tutti i negozi"DropdownAdmin onlyCompany"Tutte le società"Dropdown (Telefutura / Telefutura 2SRL)All rolesDate range"Dal" / "Al"Two date pickersAll roles
+No status filter.
+Include a "✕ Reset" button that appears when any filter is active. Show result count: "{n} risultati".
+5.4 Table Columns
+Admin view:
+| Data | Ora | Negozio | Società | Operatore | Cassa | POS | DDT W3 | DDT VF | Fatture | ▼ |
+Punto Vendita view (reduced — no Negozio, no Operatore, no expand arrow):
+| Data | Ora | Società | Cassa | POS | DDT W3 | DDT VF | Fatture |
+No "Stato" column in either view.
+Document count cells: show a green badge with the count if > 0, show "—" if 0.
+5.5 Row Expansion
+Clicking a row expands it to show all attachments grouped by category. Each attachment shows filename and a "⬇ Scarica" download button.
+
+Admin: can view and download all attachments.
+Punto Vendita: can view and download their own attachments. Cannot modify or delete anything.
+
+
+6. FATTURE (Invoice Management — Admin Only)
+Full-screen overlay opened by clicking "🧾 Fatture". Visible and accessible only by Admin role.
+6.1 Data Source
+This view aggregates all files categorized as "fatture" across all submitted closures. Each invoice row is linked to its parent closure record.
+6.2 Tabs
+Two tabs at the top:
+TabLabelContentPending"Da Emettere"Invoices not yet marked as issuedIssued"Emesse"Invoices marked as issued
+Each tab shows a count badge with the current number of items.
+6.3 Filters
+FilterLabelTypeStore"Tutti i negozi"DropdownCompany"Tutte le società"DropdownDate range"Dal" / "Al"Two date pickers
+Include "✕ Reset" button and result count.
+6.4 Table Columns
+| File | Negozio | Società | Data Chiusura | Operatore | Stato | Azioni |
+
+Stato: badge "Da Emettere" (yellow) or "Emessa" (green)
+Azioni: three buttons per row:
+
+"👁 Apri" — opens/previews the PDF
+"⬇ PDF" — downloads the file
+"✓ Segna Emessa" — toggles the invoice to "Emessa" status (moves it to the Emesse tab)
+When already marked as Emessa: "↩ Riapri" — toggles it back to "Da Emettere"
+
+
+
+6.5 Backend
+Each invoice file needs a boolean field emessa (default: false). The "Segna Emessa" / "Riapri" actions toggle this field via API call. The tab filter is a simple query on emessa = true/false.
+
+7. DATABASE SCHEMA (Suggested)
+Table: chiusure_negozio
+ColumnTypeNotesidINT PKAuto-incrementstore_idINT FKReferences stores tablesocietaENUM('Telefutura', 'Telefutura 2SRL')operator_idINT FKUser who submitteddateDATEClosure datetimeTIMESubmission timenoteTEXTOptional notescreated_atTIMESTAMP
+Table: chiusure_allegati
+ColumnTypeNotesidINT PKchiusura_idINT FKReferences chiusure_negoziocategoryENUM('cassa', 'pos', 'ddt_w3', 'ddt_vf', 'fatture')filenameVARCHAROriginal filenamefile_pathVARCHARStorage pathemessaBOOLEANDefault false. Only relevant when category = 'fatture'created_atTIMESTAMP
+
+8. API ENDPOINTS (Suggested)
+MethodEndpointDescriptionAuthPOST/api/chiusureSubmit new closure (with file uploads)All rolesGET/api/chiusureList closures (filterable by store, societa, date range)All roles (scoped)GET/api/chiusure/:idGet closure detail with attachmentsAll roles (scoped)GET/api/chiusure/:id/allegati/:fileId/downloadDownload specific attachmentAll roles (scoped)GET/api/fattureList all invoice attachments (filterable)Admin onlyPATCH/api/fatture/:id/emessaToggle emessa statusAdmin only
+All endpoints for non-admin roles must enforce store-level scoping — users can only access data belonging to their assigned store.

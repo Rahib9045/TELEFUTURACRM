@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Search, ShoppingBag, User, Check, ChevronLeft, ChevronRight, Plus, Trash2, Archive, HelpCircle, Info, LayoutGrid, Clock, Calendar, ExternalLink, MoreVertical, ChevronUp, ChevronDown } from "lucide-react";
+import { calculateCF, _CNA, _PNA } from "@/lib/cf";
 
 // ── COSTANTI ──────────────────────────────────────────────────────────────────
 
@@ -126,7 +127,18 @@ const DONOR_MOBILE = ["", "TIM", "Vodafone", "WindTre", "Iliad", "Fastweb Mobile
 const DONOR_FISSO = ["", "TIM", "Vodafone", "WindTre", "Fastweb", "Iliad", "Tiscali", "Aruba", "PosteMobile", "Vianova", "Linkem", "Eolo", "BT Italia", "Retelit", "Unidata", "Uno Communications"];
 const DONOR_LUCE_GAS = ["", "Enel Energia", "Eni Plenitude", "A2A Energia", "Iren", "Hera Comm", "Edison", "Sorgenia", "E.ON", "Illumia", "Engie", "Optima", "Wekiwi", "Estra", "Axpo", "Iberdrola", "Acea Energia", "Servizio Elettrico Nazionale", "Altro"];
 
-const STEP_LABELS = ["Venditore", "Cliente + Anagrafica", "Brand", "Prodotti", "Allegati", "Note"];
+const STEP_LABELS = ["Venditore", "Cliente", "Brand", "Prodotti"];
+
+// W3 GA Consumer offerte per tipologia+easypay key
+const MOB_OFFERS = {
+  "Underground_Sì": ["EP LOCAL"],
+  "Underground_No": ["RIC LOCAL"],
+  "Mass Market_Sì": ["SPECIAL 5G", "START UNLIMITED 5G", "UNLIMITED 5G", "UNLIMITED PRO 5G", "UNLIMITED 5G SUPER FIBRA", "FAMILY UNLIMITED 200", "MULTISERVICE", "SUPER 5G UNDER 14 6.99", "SUPER 5G UNDER 14 9.99", "CYC UNLIMITED PLUS", "CYC UNLIMITED SUPER", "CYC UNLIMITED ULTRA", "CYC UNLIMITED FULL", "PACK 5G RELOAD EXCHANGE", "GIGA SPECIAL"],
+  "Mass Market_No": ["SPECIAL 5G", "START UNLIMITED 5G", "UNLIMITED 5G", "UNLIMITED PRO 5G", "UNLIMITED 5G SUPER FIBRA", "FAMILY UNLIMITED 200", "MULTISERVICE", "SUPER 5G UNDER 14 6.99", "SUPER 5G UNDER 14 9.99", "CYC UNLIMITED PLUS", "CYC UNLIMITED SUPER", "CYC UNLIMITED ULTRA", "CYC UNLIMITED FULL", "PACK 5G RELOAD EXCHANGE", "GIGA 150 5G", "GIGA 250 5G", "GIGA UNLIMITED 5G", "GIGA START&STOP", "SMART SECURITY"],
+};
+const CB_TNP_VALS = ["Rata 0", "Finanziamento 0", "Rata >0", "Finanziamento >0"];
+const CB_CAMBIO_VALS = ["Caring", "CL0", "CL1", "CL1 EP", "CL2", "CL2 EP", "CL3", "CL3 EP", "Migrazione FTTH"];
+const CB_ADDON_VALS = ["Add-on", "Security Ric", "Security EP", "Security Pro Ric", "Security Pro EP", "Home Protect Fisso", "Netflix Fisso"];
 
 
 // ── CartItem ──────────────────────────────────────────────────────────────────
@@ -189,6 +201,7 @@ export default function InviaPda() {
   const [step, setStep] = useState(1);
   const [venditore, setVenditore] = useState("");
   const [negozio, setNegozio] = useState("");
+  const [confirmReset, setConfirmReset] = useState(false);
 
   const [tipoCliente, setTipoCliente] = useState(null);
   const [lookupValue, setLookupValue] = useState("");
@@ -198,6 +211,10 @@ export default function InviaPda() {
   const [anBusiness, setAnBusiness] = useState({ ragioneSociale: "", piva: "", referente: "", numeroFisso: "", mobile: "", email: "", pec: "", codiceUnivoco: "", iban: "", sedeLegale: "", note: "" });
 
   const [brand, setBrand] = useState(null);
+
+  const [showCF, setShowCF] = useState(false);
+  const [cfD, setCfD] = useState({ nome: "", cognome: "", sesso: "M", giorno: "", mese: "", anno: "", comune: "", estero: false, paese: "" });
+
 
   // Carrello multi-brand
   const [cart, setCart] = useState([]);
@@ -227,6 +244,24 @@ export default function InviaPda() {
 
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  const doCF = () => {
+    const cf = calculateCF(cfD);
+    if (cf) {
+      setAnConsumer(p => ({
+        ...p,
+        cf,
+        nome: cfD.nome.charAt(0).toUpperCase() + cfD.nome.slice(1).toLowerCase(),
+        cognome: cfD.cognome.charAt(0).toUpperCase() + cfD.cognome.slice(1).toLowerCase()
+      }));
+      setLookupValue(cf);
+      setShowCF(false);
+      showToast("✅ Codice Fiscale calcolato: " + cf);
+    } else {
+      showToast("❌ Dati incompleti per il calcolo");
+    }
+  };
+
 
   // Raccoglie tutti i prodotti selezionati nel brand corrente
   const colItems = useCallback(() => {
@@ -287,7 +322,7 @@ export default function InviaPda() {
     setAnConsumer({ nome: "", cognome: "", cf: "", email: "", numeroFisso: "", cellulare: "", iban: "", domicilio: "", note: "" });
     setAnBusiness({ ragioneSociale: "", piva: "", referente: "", numeroFisso: "", mobile: "", email: "", pec: "", codiceUnivoco: "", iban: "", sedeLegale: "", note: "" });
     setBrand(null); setAllSales({});
-    setCart([]); setShowCart(false); setExpI({});
+    setCart([]); setShowCart(false); setExpI({}); setConfirmReset(false);
   };
 
   const finalSubmit = () => {
@@ -315,7 +350,7 @@ export default function InviaPda() {
     if (step === 3) return !!brand;
     return true;
   };
-  const goNext = () => { if (canProceed() && step < 6) setStep(s => s + 1); };
+  const goNext = () => { if (canProceed() && step < 4) setStep(s => s + 1); };
   const goBack = () => { if (step > 1) setStep(s => s - 1); };
 
   // ── Render campi MENU A COMPARSA ─────────────────────────────────────────────
@@ -640,10 +675,234 @@ export default function InviaPda() {
       );
     }
 
+    // ── W3 Consumer Mobile: GA + CB flow ──────────────────────────────────────
+    if (categoria === "Mobile" && brand === "w3" && tipoCliente !== "business") {
+      const isGa = sale.product && !sale.product.toUpperCase().includes("CB");
+      const isCb = sale.product && sale.product.toUpperCase().includes("CB");
+      const tipMob = sale.fields?.tipMob || null;
+      const mnp = sale.fields?.mnp || null;
+      const easyPay = sale.fields?.easyPay || null;
+      const offerta = sale.fields?.offerta || "";
+      const isUnd = tipMob === "Underground";
+      const mnpLocked = isUnd ? true : null;
+      const showMnp = tipMob !== null;
+      const showEP = tipMob !== null && (isUnd || mnp !== null);
+      const mobDone = tipMob !== null && (isUnd || mnp !== null) && easyPay !== null;
+      const offerKey = tipMob && easyPay ? `${tipMob}_${easyPay === true || easyPay === "Sì" ? "Sì" : "No"}` : null;
+      const offers = offerKey ? (MOB_OFFERS[offerKey] || []) : [];
+
+      // CB-flow state
+      const hasTnp = sale.fields?.cbHasTnp || null;
+      const tnpVal = sale.fields?.cbTnpVal || "";
+      const hasCambio = sale.fields?.cbHasCambio || null;
+      const cambioVal = sale.fields?.cbCambioVal || "";
+      const addons = sale.fields?.cbAddons || {};
+
+      const MiniBtn = ({ val, active, onClick, color = "#2E75B6" }) => (
+        <button onClick={onClick}
+          className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all ${active ? "text-white shadow-lg" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"
+            }`}
+          style={active ? { background: color } : {}}>
+          {val}
+        </button>
+      );
+
+      return (
+        <div className="mt-4 p-5 rounded-2xl bg-white/[0.03] border border-white/5 space-y-6">
+
+          {/* GA flow */}
+          {(isGa || !isCb) && (
+            <div className="space-y-4">
+              {/* Step 1: Tipologia */}
+              <div>
+                <Label text="📡 Tipologia Mobile" required color={color} />
+                <div className="flex gap-3 mt-2">
+                  {["Underground", "Mass Market"].map(opt => (
+                    <MiniBtn key={opt} val={opt} active={tipMob === opt} color={color}
+                      onClick={() => {
+                        setField(catKey, si, "tipMob", tipMob === opt ? null : opt);
+                        if (opt !== tipMob) {
+                          setField(catKey, si, "mnp", opt === "Underground" ? true : null);
+                          setField(catKey, si, "easyPay", null);
+                          setField(catKey, si, "offerta", "");
+                        }
+                      }} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Step 2: MNP */}
+              {showMnp && (
+                <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                  <Label text="🔄 MNP (Portabilità)?" required color={color} />
+                  <div className="flex gap-3 mt-2">
+                    {isUnd ? (
+                      <div className="flex-1 py-2.5 px-4 rounded-xl text-sm font-bold text-white shadow-lg text-center" style={{ background: color }}>Sì (fisso Underground)</div>
+                    ) : (
+                      ["Sì", "No"].map(opt => (
+                        <MiniBtn key={opt} val={opt} active={mnp === opt} color={color}
+                          onClick={() => { setField(catKey, si, "mnp", mnp === opt ? null : opt); setField(catKey, si, "easyPay", null); setField(catKey, si, "offerta", ""); }} />
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Easy Pay */}
+              {showEP && (
+                <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                  <Label text="💳 Easy Pay?" required color={color} />
+                  <div className="flex gap-3 mt-2">
+                    {["Sì", "No"].map(opt => (
+                      <MiniBtn key={opt} val={opt} active={easyPay === opt} color={color}
+                        onClick={() => { setField(catKey, si, "easyPay", easyPay === opt ? null : opt); setField(catKey, si, "offerta", ""); }} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4: Offerta */}
+              {mobDone && offers.length > 0 && (
+                <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                  <Label text="📦 Offerta Mobile" required color={color} />
+                  <select value={offerta} onChange={e => setField(catKey, si, "offerta", e.target.value)}
+                    className="w-full mt-2 bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-sm text-slate-300 outline-none focus:border-blue-500/50">
+                    <option value="">— Seleziona offerta —</option>
+                    {offers.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {/* Security when EasyPay = No */}
+              {mobDone && (easyPay === "No") && (
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 animate-in fade-in duration-200">
+                  <Label text="🛡️ Security" color={color} />
+                  <div className="flex gap-3 mt-2">
+                    {["Security", "Security PRO"].map(s => (
+                      <button key={s}
+                        onClick={() => { const cur = sale.fields?.security || ""; setField(catKey, si, "security", cur === s ? "" : s); }}
+                        className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all ${sale.fields?.security === s ? "text-white shadow-lg" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"
+                          }`}
+                        style={sale.fields?.security === s ? { background: "#fd7e14" } : {}}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Common Mobile fields (Seriale SIM, Device etc) always shown if tipMob set */}
+              {tipMob && (
+                <div className="pt-4 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-200">
+                  {CAT_FIELDS["Mobile"].filter(f => ["serialeSim", "device", "serviziDig"].includes(f.key)).map(f => (
+                    <div key={f.key}>
+                      <Label text={f.label} required={f.required} />
+                      <input type="text" value={sale.fields?.[f.key] || ""} onChange={e => setField(catKey, si, f.key, e.target.value)}
+                        placeholder={f.ph} className="glass-input mt-2" />
+                    </div>
+                  ))}
+                  {(mnp === "Sì" || isUnd) && (
+                    <>
+                      <div>
+                        <Label text="Operatore di provenienza" required />
+                        <select value={sale.fields?.operatoreDon || ""} onChange={e => setField(catKey, si, "operatoreDon", e.target.value)}
+                          className="w-full mt-2 bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-sm text-slate-300 outline-none focus:border-blue-500/50">
+                          {DONOR_MOBILE.map(o => <option key={o} value={o}>{o || "— Seleziona —"}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <Label text="N. Telefono MNP" />
+                        <input type="text" value={sale.fields?.numeroMnp || ""} onChange={e => setField(catKey, si, "numeroMnp", e.target.value)}
+                          placeholder="es. 3331234567" className="glass-input mt-2" />
+                      </div>
+                      <div>
+                        <Label text="Seriale SIM Donating" />
+                        <input type="text" value={sale.fields?.serialeDon || ""} onChange={e => setField(catKey, si, "serialeDon", e.target.value)}
+                          placeholder="893910..." className="glass-input mt-2" />
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* CB flow */}
+          {isCb && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                <Label text="📱 TNP (Terminale Nuovo Prodotto)?" color={color} />
+                <div className="flex gap-3 mt-2">
+                  {["Sì", "No"].map(opt => (
+                    <MiniBtn key={opt} val={opt} active={hasTnp === opt} color={color}
+                      onClick={() => setField(catKey, si, "cbHasTnp", hasTnp === opt ? null : opt)} />
+                  ))}
+                </div>
+                {hasTnp === "Sì" && (
+                  <div className="mt-3 animate-in fade-in duration-200">
+                    <select value={tnpVal} onChange={e => setField(catKey, si, "cbTnpVal", e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-sm text-slate-300 outline-none">
+                      <option value="">— Tipo rata —</option>
+                      {CB_TNP_VALS.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                <Label text="🔄 Cambio Offerta?" color={color} />
+                <div className="flex gap-3 mt-2">
+                  {["Sì", "No"].map(opt => (
+                    <MiniBtn key={opt} val={opt} active={hasCambio === opt} color={color}
+                      onClick={() => setField(catKey, si, "cbHasCambio", hasCambio === opt ? null : opt)} />
+                  ))}
+                </div>
+                {hasCambio === "Sì" && (
+                  <div className="mt-3 animate-in fade-in duration-200">
+                    <select value={cambioVal} onChange={e => setField(catKey, si, "cbCambioVal", e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-sm text-slate-300 outline-none">
+                      <option value="">— Tipo cambio —</option>
+                      {CB_CAMBIO_VALS.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                <Label text="➕ Add-on" color={color} />
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {CB_ADDON_VALS.map(a => (
+                    <button key={a}
+                      onClick={() => { const cur = { ...addons }; cur[a] = !cur[a]; setField(catKey, si, "cbAddons", cur); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${addons[a] ? "text-white shadow" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"
+                        }`}
+                      style={addons[a] ? { background: color } : {}}>
+                      {addons[a] ? "✓ " : ""}{a}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Common fields */}
+              <div className="pt-4 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {CAT_FIELDS["Mobile"].filter(f => ["serialeSim", "device"].includes(f.key)).map(f => (
+                  <div key={f.key}>
+                    <Label text={f.label} required={f.required} />
+                    <input type="text" value={sale.fields?.[f.key] || ""} onChange={e => setField(catKey, si, f.key, e.target.value)}
+                      placeholder={f.ph} className="glass-input mt-2" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     // Default rendering for other categories
     let fields = CAT_FIELDS[categoria];
     if (!fields || fields.length === 0) return null;
-    // Mobile: rimuovi MNP e Donating se Portabilità = No
+    // Mobile (non-W3): rimuovi MNP e Donating se Portabilità = No
     if (categoria === "Mobile") {
       if (sale.fields?.portMob === "No") {
         fields = fields.filter(f => f.key !== "numeroMnp" && f.key !== "serialeDon" && f.key !== "operatoreDon");
@@ -1326,7 +1585,7 @@ export default function InviaPda() {
             <div className="space-y-6">
               <div className="glass-panel p-6 sticky top-24">
                 <h3 className="text-sm font-bold text-slate-400 mb-6 uppercase tracking-widest">Resoconto</h3>
-                <div className="space-y-4 mb-8">
+                <div className="space-y-4 mb-4">
                   <div className="flex justify-between text-sm py-2 border-b border-white/5">
                     <span className="text-slate-500 font-bold uppercase text-[10px]">Totale Brand</span>
                     <span className="text-white font-bold">{cart.length + (colItems().length > 0 ? 1 : 0)}</span>
@@ -1336,11 +1595,49 @@ export default function InviaPda() {
                     <span className="text-white font-bold">{tCI}</span>
                   </div>
                 </div>
-                <button onClick={finalSubmit}
-                  className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-2 uppercase tracking-widest text-sm">
-                  <Check className="w-5 h-5" /> INVIA TUTTO
-                </button>
-                <p className="text-[10px] text-slate-500 text-center mt-4 uppercase font-bold tracking-tighter">I dati verranno salvati nel sistema centralizzato</p>
+
+                {/* STEP 5 & 6 (CART INLINE) */}
+                <div className="mt-6 mb-6">
+                  <h4 className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest flex items-center gap-2"><Archive className="w-3 h-3 text-emerald-400" /> Attribuzione & Allegati</h4>
+
+                  <div className="space-y-4 mb-6 relative z-50">
+                    <div>
+                      <Label text="Negozio" required />
+                      <SearchableSelect options={NEGOZI} value={negozio} onChange={setNegozio} placeholder="— Seleziona —" icon={<Archive className="w-3 h-3 text-emerald-400" />} />
+                    </div>
+                    <div>
+                      <Label text="Data Vendita" required />
+                      <input type="date" className="w-full glass-input text-sm py-2.5 shadow-sm focus:border-violet-500/50" defaultValue="2026-03-07" />
+                    </div>
+                  </div>
+
+                  <NoteStep mini />
+
+                  <div className="mt-6">
+                    <Label text="Allegati (Trascina o clicca)" />
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                      {[{ l: "Identità", i: "🪪" }, { l: "Contratti", i: "📄" }, { l: "Altro", i: "📁" }].map(a => (
+                        <div key={a.l} className="border border-dashed border-white/10 rounded-xl p-3 text-center bg-white/[0.02] hover:bg-white/[0.05] cursor-pointer group">
+                          <div className="text-xl mb-1 group-hover:scale-110 transition-transform">{a.i}</div>
+                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter line-clamp-1">{a.l}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {colItems().length > 0 && (
+                    <button onClick={addCart} className="w-full py-3 bg-white/5 border border-white/10 text-slate-300 rounded-xl font-bold hover:bg-white/10 transition-all text-xs uppercase tracking-widest">
+                      + Aggiungi Altro Brand
+                    </button>
+                  )}
+                  <button onClick={finalSubmit} disabled={tCI === 0}
+                    className={`w-full py-4 rounded-xl font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 transition-all ${tCI > 0 ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}>
+                    <Check className="w-5 h-5" /> Invia Tutto
+                  </button>
+                </div>
+                <p className="text-[9px] text-slate-500 text-center mt-4 uppercase font-bold tracking-tighter">I dati verranno salvati nel sistema centralizzato</p>
               </div>
             </div>
           </div>
@@ -1444,7 +1741,8 @@ export default function InviaPda() {
                         <>
                           <AField label="Nome" required value={anConsumer.nome} onChange={v => setAnConsumer(p => ({ ...p, nome: v }))} pf={clienteFound} ph="es. Mario" />
                           <AField label="Cognome" required value={anConsumer.cognome} onChange={v => setAnConsumer(p => ({ ...p, cognome: v }))} pf={clienteFound} ph="es. Rossi" />
-                          <AField label="Codice Fiscale" required value={anConsumer.cf} onChange={v => setAnConsumer(p => ({ ...p, cf: v }))} pf={clienteFound} ph="Rssmra80a01h501u" mono />
+                          <AField label="Codice Fiscale" required value={anConsumer.cf} onChange={v => setAnConsumer(p => ({ ...p, cf: v.toUpperCase() }))} pf={clienteFound} ph="Rssmra80a01h501u" mono actionLabel="🧮 Calcola" onAction={() => setShowCF(true)} />
+
                           <AField label="Email" value={anConsumer.email} onChange={v => setAnConsumer(p => ({ ...p, email: v }))} pf={clienteFound} ph="mario.rossi@email.com" />
                           <AField label="Numero Fisso" value={anConsumer.numeroFisso} onChange={v => setAnConsumer(p => ({ ...p, numeroFisso: v }))} pf={clienteFound} ph="06 1234567" />
                           <AField label="Recapito Cellulare" value={anConsumer.cellulare} onChange={v => setAnConsumer(p => ({ ...p, cellulare: v }))} pf={clienteFound} ph="333 1234567" />
@@ -1526,67 +1824,25 @@ export default function InviaPda() {
                     </div>
                   )
                 }
-                <NavBar onBack={goBack} onNext={goNext} canNext />
-              </StepCard>
-            )}
-
-            {/* ══ STEP 5 ══ */}
-            {step === 5 && (
-              <StepCard title="Step 5 — Allegati" color="#17a2b8" icon="📎">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {[{ label: "Documento Identità", icon: "🪪" }, { label: "Contratti Firmati", icon: "📄" }, { label: "Altri Allegati", icon: "📁" }].map(a => (
-                    <div key={a.label} className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20 transition-all group cursor-pointer border-collapse">
-                      <div className="text-4xl mb-4 group-hover:scale-110 transition-transform">{a.icon}</div>
-                      <div className="text-sm font-bold text-white mb-2 uppercase tracking-wide">{a.label}</div>
-                      <div className="text-[10px] text-slate-500 mb-6 uppercase">Trascina o clicca</div>
-                      <div className="inline-block px-4 py-2 bg-slate-800 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest border border-white/5 transition-colors group-hover:bg-slate-700">Carica File</div>
-                    </div>
-                  ))}
-                </div>
-                <NavBar onBack={goBack} onNext={goNext} canNext />
-              </StepCard>
-            )}
-
-            {/* ══ STEP 6 ══ */}
-            {step === 6 && (
-              <StepCard title="Step 6 — Note / Promemoria" color="#e83e8c" icon="📝">
-                <NoteStep />
-                <div className="bg-white/[0.03] rounded-2xl p-6 mt-8 border border-white/5 shadow-inner">
-                  <div className="text-sm font-bold text-slate-300 mb-6 uppercase tracking-widest flex items-center gap-2">
-                    <Archive className="w-4 h-4 text-emerald-400" /> Attribuzione Vendita
+                <div className="flex justify-between items-center mt-8 pt-6 border-t border-white/10 gap-4 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <button onClick={goBack} className="px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 text-sm font-medium transition-all">← Indietro</button>
+                    {confirmReset ? (
+                      <div className="flex items-center gap-3 animate-in fade-in duration-200 ml-2">
+                        <span className="text-xs font-bold text-rose-500 uppercase">Sei sicuro?</span>
+                        <button onClick={reset} className="px-4 py-2 rounded-lg bg-rose-500 text-white text-xs font-bold hover:bg-rose-600 transition-all">Sì, resetta</button>
+                        <button onClick={() => setConfirmReset(false)} className="px-4 py-2 rounded-lg bg-white/5 text-slate-300 text-xs font-bold hover:bg-white/10 border border-white/10 transition-all">Annulla</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setConfirmReset(true)} className="px-5 py-2.5 flex items-center gap-2 rounded-xl text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition-all uppercase tracking-widest">
+                        <Trash2 className="w-4 h-4" /> Reset form
+                      </button>
+                    )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label text="Negozio" required note="Pre-compilato dal login" />
-                      <SearchableSelect
-                        options={NEGOZI}
-                        value={negozio}
-                        onChange={setNegozio}
-                        placeholder="— Seleziona negozio —"
-                        icon={<Archive className="w-4 h-4 text-emerald-400" />}
-                      />
-                    </div>
-                    <div>
-                      <Label text="Data Vendita" required />
-                      <input type="date" className="glass-input shadow-sm" defaultValue="2026-03-07" />
-                    </div>
-                  </div>
-                </div>
 
-                <div className="flex flex-col md:flex-row gap-4 justify-between mt-12 pt-8 border-t border-white/10">
-                  <button onClick={goBack} className="px-8 py-3 rounded-2xl border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 text-sm font-bold uppercase tracking-widest transition-all">
-                    ← Indietro
+                  <button onClick={() => setShowCart(true)} className="px-8 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-sm font-bold uppercase tracking-widest shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-all flex items-center gap-2">
+                    🛒 Riepilogo Carrello {tCI > 0 && <span className="bg-white text-violet-600 px-2 py-0.5 rounded-full text-[10px] font-black ml-1">{tCI}</span>}
                   </button>
-                  <div className="flex gap-4">
-                    <button onClick={addCart}
-                      className="px-6 py-3 bg-violet-600/10 border border-violet-500/50 text-violet-400 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-violet-600 hover:text-white transition-all">
-                      📦 Aggiungi e Prosegui
-                    </button>
-                    <button onClick={finalSubmit}
-                      className="px-10 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all flex items-center gap-2">
-                      <Check className="w-5 h-5" /> Invia Tutto
-                    </button>
-                  </div>
                 </div>
               </StepCard>
             )}
@@ -1594,7 +1850,85 @@ export default function InviaPda() {
         </div>
       )}
 
+      {/* MODAL CF */}
+      {showCF && tipoCliente === "privato" && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-[#1a1d29] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden relative max-h-[90vh] flex flex-col">
+            <div className="p-5 border-b border-white/5 flex items-center justify-between sticky top-0 bg-[#1a1d29]/95 backdrop-blur z-10 shrink-0">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <span className="text-violet-400">🧮</span> Calcolo Codice Fiscale
+              </h3>
+              <button onClick={() => setShowCF(false)} className="text-slate-400 hover:text-white transition-colors">✕</button>
+            </div>
+
+            <div className="p-6 space-y-5 overflow-y-auto min-h-0">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-1">
+                  <Label text="Nome" required />
+                  <input type="text" value={cfD.nome} onChange={e => setCfD(p => ({ ...p, nome: e.target.value }))} className="w-full glass-input text-sm rounded-xl py-2 px-3 focus:border-violet-500/50" placeholder="Mario" />
+                </div>
+                <div className="col-span-1">
+                  <Label text="Cognome" required />
+                  <input type="text" value={cfD.cognome} onChange={e => setCfD(p => ({ ...p, cognome: e.target.value }))} className="w-full glass-input text-sm rounded-xl py-2 px-3 focus:border-violet-500/50" placeholder="Rossi" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-1">
+                  <Label text="Sesso" required />
+                  <div className="flex gap-2">
+                    {["M", "F"].map(sx => (
+                      <button key={sx} onClick={() => setCfD(p => ({ ...p, sesso: sx }))} className={`flex-1 py-1.5 rounded-xl text-sm font-bold transition-all ${cfD.sesso === sx ? "bg-violet-500 text-white shadow-lg shadow-violet-500/20" : "bg-white/5 text-slate-400 border border-white/10"}`}>{sx === "M" ? "♂ M" : "♀ F"}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="col-span-1">
+                  <Label text="Data di Nascita" required />
+                  <div className="flex gap-2">
+                    <input type="text" value={cfD.giorno} onChange={e => setCfD(p => ({ ...p, giorno: e.target.value }))} placeholder="GG" maxLength={2} className="w-[50px] text-center glass-input rounded-xl text-sm py-2 px-1 focus:border-violet-500/50" />
+                    <select value={cfD.mese} onChange={e => setCfD(p => ({ ...p, mese: e.target.value }))} className="flex-1 min-w-0 glass-input rounded-xl text-sm py-2 px-1 text-slate-300 bg-[#1a1d29] focus:border-violet-500/50">
+                      <option value="">MM</option>
+                      {["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"].map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                    <input type="text" value={cfD.anno} onChange={e => setCfD(p => ({ ...p, anno: e.target.value }))} placeholder="AAAA" maxLength={4} className="w-[60px] text-center glass-input rounded-xl text-sm py-2 px-1 focus:border-violet-500/50" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Label text="Luogo di nascita" required />
+                <div className="flex gap-2 mb-3">
+                  {[{ k: false, l: "🇮🇹 Italia" }, { k: true, l: "🌍 Estero" }].map(({ k, l }) => (
+                    <button key={String(k)} onClick={() => setCfD(p => ({ ...p, estero: k, comune: "", paese: "" }))} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all border ${cfD.estero === k ? "bg-violet-500/20 text-violet-300 border-violet-500/40" : "bg-white/5 text-slate-400 border-white/5 hover:bg-white/10"}`}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+                {!cfD.estero ? (
+                  <div>
+                    <input list="cf-comuni-list" value={cfD.comune} onChange={e => setCfD(p => ({ ...p, comune: e.target.value.toUpperCase() }))} placeholder="Ricerca comune..." className="w-full glass-input text-sm rounded-xl py-2.5 px-3 uppercase focus:border-violet-500/50" />
+                    <datalist id="cf-comuni-list">{_CNA?.map(n => <option key={n} value={n} />)}</datalist>
+                  </div>
+                ) : (
+                  <div>
+                    <input list="cf-paesi-list" value={cfD.paese} onChange={e => setCfD(p => ({ ...p, paese: e.target.value.toUpperCase() }))} placeholder="Ricerca nazione..." className="w-full glass-input text-sm rounded-xl py-2.5 px-3 uppercase focus:border-violet-500/50" />
+                    <datalist id="cf-paesi-list">{_PNA?.map(n => <option key={n} value={n} />)}</datalist>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-white/5 bg-black/20 shrink-0">
+              <button onClick={doCF} className="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-sm font-bold uppercase tracking-widest shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-all flex items-center justify-center gap-2">
+                🧮 Calcola Codice Fiscale
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* FOOTER TIPS */}
+
       <div className="mt-12 bg-blue-500/5 border border-blue-500/10 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center gap-3 mb-4">
           <Info className="w-5 h-5 text-blue-400" />
@@ -1773,17 +2107,24 @@ function Pill({ children }) {
   );
 }
 
-function AField({ label, required, value, onChange, pf, ph, mono, span2 }) {
+function AField({ label, required, value, onChange, pf, ph, mono, span2, actionLabel, onAction }) {
   return (
     <div className={`space-y-1.5 ${span2 ? 'col-span-full' : ''}`}>
       <Label text={label} required={required} />
-      <input
-        type="text"
-        value={value || ""}
-        onChange={e => onChange(e.target.value)}
-        placeholder={ph}
-        className={`w-full glass-input text-sm rounded-xl py-2.5 px-4 outline-none transition-all ${mono ? 'font-monospace' : ''} ${pf && value ? 'border-emerald-500/50 bg-emerald-500/5' : ''}`}
-      />
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={value || ""}
+          onChange={e => onChange(e.target.value)}
+          placeholder={ph}
+          className={`flex-1 glass-input text-sm rounded-xl py-2.5 px-4 outline-none transition-all ${mono ? 'font-monospace uppercase text-white tracking-widest' : ''} ${pf && value ? 'border-emerald-500/50 bg-emerald-500/5' : ''}`}
+        />
+        {actionLabel && (
+          <button type="button" onClick={onAction} className="px-4 py-2.5 rounded-xl bg-violet-500/10 text-violet-400 font-bold text-xs uppercase tracking-widest border border-violet-500/20 hover:bg-violet-500/20 transition-all">
+            {actionLabel}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

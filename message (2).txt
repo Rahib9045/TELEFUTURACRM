@@ -1,0 +1,142 @@
+GESTIONE USATI — Technical Specification (v3)
+Section: Gestione Usati
+Date: March 10, 2026
+Attachment: GestioneUsati.jsx (UI prototype reference)
+
+1. Objective
+Remove the separate "Disponibilità Usati" slide and consolidate everything into a single "Gestione Usati" section. Remove the old sidebar menu item and redirect any dead routes.
+
+2. Page Layout
+The upper area (title, value boxes, filters, KPI cards, search bar, "Registra Usato" button) is sticky. Below it, the device table scrolls freely with no pagination (infinite scroll).
+
+3. Value Boxes (top-right header)
+Two boxes side by side:
+
+"VALORE INVENTARIO" (left): SUM of sale_price for all devices WHERE status ≠ venduto AND ≠ ko AND sale_price > 0. Shows device count.
+"VALORE VETRINA" (right): SUM of sale_price for devices WHERE status = in_vendita only. Shows count.
+
+
+4. Filters
+All filters combine with AND logic.
+
+"Negozio": multi-select with checkboxes, "Seleziona Tutti" / "Deseleziona Tutti" toggle. Respects role-based store scoping.
+"Stato": multi-select with checkboxes, same component. Each option shows icon + label. All 9 statuses available.
+"Filtra per Data": single dropdown to choose which date field the range applies to ("Data Registrazione", "Data Acquisto", "Data Messa in Vendita", "Data Vendita").
+"DA" / "A": two date pickers for range (inclusive). Each works independently if the other is empty.
+"Stato Ricambi": multi-select dropdown filtering devices that have at least one spare part matching the selected state. Options: "In Magazzino", "Da Ordinare", "Ordinato", "Arrivato". Useful for administration to find devices with pending parts.
+"Bonifici": single-select dropdown with options "Tutti" (default), "Da Effettuare" (pending transfers only), "Effettuato" (completed transfers only). Allows administration to quickly identify and process pending bank transfers.
+"↺ Reset Filtri": clears all filters to defaults.
+
+Search bar ("Cerca Modello / IMEI"): full-width input spanning the entire page width, positioned between the KPI cards and the device table.
+
+5. KPI Cards
+Five clickable cards: "Totale", "Acquistato", "Arrivo in Negozio", "In Vendita", "Venduto".
+
+Click → filters the table to that status.
+Re-click on the same active card → removes the filter and shows all statuses.
+"Totale" count excludes venduto and ko.
+All counts reflect active filters (store, dates, search).
+
+
+6. Device Status Lifecycle
+#KeyUI LabelDescription1acquistato"Acquistato"Auto-set on registration2in_transito"In Transito"Shipped to administration3ricevuto"Ricevuto"Administration confirms receipt4in_lavorazione"In Lavorazione"Sent to technician for inspection/repair5pronto"Pronto"Repaired/verified, ready to be assigned to a store6invio_in_negozio"Arrivo in Negozio"Assigned to a point of sale and shipped7in_vendita"In Vendita"In store showcase, ready to sell8venduto"Venduto"Sold — end of lifecycle—ko"KO"Unrepairable, to be disposed. Only settable by admin from "Ricevuto" or "In Lavorazione"
+Each status displays with an associated icon in table badges and filter options.
+
+7. Sale Price ("Prezzo Vendita")
+
+NOT set at registration time (stored as 0/null).
+In the main table, shows "—" when not yet set.
+In the device detail panel: if not set, a button "Imposta" reveals the editable field. If already set, the field is directly editable.
+Margin calculation only displays when sale price is filled in, otherwise shows "—".
+Editable by store staff and administration.
+
+
+8. Device Table
+Columns: #, "Modello", "IMEI", "Stato" (badge with icon), "Acquisto" (€), "Vendita" (€ — blank if not set), "Negozio", "Data Reg." — all sortable. Clicking a row opens the device detail panel.
+
+9. Device Detail Panel
+Opens as a modal overlay on row click. Two-column layout.
+Left column — Status Timeline
+Vertical timeline showing all lifecycle steps. Completed and active steps are clickable: on click they expand to show date/time and operator name of that status change. Future steps are greyed out and not clickable.
+Action buttons below the timeline:
+
+Advance to next status. When current status is "Pronto", a store selector dropdown ("Seleziona Negozio...") is required before advancing.
+"KO" — available only from "Ricevuto" or "In Lavorazione".
+
+Right column — Details, Badges, Payments, Spare Parts, Notes
+Badges: a "Provenienza Subito.it" badge appears if the device was flagged as coming from Subito.it. A payment method badge ("Contanti" / "Buono" / "Bonifico") is always displayed.
+Device details: model, IMEI, purchase price, sale price (editable), origin store, destination store, dates.
+Bank transfer section ("Bonifico"): only displayed when payment method is "Bonifico". Shows:
+
+The IBAN with a small clipboard icon button to copy it to system clipboard (for faster bank transfer processing).
+Status: "Bonifico Non Effettuato" (red) or "Bonifico Effettuato" (green).
+"Segna Effettuato" button for administration. This action auto-saves immediately without needing to press "Salva" — prevents risk of double transfers. Records the operator name and exact date/time.
+Once confirmed, the operator name and timestamp are permanently displayed (e.g., "👤 Admin — 📅 10/03/2026 14:35").
+An "Annulla" button allows reverting (also auto-saves).
+
+Extra Margin alert ("Extra Margine"): if flagged during registration, a highlighted box appears:
+
+Before confirmation: highlighted border, shows amount (€) and seller name, plus a "Conferma Extra Margine" button for administration.
+After confirmation: shows confirmed badge with operator name and timestamp. Confirmed data will be sent to the "VA" incentive page (to be built separately).
+
+Cost summary: total spare parts cost and calculated margin (sale_price − purchase_price − spare_parts_cost).
+Spare parts ("Ricambi"):
+
+"Aggiungi" button adds a part from a catalog dropdown.
+On add, technician flags whether part is in stock ("Presente in magazzino") or needs ordering.
+Each part row: name (left), status dropdown (center), trash icon (right).
+Status dropdown options: "In Magazzino", "Da Ordinare", "Ordinato", "Arrivato".
+Each part has a cost input field (€).
+When status = "Ordinato", a date picker appears for "Consegna prevista".
+
+Notes ("Note"): free-text textarea.
+"💾 Salva" button persists all changes and closes the panel. Bank transfer status changes are the only action that auto-saves without this button.
+
+10. Register Used Device ("+ Registra Usato")
+Button positioned above the KPI cards. Opens a 5-step wizard modal.
+Step 1 — "Venditore e Negozio"
+Two required dropdowns (seller and store). Plus a checkbox flag: "Provenienza da Subito.it". When checked, the device is tagged for traceability.
+Step 2 — "Anagrafica Cliente"
+Select "CONSUMER" or "BUSINESS" → search existing customer by "Codice Fiscale" or "Cellulare" (consumer) / "Partita IVA" or "Cellulare" (business). If found, pre-fill and allow editing. If not found, empty form.
+
+Consumer fields: "Nome", "Cognome", "Codice Fiscale"*, "Email", "Cellulare", "Domicilio", "IBAN"
+Business fields: "Ragione Sociale", "Partita IVA", "Referente"*, "Cellulare", "Email", "PEC", "Codice Univoco / SDI", "Sede Legale", "IBAN"
+
+The IBAN field is present in the customer form so it can be reused in Step 4 via a copy button.
+Step 3 — "Dettaglio Prodotto"
+Device type selector (required, shown first): four clickable cards — "Smartphone", "Tablet", "Portatile", "Watch". The rest of the form only appears after a type is selected.
+Then:
+
+"Brand"* (dropdown) → "Modello"* (dependent on brand) → "Capacità"* (GB dropdown) → "Colore"* → "IMEI"* (15 digits) → "Prezzo Acquisto"* (€) → "Grado di Usura"* ("Km 0" = brand new / A = "Come nuovo" / B = "Buono" / C = "Discreto" / D = "Usurato")
+
+Extra Margin flag ("Extra Margine"): checkbox below purchase price. When checked, a required input appears: "Importo Extra Margine" (€). The seller enters the difference between list price and actual acquisition price.
+Step 4 — "Metodo di Pagamento"
+Three selectable options: "Contanti", "Buono", "Bonifico". When "Bonifico" is selected, an "IBAN" input appears with a "Copia IBAN da anagrafica" button that copies the customer's IBAN from Step 2 into this field with one click.
+Step 5 — "Allegati"
+Two mandatory uploads:
+
+"Documento di Identità" (PDF/JPG/PNG)
+"Dichiarazione di Vendita" signed by customer (PDF/JPG/PNG)
+
+On submit, device is created with status "Acquistato" and timestamp + operator recorded. Sale price is NOT set at this stage.
+
+11. Extra Margin Flow Summary
+
+At registration (Step 3): seller flags "Extra Margine" and enters the amount.
+On device record: extra margin flag, amount, and seller are stored.
+In device detail panel: when administration opens the device, a visible alert shows the extra margin details and a "Conferma Extra Margine" button.
+On confirmation: timestamp and operator recorded.
+Data output: confirmed data sent to "VA" incentive page (future iteration).
+
+
+12. Bank Transfer Flow Summary
+
+At registration (Step 4): seller selects "Bonifico" and enters IBAN (or copies from anagrafica).
+On device record: payment method, IBAN, and status (bonifico_effettuato: false) are stored.
+In device detail panel: a box shows the IBAN with copy-to-clipboard button and transfer status.
+Administration marks "Segna Effettuato": auto-saves immediately with operator name and timestamp. No manual save needed.
+Filter "Bonifici": administration can filter the main list by "Da Effettuare" to see all pending transfers, process them, then mark as completed.
+
+
+13. Label Reference
+All user-facing text must remain in Italian. Full reference in the attached JSX.

@@ -1,1455 +1,1064 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
-    Smartphone,
-    Calendar,
-    Search,
-    User,
-    Building2,
-    CalendarDays,
-    Settings,
-    CheckCircle2,
-    Truck,
-    Tag,
-    CircleDollarSign,
-    XCircle,
-    X,
-    Save,
-    MapPin,
-    Plus,
-    Wrench,
-    FileText,
-    ArrowLeft,
-    ArrowRight,
-    ArrowUp,
-    ArrowDown,
-    Check
+  Smartphone, Tablet, Laptop, Watch,
+  Calendar, Search, User, Building2, CalendarDays,
+  CheckCircle2, Truck, Tag, CircleDollarSign, XCircle,
+  Save, MapPin, Plus, Wrench, FileText, Copy,
+  ChevronDown, ChevronUp, AlertTriangle, Banknote,
+  TicketIcon, Paperclip, ArrowRight, ArrowLeft, RotateCcw
 } from "lucide-react";
 import { cn } from "@/utils";
-import { useAuth } from "@/context/AuthContext";
 
-// --- Types & Constants from Prototype ---
+// ─── Types ────────────────────────────────────────────────────────────────────
 type UsatoStatus =
-    | "acquistato"
-    | "in_transito"
-    | "ricevuto"
-    | "in_lavorazione"
-    | "pronto"
-    | "invio_in_negozio"
-    | "in_vendita"
-    | "venduto"
-    | "ko";
+  | "acquistato" | "in_transito" | "ricevuto" | "in_lavorazione"
+  | "pronto" | "invio_in_negozio" | "in_vendita" | "venduto" | "ko";
 
-const STATUS_LIST: { key: UsatoStatus; label: string; icon: any; colorClass: string; bgClass: string; borderClass: string }[] = [
-    { key: "acquistato", label: "Acquistato", icon: CalendarDays, colorClass: "text-slate-400", bgClass: "bg-slate-500/10", borderClass: "border-slate-500/20" },
-    { key: "in_transito", label: "In Transito", icon: Truck, colorClass: "text-amber-500", bgClass: "bg-amber-500/10", borderClass: "border-amber-500/20" },
-    { key: "ricevuto", label: "Ricevuto", icon: Building2, colorClass: "text-blue-400", bgClass: "bg-blue-500/10", borderClass: "border-blue-500/20" },
-    { key: "in_lavorazione", label: "In Lavorazione", icon: Wrench, colorClass: "text-purple-400", bgClass: "bg-purple-500/10", borderClass: "border-purple-500/20" },
-    { key: "pronto", label: "Pronto", icon: CheckCircle2, colorClass: "text-emerald-500", bgClass: "bg-emerald-500/10", borderClass: "border-emerald-500/20" },
-    { key: "invio_in_negozio", label: "Arrivo in Negozio", icon: Truck, colorClass: "text-orange-500", bgClass: "bg-orange-500/10", borderClass: "border-orange-500/20" },
-    { key: "in_vendita", label: "In Vendita", icon: Tag, colorClass: "text-emerald-400", bgClass: "bg-emerald-500/10", borderClass: "border-emerald-500/20" },
-    { key: "venduto", label: "Venduto", icon: CircleDollarSign, colorClass: "text-rose-400", bgClass: "bg-rose-500/10", borderClass: "border-rose-500/20" },
-    { key: "ko", label: "KO", icon: XCircle, colorClass: "text-rose-500", bgClass: "bg-rose-500/10", borderClass: "border-rose-500/20" },
-];
+type RicambioState = "in_magazzino" | "da_ordinare" | "ordinato" | "arrivato";
+
+interface Ricambio {
+  name: string;
+  stato: RicambioState;
+  cost: number;
+  data_consegna_prevista: string;
+}
+
+interface Pagamento {
+  metodo: "contanti" | "buono" | "bonifico";
+  iban: string;
+  bonifico_effettuato: boolean | null;
+  bonifico_operatore: string | null;
+  bonifico_date: Date | null;
+}
+
+interface ExtraMargine {
+  importo: number;
+  venditore: string;
+  confermato: boolean;
+  conferma_operatore: string | null;
+  conferma_date: Date | null;
+}
+
+interface Device {
+  id: number; model: string; imei: string; status: UsatoStatus;
+  sale_price: number; purchase_price: number;
+  store: string; target_store: string | null;
+  created_at: Date; purchase_date: Date;
+  listed_date: Date | null; sold_date: Date | null;
+  ricambi: Ricambio[]; note_tecnico: string;
+  status_history: Record<string, { date: Date; operatore: string }>;
+  provenienza_subito: boolean;
+  extra_margine: ExtraMargine | null;
+  pagamento: Pagamento;
+  grado_usura: string;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const STATUS_LIST = [
+  { key: "acquistato", label: "Acquistato", icon: "🛒", colorClass: "text-slate-400", bgClass: "bg-slate-500/10", borderClass: "border-slate-500/30" },
+  { key: "in_transito", label: "In Transito", icon: "🚚", colorClass: "text-amber-400", bgClass: "bg-amber-500/10", borderClass: "border-amber-500/30" },
+  { key: "ricevuto", label: "Ricevuto", icon: "📥", colorClass: "text-blue-400", bgClass: "bg-blue-500/10", borderClass: "border-blue-500/30" },
+  { key: "in_lavorazione", label: "In Lavorazione", icon: "🔧", colorClass: "text-purple-400", bgClass: "bg-purple-500/10", borderClass: "border-purple-500/30" },
+  { key: "pronto", label: "Pronto", icon: "✅", colorClass: "text-emerald-400", bgClass: "bg-emerald-500/10", borderClass: "border-emerald-500/30" },
+  { key: "invio_in_negozio", label: "Arrivo in Negozio", icon: "📦", colorClass: "text-orange-400", bgClass: "bg-orange-500/10", borderClass: "border-orange-500/30" },
+  { key: "in_vendita", label: "In Vendita", icon: "🏷️", colorClass: "text-green-400", bgClass: "bg-green-500/10", borderClass: "border-green-500/30" },
+  { key: "venduto", label: "Venduto", icon: "💸", colorClass: "text-rose-400", bgClass: "bg-rose-500/10", borderClass: "border-rose-500/30" },
+  { key: "ko", label: "KO", icon: "❌", colorClass: "text-red-500", bgClass: "bg-red-500/10", borderClass: "border-red-500/30" },
+] as const;
 
 const statusMap = Object.fromEntries(STATUS_LIST.map(s => [s.key, s]));
 const STATUS_KEYS = STATUS_LIST.map(s => s.key);
+const LIFECYCLE: UsatoStatus[] = ["acquistato", "in_transito", "ricevuto", "in_lavorazione", "pronto", "invio_in_negozio", "in_vendita", "venduto"];
 
 const KPI_CARDS = [
-    { key: "_all", label: "Totale", icon: Smartphone, colorClass: "text-indigo-400", bgClass: "bg-indigo-500/10", borderClass: "border-indigo-500/20" },
-    { key: "acquistato", label: "Acquistato", icon: CalendarDays, colorClass: "text-slate-400", bgClass: "bg-slate-500/10", borderClass: "border-slate-500/20" },
-    { key: "invio_in_negozio", label: "Arrivo in Negozio", icon: Truck, colorClass: "text-orange-500", bgClass: "bg-orange-500/10", borderClass: "border-orange-500/20" },
-    { key: "in_vendita", label: "In Vendita", icon: Tag, colorClass: "text-emerald-400", bgClass: "bg-emerald-500/10", borderClass: "border-emerald-500/20" },
-    { key: "venduto", label: "Venduto", icon: CircleDollarSign, colorClass: "text-rose-400", bgClass: "bg-rose-500/10", borderClass: "border-rose-500/20" },
+  { key: "_all", label: "Totale", icon: "📊", colorClass: "text-indigo-400", bgClass: "bg-indigo-500/10", borderClass: "border-indigo-500/30" },
+  { key: "acquistato", label: "Acquistato", icon: "🛒", colorClass: "text-slate-400", bgClass: "bg-slate-500/10", borderClass: "border-slate-500/30" },
+  { key: "invio_in_negozio", label: "Arrivo in Negozio", icon: "📦", colorClass: "text-orange-400", bgClass: "bg-orange-500/10", borderClass: "border-orange-500/30" },
+  { key: "in_vendita", label: "In Vendita", icon: "🏷️", colorClass: "text-green-400", bgClass: "bg-green-500/10", borderClass: "border-green-500/30" },
+  { key: "venduto", label: "Venduto", icon: "💸", colorClass: "text-rose-400", bgClass: "bg-rose-500/10", borderClass: "border-rose-500/30" },
 ];
 
-// Reusing global store constants (mocked for now)
-const NEGOZI = [
-    "Magliana", "Donna", "Libia", "Collatina", "Mazzini",
-    "San Paolo", "Garbatella", "Promontori", "Acilia",
-    "Baleniere", "Castani", "Merulana", "Telefonico"
-];
-
+const NEGOZI = ["Magliana", "Donna", "Libia", "Collatina", "Mazzini", "San Paolo", "Garbatella", "Promontori", "Acilia", "Baleniere", "Castani", "Merulana", "Telefonico"];
 const DATE_FIELDS = [
-    { key: "created_at", label: "Data Registrazione" },
-    { key: "purchase_date", label: "Data Acquisto" },
-    { key: "listed_date", label: "Data Messa in Vendita" },
-    { key: "sold_date", label: "Data Vendita" },
+  { key: "created_at", label: "Data Registrazione" },
+  { key: "purchase_date", label: "Data Acquisto" },
+  { key: "listed_date", label: "Data Messa in Vendita" },
+  { key: "sold_date", label: "Data Vendita" },
 ];
-
-const RICAMBI_CATALOG = [
-    "Display LCD", "Batteria", "Fotocamera posteriore", "Fotocamera frontale",
-    "Connettore ricarica", "Altoparlante", "Microfono", "Tasto accensione",
-    "Tasto volume", "Vetro posteriore", "Scheda madre", "Sensore impronte",
-    "Face ID module", "Antenna NFC", "Vibrazione motore"
+const RICAMBI_CATALOG = ["Display LCD", "Batteria", "Fotocamera posteriore", "Fotocamera frontale", "Connettore ricarica", "Altoparlante", "Microfono", "Tasto accensione", "Tasto volume", "Vetro posteriore", "Scheda madre", "Sensore impronte", "Face ID module", "Antenna NFC", "Vibrazione motore"];
+const RICAMBIO_STATES: { key: RicambioState; label: string; colorClass: string }[] = [
+  { key: "in_magazzino", label: "In Magazzino", colorClass: "text-emerald-400" },
+  { key: "da_ordinare", label: "Da Ordinare", colorClass: "text-amber-400" },
+  { key: "ordinato", label: "Ordinato", colorClass: "text-blue-400" },
+  { key: "arrivato", label: "Arrivato", colorClass: "text-emerald-400" },
 ];
-
-const BRANDS_PHONES = [
-    "Apple iPhone 15", "Apple iPhone 14", "Samsung Galaxy S24", "Xiaomi 14"
-];
-
-const RICAMBIO_STATES = [
-    { key: "in_magazzino", label: "In Magazzino", colorClass: "text-emerald-400" },
-    { key: "da_ordinare", label: "Da Ordinare", colorClass: "text-amber-500" },
-    { key: "ordinato", label: "Ordinato", colorClass: "text-blue-400" },
-    { key: "arrivato", label: "Arrivato", colorClass: "text-emerald-400" },
-];
-
-const VENDITORI = ["Alberto", "Giulia", "Marco", "Francesca", "Alessandro"];
+const VENDITORI = ["Alberto", "Alex", "Alin", "Asad", "Ben Aziza", "Cristhian", "Cristi", "Damiano", "Daniel", "Daniele", "Denise", "Dimitri", "Eloise", "Eros", "Fadel", "Federico", "Francesca", "Francesco", "George", "Giacomo", "Gian", "Giulia", "Giuseppe B.", "Ilaria", "Lorenzo", "Manu", "Marta", "Matteo", "Michele", "Riccardo", "Roberto", "Samantha", "Sheekell", "Tommaso", "Veronica"];
+const OPERATORI = ["Alberto", "Francesca", "Daniele", "Giulia", "Michele", "Marta", "Federico", "Eloise", "Riccardo", "Lorenzo"];
 const PHONE_BRANDS_MODELS: Record<string, string[]> = {
-    Apple: ["iPhone 16 Pro Max", "iPhone 16 Pro", "iPhone 16", "iPhone 15 Pro Max", "iPhone 15 Pro", "iPhone 15", "iPhone 14 Pro", "iPhone 14", "iPhone 13", "iPhone SE"],
-    Samsung: ["Galaxy S24 Ultra", "Galaxy S24+", "Galaxy S24", "Galaxy S23", "Galaxy Z Fold5", "Galaxy Z Flip5", "Galaxy A54", "Galaxy A34", "Galaxy A15"],
-    Xiaomi: ["14 Ultra", "14", "13T Pro", "13T", "Redmi Note 13 Pro", "Redmi Note 13", "Redmi 13C"],
+  Apple: ["iPhone 16 Pro Max", "iPhone 16 Pro", "iPhone 16", "iPhone 15 Pro Max", "iPhone 15 Pro", "iPhone 15", "iPhone 14 Pro", "iPhone 14", "iPhone 13", "iPhone SE"],
+  Samsung: ["Galaxy S24 Ultra", "Galaxy S24+", "Galaxy S24", "Galaxy S23", "Galaxy Z Fold5", "Galaxy Z Flip5", "Galaxy A54", "Galaxy A34", "Galaxy A15"],
+  Xiaomi: ["14 Ultra", "14", "13T Pro", "13T", "Redmi Note 13 Pro", "Redmi Note 13", "Redmi 13C"],
+  OPPO: ["Find X7", "Reno 11 Pro", "Reno 11", "A79", "A58"],
+  Huawei: ["P60 Pro", "P60", "Nova 12", "Nova 11"],
+  Google: ["Pixel 8 Pro", "Pixel 8", "Pixel 7a"],
+  OnePlus: ["12", "Nord 3", "Nord CE3"],
+  Motorola: ["Edge 40 Pro", "Edge 40", "Moto G84"],
+  Nothing: ["Phone 2", "Phone 1"],
 };
-
 const CAPACITA_OPTIONS = ["32 GB", "64 GB", "128 GB", "256 GB", "512 GB", "1 TB"];
 const COLORI_OPTIONS = ["Nero", "Bianco", "Blu", "Rosso", "Verde", "Oro", "Argento", "Viola", "Rosa", "Grigio", "Titanio", "Altro"];
 const GRADI_USURA = [
-    { key: "A", label: "Grado A - Come nuovo", desc: "Nessun segno visibile" },
-    { key: "B", label: "Grado B - Buono", desc: "Lievi segni di usura" },
-    { key: "C", label: "Grado C - Discreto", desc: "Segni evidenti ma funzionante" },
-    { key: "D", label: "Grado D - Usurato", desc: "Segni importanti, possibili difetti estetici" },
+  { key: "Km0", label: "Km 0", desc: "Nuovo, mai utilizzato" },
+  { key: "A", label: "Grado A — Come nuovo", desc: "Nessun segno visibile" },
+  { key: "B", label: "Grado B — Buono", desc: "Lievi segni di usura" },
+  { key: "C", label: "Grado C — Discreto", desc: "Segni evidenti ma funzionante" },
+  { key: "D", label: "Grado D — Usurato", desc: "Segni importanti, possibili difetti estetici" },
+];
+const TIPO_PRODOTTO = [
+  { key: "smartphone", label: "Smartphone", Icon: Smartphone },
+  { key: "tablet", label: "Tablet", Icon: Tablet },
+  { key: "portatile", label: "Portatile", Icon: Laptop },
+  { key: "watch", label: "Watch", Icon: Watch },
 ];
 
-const LIFECYCLE = ["acquistato", "in_transito", "ricevuto", "in_lavorazione", "pronto", "invio_in_negozio", "in_vendita", "venduto"];
-
-// Formatters
-const fmtDate = (d: Date | string | null | undefined) => d ? new Date(d).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
+// ─── Formatters ───────────────────────────────────────────────────────────────
+const rnd = (f: string, t: string) => { const a = new Date(f).getTime(), b = new Date(t).getTime(); return new Date(a + Math.random() * (b - a)); };
+const fmtDate = (d: Date | null) => d ? d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
+const fmtDateTime = (d: Date | null) => d ? fmtDate(d) + " " + d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }) : "—";
 const fmtEur = (v: number) => v.toLocaleString("it-IT", { style: "currency", currency: "EUR" });
-const isoDate = (d: Date | string) => new Date(d).toISOString().slice(0, 10);
-const fmtDateTime = (d: Date | string | null | undefined) => d ? new Date(d).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" }) + " " + new Date(d).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }) : "—";
-const randomDate = (f: string, t: string) => { const a = new Date(f).getTime(), b = new Date(t).getTime(); return new Date(a + Math.random() * (b - a)); };
+const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 const genIMEI = () => { let s = "35"; for (let i = 0; i < 13; i++) s += Math.floor(Math.random() * 10); return s; };
 
-// Mock Generator
-const generateMockDevices = () => {
-    const statusDist = [
-        ...Array(6).fill("acquistato"), ...Array(4).fill("in_transito"), ...Array(5).fill("ricevuto"),
-        ...Array(8).fill("in_lavorazione"), ...Array(5).fill("pronto"), ...Array(4).fill("invio_in_negozio"),
-        ...Array(18).fill("in_vendita"), ...Array(14).fill("venduto"), ...Array(4).fill("ko"),
-    ];
+// ─── Mock Data ────────────────────────────────────────────────────────────────
+const BRANDS_FLAT = Object.entries(PHONE_BRANDS_MODELS).flatMap(([b, ms]) => ms.map(m => `${b} ${m}`));
+const statusDist = [
+  ...Array(6).fill("acquistato"), ...Array(4).fill("in_transito"), ...Array(5).fill("ricevuto"),
+  ...Array(8).fill("in_lavorazione"), ...Array(5).fill("pronto"), ...Array(4).fill("invio_in_negozio"),
+  ...Array(18).fill("in_vendita"), ...Array(14).fill("venduto"), ...Array(4).fill("ko"),
+] as UsatoStatus[];
 
-    return statusDist.map((status: any, i) => {
-        const price = Math.round((80 + Math.random() * 720) / 10) * 10;
-        const store = NEGOZI[Math.floor(Math.random() * NEGOZI.length)];
-        const hasR = ["pronto", "invio_in_negozio", "in_vendita", "venduto"].includes(status);
-        const inLav = status === "in_lavorazione";
-        const rc = hasR ? Math.floor(Math.random() * 3) : (inLav ? 1 + Math.floor(Math.random() * 2) : 0);
-        const ricambi = []; const used = new Set();
+const MOCK_DEVICES: Device[] = statusDist.map((status, i) => {
+  const price = Math.round((80 + Math.random() * 720) / 10) * 10;
+  const store = NEGOZI[Math.floor(Math.random() * NEGOZI.length)];
+  const hasR = ["pronto", "invio_in_negozio", "in_vendita", "venduto"].includes(status);
+  const inLav = status === "in_lavorazione";
+  const rc = hasR ? Math.floor(Math.random() * 3) : (inLav ? 1 + Math.floor(Math.random() * 2) : 0);
+  const ricambi: Ricambio[] = []; const used = new Set<number>();
+  for (let r = 0; r < rc; r++) {
+    let idx; do { idx = Math.floor(Math.random() * RICAMBI_CATALOG.length); } while (used.has(idx)); used.add(idx);
+    const rState = hasR ? "arrivato" : (inLav ? ["in_magazzino", "da_ordinare", "ordinato", "arrivato"][Math.floor(Math.random() * 4)] : "da_ordinare") as RicambioState;
+    ricambi.push({ name: RICAMBI_CATALOG[idx], stato: rState, cost: Math.round((5 + Math.random() * 45) * 100) / 100, data_consegna_prevista: rState === "ordinato" ? isoDate(rnd("2026-03-10", "2026-03-25")) : "" });
+  }
+  const isKO = status === "ko";
+  const lcIdx = isKO ? 4 : LIFECYCLE.indexOf(status as any);
+  const base = new Date("2025-08-01").getTime();
+  const history: Record<string, { date: Date; operatore: string }> = {};
+  for (let h = 0; h <= Math.min(lcIdx, LIFECYCLE.length - 1); h++) {
+    const dt = new Date(base + h * (2 + Math.random() * 5) * 86400000);
+    dt.setHours(8 + Math.floor(Math.random() * 10), Math.floor(Math.random() * 60));
+    history[LIFECYCLE[h]] = { date: dt, operatore: OPERATORI[Math.floor(Math.random() * OPERATORI.length)] };
+  }
+  if (isKO) { const dt = new Date(base + 5 * 86400000); dt.setHours(14); history["ko"] = { date: dt, operatore: OPERATORI[Math.floor(Math.random() * OPERATORI.length)] }; }
+  const m = ["contanti", "buono", "bonifico"][Math.floor(Math.random() * 3)] as "contanti" | "buono" | "bonifico";
+  const eff = m === "bonifico" && ["pronto", "invio_in_negozio", "in_vendita", "venduto"].includes(status) && Math.random() > 0.3;
+  const grads = ["Km0", "A", "B", "C", "D"];
+  return {
+    id: i + 1, model: BRANDS_FLAT[Math.floor(Math.random() * BRANDS_FLAT.length)], imei: genIMEI(), status,
+    sale_price: ["acquistato", "in_transito", "ricevuto", "in_lavorazione"].includes(status) ? (Math.random() > 0.7 ? price : 0) : price,
+    purchase_price: Math.round(price * (0.35 + Math.random() * 0.25)),
+    store, target_store: ["invio_in_negozio", "in_vendita", "venduto"].includes(status) ? NEGOZI[Math.floor(Math.random() * 12)] : null,
+    created_at: rnd("2025-06-01", "2026-03-10"), purchase_date: rnd("2025-04-01", "2026-02-28"),
+    listed_date: ["in_vendita", "venduto"].includes(status) ? rnd("2025-07-01", "2026-03-08") : null,
+    sold_date: status === "venduto" ? rnd("2026-01-01", "2026-03-09") : null,
+    ricambi, note_tecnico: inLav ? "Verifica componenti in corso" : (status === "ko" ? "Scheda madre irrecuperabile" : ""),
+    status_history: history,
+    provenienza_subito: Math.random() > 0.7,
+    grado_usura: grads[Math.floor(Math.random() * grads.length)],
+    extra_margine: Math.random() > 0.6 ? {
+      importo: Math.round(15 + Math.random() * 50), venditore: OPERATORI[Math.floor(Math.random() * OPERATORI.length)],
+      confermato: ["pronto", "invio_in_negozio", "in_vendita", "venduto"].includes(status),
+      conferma_operatore: ["pronto", "invio_in_negozio", "in_vendita", "venduto"].includes(status) ? OPERATORI[Math.floor(Math.random() * OPERATORI.length)] : null,
+      conferma_date: ["pronto", "invio_in_negozio", "in_vendita", "venduto"].includes(status) ? rnd("2025-09-01", "2026-03-01") : null,
+    } : null,
+    pagamento: {
+      metodo: m,
+      iban: m === "bonifico" ? "IT60X054281110100000" + String(Math.floor(Math.random() * 999999)).padStart(6, "0") : "",
+      bonifico_effettuato: m === "bonifico" ? eff : null,
+      bonifico_operatore: eff ? OPERATORI[Math.floor(Math.random() * OPERATORI.length)] : null,
+      bonifico_date: eff ? rnd("2025-10-01", "2026-03-05") : null,
+    },
+  };
+});
 
-        for (let r = 0; r < rc; r++) {
-            let idx; do { idx = Math.floor(Math.random() * RICAMBI_CATALOG.length); } while (used.has(idx)); used.add(idx);
-            const rState = hasR ? "arrivato" : (inLav ? ["in_magazzino", "da_ordinare", "ordinato", "arrivato"][Math.floor(Math.random() * 4)] : "da_ordinare");
-            ricambi.push({
-                name: RICAMBI_CATALOG[idx],
-                stato: rState,
-                cost: hasR || Math.random() > 0.4 ? Math.round((5 + Math.random() * 45) * 100) / 100 : 0,
-                data_consegna_prevista: rState === "ordinato" ? isoDate(randomDate("2026-03-10", "2026-03-25")) : "",
-            });
-        }
-
-        const isKO = status === "ko";
-        const lcIdx = isKO ? 4 : LIFECYCLE.indexOf(status);
-        const baseDate = new Date("2025-08-01").getTime();
-        const history: any = {};
-
-        for (let h = 0; h <= Math.min(lcIdx, LIFECYCLE.length - 1); h++) {
-            const dt = new Date(baseDate + h * (2 + Math.random() * 5) * 86400000);
-            dt.setHours(8 + Math.floor(Math.random() * 10), Math.floor(Math.random() * 60));
-            history[LIFECYCLE[h]] = { date: dt, operatore: "Operatore" };
-        }
-        if (isKO) {
-            const dt = new Date(baseDate + 5 * 86400000);
-            dt.setHours(14, Math.floor(Math.random() * 60));
-            history["ko"] = { date: dt, operatore: "Operatore" };
-        }
-
-        return {
-            id: i + 1,
-            model: BRANDS_PHONES[Math.floor(Math.random() * BRANDS_PHONES.length)],
-            imei: genIMEI(),
-            status,
-            sale_price: price,
-            purchase_price: Math.round(price * (0.35 + Math.random() * 0.25)),
-            store,
-            target_store: ["invio_in_negozio", "in_vendita", "venduto"].includes(status) ? NEGOZI[Math.floor(Math.random() * 12)] : null,
-            created_at: randomDate("2025-06-01", "2026-03-10"),
-            purchase_date: randomDate("2025-04-01", "2026-02-28"),
-            listed_date: ["in_vendita", "venduto"].includes(status) ? randomDate("2025-07-01", "2026-03-08") : null,
-            sold_date: status === "venduto" ? randomDate("2026-01-01", "2026-03-09") : null,
-            ricambi,
-            note_tecnico: inLav ? "Verifica componenti in corso" : (status === "ko" ? "Scheda madre irrecuperabile" : ""),
-            status_history: history,
-        };
-    });
-};
-
-const MOCK_DEVICES = generateMockDevices();
-
-// --- Components ---
-export function MultiSelect({
-    label,
-    options,
-    selected,
-    onChange,
-    renderOption
-}: {
-    label: string,
-    options: string[],
-    selected: string[],
-    onChange: (arr: string[]) => void,
-    renderOption?: (opt: string) => React.ReactNode
+//  MultiSelect 
+function MultiSelect({ label, options, selected, onChange, renderOpt }: {
+  label: string; options: string[]; selected: string[];
+  onChange: (v: string[]) => void; renderOpt?: (o: string) => React.ReactNode;
 }) {
-    const [open, setOpen] = useState(false);
-    const allSel = selected.length === options.length;
-
-    const toggle = (opt: string) => {
-        onChange(selected.includes(opt) ? selected.filter(x => x !== opt) : [...selected, opt]);
-    };
-
-    return (
-        <div className="relative">
-            <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">{label}</label>
-            <div
-                className="bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white cursor-pointer flex justify-between items-center min-h-[38px] hover:border-slate-600 transition-colors"
-                onClick={() => setOpen(!open)}
-            >
-                <div className="truncate flex-1 pr-2">
-                    {allSel ? "Tutti" : selected.length === 0 ? "Nessuno" :
-                        selected.length <= 2
-                            ? (renderOption
-                                ? selected.map((o, i) => <span key={o} className="inline-flex items-center">{i > 0 && <span className="mx-1">,</span>}{renderOption(o)}</span>)
-                                : selected.join(", "))
-                            : <span className="bg-indigo-500/20 text-indigo-400 rounded-full px-2 py-0.5 text-xs font-semibold">{selected.length} selezionati</span>
-                    }
-                </div>
-                {open ? <ArrowUp className="w-3.5 h-3.5 text-slate-500 shrink-0" /> : <ArrowDown className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
-            </div>
-
-            {open && (
-                <>
-                    <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-                    <div className="absolute top-[calc(100%+4px)] left-0 w-full min-w-[220px] bg-[#161b22] border border-white/10 rounded-xl py-1.5 z-50 max-h-[300px] overflow-auto shadow-xl shadow-black/50 custom-scrollbar">
-                        <div
-                            className="px-4 py-2 text-xs font-semibold text-indigo-400 cursor-pointer border-b border-white/5 mb-1 uppercase tracking-wider hover:bg-white/5"
-                            onClick={() => onChange(allSel ? [] : [...options])}
-                        >
-                            {allSel ? "Deseleziona Tutti" : "Seleziona Tutti"}
-                        </div>
-                        {options.map(opt => {
-                            const ch = selected.includes(opt);
-                            return (
-                                <div
-                                    key={opt}
-                                    className={cn(
-                                        "px-4 py-2 text-sm flex items-center gap-3 cursor-pointer transition-colors",
-                                        ch ? "bg-indigo-500/10 text-white" : "text-slate-300 hover:bg-white/5"
-                                    )}
-                                    onClick={() => toggle(opt)}
-                                >
-                                    <div className={cn(
-                                        "w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-colors",
-                                        ch ? "bg-indigo-500 border-indigo-500 text-white" : "border-slate-600"
-                                    )}>
-                                        {ch && <Check className="w-3 h-3 stroke-[3]" />}
-                                    </div>
-                                    <span>{renderOption ? renderOption(opt) : opt}</span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </>
-            )}
-        </div>
-    );
-}
-
-function StatusBadge({ statusKey }: { statusKey: string }) {
-    const s = statusMap[statusKey];
-    if (!s) return null;
-    const Icon = s.icon;
-    return (
-        <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border", s.colorClass, s.bgClass, s.borderClass)}>
-            <Icon className="w-3.5 h-3.5" />
-            {s.label}
+  const [open, setOpen] = useState(false);
+  const allSel = selected.length === options.length;
+  const toggle = (o: string) => onChange(selected.includes(o) ? selected.filter(x => x !== o) : [...selected, o]);
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-300 hover:bg-white/10 transition-all min-w-[140px]">
+        <span className="flex-1 text-left truncate">
+          {allSel ? label + " (Tutti)" : selected.length === 0 ? label + " (Nessuno)" : selected.length <= 2 ? selected.join(", ") : `${label} (${selected.length})`}
         </span>
-    );
+        <span className="text-[10px] text-slate-500">{open ? "" : ""}</span>
+      </button>
+      {open && <>
+        <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+        <div className="absolute top-full mt-1 left-0 z-50 bg-[#161b22] border border-white/10 rounded-xl shadow-2xl w-52 max-h-72 overflow-auto py-1">
+          <div className="px-3 py-2 text-[11px] font-bold uppercase text-purple-400 border-b border-white/5 cursor-pointer hover:bg-white/5"
+            onClick={() => onChange(allSel ? [] : [...options])}>
+            {allSel ? "Deseleziona Tutti" : "Seleziona Tutti"}
+          </div>
+          {options.map(o => (
+            <div key={o} onClick={() => toggle(o)}
+              className={cn("flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-white/5 transition-colors",
+                selected.includes(o) ? "bg-purple-500/10 text-purple-300" : "text-slate-300")}>
+              <div className={cn("w-4 h-4 rounded flex items-center justify-center border text-[10px] flex-shrink-0",
+                selected.includes(o) ? "bg-purple-500 border-purple-500 text-white" : "border-white/20")}>
+                {selected.includes(o) && ""}
+              </div>
+              {renderOpt ? renderOpt(o) : o}
+            </div>
+          ))}
+        </div>
+      </>}
+    </div>
+  );
 }
 
-function StatusTimeline({ currentStatus, history }: { currentStatus: string, history: any }) {
-    const isKO = currentStatus === "ko";
-    const currentIdx = isKO ? 3 : LIFECYCLE.indexOf(currentStatus);
-    const [openStep, setOpenStep] = useState<string | null>(null);
-    const hist = history || {};
+//  StatusBadge 
+function StatusBadge({ statusKey }: { statusKey: string }) {
+  const s = statusMap[statusKey as UsatoStatus];
+  if (!s) return <span>{statusKey}</span>;
+  return (
+    <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border", s.bgClass, s.colorClass, s.borderClass)}>
+      {s.icon} {s.label}
+    </span>
+  );
+}
 
-    return (
-        <div className="pl-2">
-            {LIFECYCLE.map((sk, i) => {
-                const s = statusMap[sk];
-                const done = !isKO && i < currentIdx;
-                const active = !isKO && i === currentIdx;
-                const hasHistory = !!hist[sk];
-                const clickable = done || active;
-
-                if (!s) return null;
-                const Icon = s.icon;
-
-                return (
-                    <div key={sk}>
-                        <div
-                            className={cn(
-                                "flex items-center gap-3 py-1.5 relative transition-opacity",
-                                done || active ? "opacity-100" : "opacity-35",
-                                clickable ? "cursor-pointer" : "cursor-default"
-                            )}
-                            onClick={() => { if (clickable && hasHistory) setOpenStep(openStep === sk ? null : sk); }}
-                        >
-                            <div className={cn(
-                                "w-7 h-7 rounded-full flex items-center justify-center border-2 transition-transform",
-                                done ? `${s.bgClass} ${s.borderClass} ${s.colorClass}` : (active ? `${s.bgClass} border-${s.colorClass.split('-')[1]}-500 ${s.colorClass} shadow-[0_0_10px_rgba(var(--tw-colors-${s.colorClass.split('-')[1]}-500),0.4)]` : "bg-[#0f111a] border-white/10 text-slate-500"),
-                                openStep === sk ? "scale-110" : "scale-100"
-                            )}>
-                                {done ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : <Icon className="w-3.5 h-3.5" />}
-                            </div>
-                            <span className={cn("text-xs", active ? "font-bold text-white" : "font-medium text-slate-400")}>{s.label}</span>
-                            {clickable && hasHistory && <Calendar className="w-3 h-3 text-slate-500 ml-1" />}
-                        </div>
-
-                        {openStep === sk && hasHistory && (
-                            <div className={cn("ml-9 mb-2 p-3 bg-[#0f111a] border rounded-lg text-xs leading-relaxed", s.borderClass)}>
-                                <div className={cn("font-semibold flex items-center gap-2 mb-1", s.colorClass)}>
-                                    <Icon className="w-3 h-3" /> {s.label}
-                                </div>
-                                <div className="text-slate-400 flex items-center gap-1.5"><Calendar className="w-3 h-3" /> {fmtDateTime(hist[sk].date)}</div>
-                                <div className="text-slate-400 flex items-center gap-1.5 mt-0.5"><User className="w-3 h-3" /> {hist[sk].operatore}</div>
-                            </div>
-                        )}
-                        {i < LIFECYCLE.length - 1 && (
-                            <div className={cn("w-0.5 h-3 space-y-1 ml-3.5", done ? "bg-emerald-500" : "bg-white/10")} />
-                        )}
-                    </div>
-                );
-            })}
-
-            {isKO && (
-                <>
-                    <div className="w-0.5 h-3 bg-white/10 ml-3.5" />
-                    <div
-                        className={cn("flex items-center gap-3 py-1.5 relative cursor-pointer")}
-                        onClick={() => { if (hist["ko"]) setOpenStep(openStep === "ko" ? null : "ko"); }}
-                    >
-                        <div className={cn(
-                            "w-7 h-7 rounded-full flex items-center justify-center border-2 bg-rose-500/20 border-rose-500 text-rose-500 transition-transform",
-                            openStep === "ko" ? "scale-110" : "scale-100"
-                        )}>
-                            <X className="w-3.5 h-3.5" strokeWidth={3} />
-                        </div>
-                        <span className="text-xs font-bold text-rose-500">KO — Non riparabile</span>
-                        {hist["ko"] && <Calendar className="w-3 h-3 text-slate-500 ml-1" />}
-                    </div>
-                    {openStep === "ko" && hist["ko"] && (
-                        <div className="ml-9 mb-2 p-3 bg-[#0f111a] border border-rose-500/30 rounded-lg text-xs leading-relaxed">
-                            <div className="font-semibold flex items-center gap-2 mb-1 text-rose-500">
-                                <XCircle className="w-3 h-3" /> KO
-                            </div>
-                            <div className="text-slate-400 flex items-center gap-1.5"><Calendar className="w-3 h-3" /> {fmtDateTime(hist["ko"].date)}</div>
-                            <div className="text-slate-400 flex items-center gap-1.5 mt-0.5"><User className="w-3 h-3" /> {hist["ko"].operatore}</div>
-                        </div>
-                    )}
-                </>
+//  StatusTimeline 
+function StatusTimeline({ currentStatus, history }: { currentStatus: UsatoStatus; history: Record<string, { date: Date; operatore: string }> }) {
+  const isKO = currentStatus === "ko";
+  const currentIdx = isKO ? 3 : LIFECYCLE.indexOf(currentStatus);
+  const [openStep, setOpenStep] = useState<string | null>(null);
+  return (
+    <div className="space-y-0.5">
+      {LIFECYCLE.map((sk, i) => {
+        const s = statusMap[sk]; const done = !isKO && i < currentIdx; const active = !isKO && i === currentIdx;
+        const hasHist = !!history[sk]; const clickable = done || active;
+        return (
+          <div key={sk}>
+            <div onClick={() => clickable && hasHist && setOpenStep(openStep === sk ? null : sk)}
+              className={cn("flex items-center gap-2 py-1.5 rounded-lg px-2 transition-all",
+                done || active ? "opacity-100" : "opacity-30",
+                clickable ? "cursor-pointer hover:bg-white/5" : "")}>
+              <div className={cn("w-6 h-6 rounded-full flex items-center justify-center text-xs border-2 flex-shrink-0 transition-all",
+                done ? `${s.bgClass} ${s.colorClass} ${s.borderClass}` : active ? `${s.bgClass} ${s.colorClass} ${s.borderClass} shadow-lg` : "border-white/10 bg-transparent")}>
+                {done ? "" : s.icon}
+              </div>
+              <span className={cn("text-xs", active ? "font-bold text-white" : "text-slate-400")}>{s.label}</span>
+              {clickable && hasHist && <span className="ml-auto text-[10px] text-slate-600"></span>}
+            </div>
+            {openStep === sk && hasHist && (
+              <div className="ml-8 mb-1 px-3 py-2 rounded-lg bg-black/30 border border-white/5 text-xs text-slate-400 space-y-0.5">
+                <div className="text-white font-semibold">{s.icon} {s.label}</div>
+                <div> {fmtDateTime(history[sk].date)}</div>
+                <div> {history[sk].operatore}</div>
+              </div>
             )}
+            {i < LIFECYCLE.length - 1 && <div className={cn("w-px h-2 ml-5", done ? "bg-emerald-500/40" : "bg-white/5")} />}
+          </div>
+        );
+      })}
+      {isKO && <>
+        <div className="w-px h-2 ml-5 bg-white/5" />
+        <div onClick={() => history["ko"] && setOpenStep(openStep === "ko" ? null : "ko")}
+          className="flex items-center gap-2 py-1.5 rounded-lg px-2 cursor-pointer hover:bg-white/5">
+          <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs border-2 bg-red-500/20 border-red-500 text-red-400"></div>
+          <span className="text-xs font-bold text-red-400">KO  Non riparabile</span>
         </div>
-    );
+        {openStep === "ko" && history["ko"] && (
+          <div className="ml-8 mb-1 px-3 py-2 rounded-lg bg-black/30 border border-red-500/20 text-xs text-slate-400 space-y-0.5">
+            <div className="text-red-400 font-semibold"> KO</div>
+            <div> {fmtDateTime(history["ko"].date)}</div>
+            <div> {history["ko"].operatore}</div>
+          </div>
+        )}
+      </>}
+    </div>
+  );
 }
 
-function RicambioRow({ r, idx, onUpdate, onRemove }: { r: any, idx: number, onUpdate: (idx: number, r: any) => void, onRemove: (idx: number) => void }) {
-    const stColor = RICAMBIO_STATES.find(s => s.key === r.stato);
-    return (
-        <div className="p-3 rounded-lg bg-white/[0.02] border border-white/10 mb-2">
-            <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-[13px] font-semibold flex items-center gap-1.5 text-white">
-                    <Wrench className="w-4 h-4 text-slate-400" />
-                    {r.name}
-                </span>
-                <select
-                    className={cn(
-                        "bg-[#0f111a] border rounded-lg px-2 py-1 text-xs font-semibold outline-none cursor-pointer",
-                        stColor ? `border-${stColor.colorClass.split('-')[1]}-500/30 ${stColor.colorClass}` : "border-white/10 text-white"
-                    )}
-                    value={r.stato}
-                    onChange={e => onUpdate(idx, { ...r, stato: e.target.value })}
-                >
-                    {RICAMBIO_STATES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-                </select>
-                <div className="ml-auto">
-                    <button
-                        className="text-slate-400 hover:text-rose-400 p-1 rounded-md hover:bg-rose-500/10 transition-colors"
-                        onClick={() => onRemove(idx)}
-                        title="Rimuovi"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
-            </div>
-
-            <div className="flex gap-4 mt-2 items-center flex-wrap">
-                <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-slate-400">Costo:</span>
-                    <div className="relative">
-                        <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            className="bg-[#0f111a] border border-white/10 text-white rounded-md pl-2 pr-6 py-1 text-xs w-20 outline-none focus:border-indigo-500"
-                            value={r.cost || ""}
-                            onChange={e => onUpdate(idx, { ...r, cost: parseFloat(e.target.value) || 0 })}
-                            placeholder="0.00"
-                        />
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-400">€</span>
-                    </div>
-                </div>
-                {r.stato === "ordinato" && (
-                    <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-slate-400">Consegna prevista:</span>
-                        <input
-                            type="date"
-                            className="bg-[#0f111a] border border-white/10 text-white rounded-md px-2 py-1 text-xs outline-none focus:border-indigo-500"
-                            value={r.data_consegna_prevista || ""}
-                            onChange={e => onUpdate(idx, { ...r, data_consegna_prevista: e.target.value })}
-                        />
-                    </div>
-                )}
-            </div>
+//  RicambioRow 
+function RicambioRow({ r, idx, onUpdate, onRemove }: { r: Ricambio; idx: number; onUpdate: (i: number, r: Ricambio) => void; onRemove: (i: number) => void }) {
+  const st = RICAMBIO_STATES.find(s => s.key === r.stato);
+  return (
+    <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-sm font-semibold text-slate-300"> {r.name}</span>
+        <select value={r.stato} onChange={e => onUpdate(idx, { ...r, stato: e.target.value as RicambioState })}
+          className={cn("bg-black/40 border rounded-lg px-2 py-1 text-xs font-semibold outline-none cursor-pointer border-white/10", st?.colorClass)}>
+          {RICAMBIO_STATES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+        </select>
+        <button onClick={() => onRemove(idx)} className="ml-auto text-slate-600 hover:text-red-400 transition-colors text-sm"></button>
+      </div>
+      <div className="flex gap-3 items-center flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-slate-500">Costo:</span>
+          <input type="number" step="0.01" min="0" value={r.cost || ""} onChange={e => onUpdate(idx, { ...r, cost: parseFloat(e.target.value) || 0 })}
+            className="w-20 bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs text-slate-300 outline-none" placeholder="0.00" />
+          <span className="text-[11px] text-slate-500"></span>
         </div>
-    );
+        {r.stato === "ordinato" && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-slate-500">Consegna prevista:</span>
+            <input type="date" value={r.data_consegna_prevista || ""} onChange={e => onUpdate(idx, { ...r, data_consegna_prevista: e.target.value })}
+              className="bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs text-slate-300 outline-none" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
-function DevicePanel({ device, onClose, onSave }: { device: any, onClose: () => void, onSave: (d: any) => void }) {
-    const [dev, setDev] = useState(() => ({ ...device, ricambi: device.ricambi.map((r: any) => ({ ...r })) }));
-    const [newRicambio, setNewRicambio] = useState("");
-    const [newRicambioInMag, setNewRicambioInMag] = useState(false);
-    const [showAdd, setShowAdd] = useState(false);
+//  DevicePanel 
+function DevicePanel({ device, onClose, onSave }: { device: Device; onClose: () => void; onSave: (d: Device) => void }) {
+  const [dev, setDev] = useState<Device>(() => ({ ...device, ricambi: device.ricambi.map(r => ({ ...r })), extra_margine: device.extra_margine ? { ...device.extra_margine } : null, pagamento: { ...device.pagamento } }));
+  const [newRicambio, setNewRicambio] = useState("");
+  const [newRicambioInMag, setNewRicambioInMag] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [targetStore, setTargetStore] = useState(dev.target_store || "");
+  const [noteTecnico, setNoteTecnico] = useState(dev.note_tecnico || "");
+  const [editSalePrice, setEditSalePrice] = useState(dev.sale_price > 0);
+  const [salePriceVal, setSalePriceVal] = useState(String(dev.sale_price || ""));
+  const [ibanCopied, setIbanCopied] = useState(false);
 
-    const [targetStore, setTargetStore] = useState(dev.target_store || "");
-    const [noteTecnico, setNoteTecnico] = useState(dev.note_tecnico || "");
+  const s = statusMap[dev.status];
+  const canAdvance = !["venduto", "ko"].includes(dev.status);
+  const lcIdx = LIFECYCLE.indexOf(dev.status as any);
+  const next = canAdvance && lcIdx >= 0 && lcIdx < LIFECYCLE.length - 1 ? LIFECYCLE[lcIdx + 1] : null;
+  const needsStore = dev.status === "pronto";
+  const totalRicambi = dev.ricambi.reduce((s, r) => s + (r.cost || 0), 0);
+  const spVal = editSalePrice ? (parseFloat(salePriceVal) || 0) : 0;
+  const margin = spVal - dev.purchase_price - totalRicambi;
 
-    const s = statusMap[dev.status];
-    const canAdvance = !["venduto", "ko"].includes(dev.status);
+  const addRicambio = () => {
+    if (!newRicambio.trim()) return;
+    setDev(p => ({ ...p, ricambi: [...p.ricambi, { name: newRicambio.trim(), stato: newRicambioInMag ? "in_magazzino" : "da_ordinare", cost: 0, data_consegna_prevista: "" }] }));
+    setNewRicambio(""); setShowAdd(false); setNewRicambioInMag(false);
+  };
+  const updateRicambio = (idx: number, r: Ricambio) => setDev(p => { const a = [...p.ricambi]; a[idx] = r; return { ...p, ricambi: a }; });
+  const removeRicambio = (idx: number) => setDev(p => ({ ...p, ricambi: p.ricambi.filter((_, i) => i !== idx) }));
 
-    const nextSt = () => {
-        const idx = LIFECYCLE.indexOf(dev.status);
-        return idx >= 0 && idx < LIFECYCLE.length - 1 ? LIFECYCLE[idx + 1] : null;
-    };
-    const next = nextSt();
-    const needsStore = dev.status === "pronto";
-
-    const totalRicambiCost = dev.ricambi.reduce((s: number, r: any) => s + (r.cost || 0), 0);
-    const margin = dev.sale_price - dev.purchase_price - totalRicambiCost;
-
-    const addRicambio = () => {
-        if (!newRicambio.trim()) return;
-        setDev((p: any) => ({
-            ...p,
-            ricambi: [...p.ricambi, { name: newRicambio.trim(), stato: newRicambioInMag ? "in_magazzino" : "da_ordinare", cost: 0, data_consegna_prevista: "" }]
-        }));
-        setNewRicambio(""); setShowAdd(false); setNewRicambioInMag(false);
-    };
-
-    const updateRicambio = (idx: number, updated: any) => {
-        setDev((p: any) => {
-            const r = [...p.ricambi];
-            r[idx] = updated;
-            return { ...p, ricambi: r };
-        });
-    };
-
-    const removeRicambio = (idx: number) => {
-        setDev((p: any) => ({ ...p, ricambi: p.ricambi.filter((_: any, i: number) => i !== idx) }));
-    };
-
-    const advanceStatus = () => {
-        if (needsStore && !targetStore) return;
-        setDev((p: any) => {
-            const u = { ...p, status: next, note_tecnico: noteTecnico };
-            if (needsStore) u.target_store = targetStore;
-            if (next === "in_vendita") u.listed_date = new Date();
-            if (next === "venduto") u.sold_date = new Date();
-            return u;
-        });
-    };
-
-    const setKO = () => setDev((p: any) => ({ ...p, status: "ko", note_tecnico: noteTecnico }));
-    const handleSave = () => { onSave({ ...dev, note_tecnico: noteTecnico }); };
-
-    if (!s) return null;
-    const OriginalIcon = s.icon;
-
-    return (
-        <div
-            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex justify-center items-start pt-10"
-            onClick={onClose}
-        >
-            <div
-                className="bg-[#161b22] border border-white/10 rounded-2xl w-[94%] max-w-5xl max-h-[85vh] overflow-auto shadow-[0_20px_60px_rgba(0,0,0,0.5)] custom-scrollbar"
-                onClick={e => e.stopPropagation()}
-            >
-                {/* Header */}
-                <div className="flex justify-between items-center px-7 py-5 border-b border-white/10 sticky top-0 bg-[#161b22] z-10 rounded-t-2xl">
-                    <div>
-                        <div className="flex items-center gap-3 text-lg font-bold text-white">
-                            <OriginalIcon className={cn("w-5 h-5", s.colorClass)} /> {dev.model}
-                        </div>
-                        <div className="text-xs text-slate-400 mt-1 font-mono">IMEI: {dev.imei}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/20 px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors"
-                            onClick={handleSave}
-                        >
-                            <Save className="w-4 h-4" /> Salva
-                        </button>
-                        <button
-                            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors ml-1"
-                            onClick={onClose}
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-                </div>
-
-                <div className="p-7">
-                    <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-8">
-                        {/* Left Column: Timeline */}
-                        <div>
-                            <div className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-slate-400" /> Stato
-                            </div>
-                            <div className="mb-4">
-                                <StatusBadge statusKey={dev.status} />
-                            </div>
-
-                            <StatusTimeline currentStatus={dev.status} history={dev.status_history} />
-
-                            {canAdvance && (
-                                <div className="mt-6 flex flex-col gap-3">
-                                    {needsStore && (
-                                        <select
-                                            className="bg-[#0f111a] border border-white/10 text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
-                                            value={targetStore}
-                                            onChange={e => setTargetStore(e.target.value)}
-                                        >
-                                            <option value="">Seleziona Negozio di destinazione...</option>
-                                            {NEGOZI.filter(n => n !== "Telefonico").map(n => <option key={n} value={n}>{n}</option>)}
-                                        </select>
-                                    )}
-
-                                    {next && statusMap[next] && (
-                                        <button
-                                            className={cn("px-4 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 border transition-colors", statusMap[next].bgClass, statusMap[next].colorClass, statusMap[next].borderClass, `hover:bg-${statusMap[next].colorClass.split('-')[1]}-500/20`)}
-                                            onClick={advanceStatus}
-                                        >
-                                            <ArrowRight className="w-4 h-4" />
-                                            Avanza a: {statusMap[next].label}
-                                        </button>
-                                    )}
-
-                                    {["in_lavorazione", "ricevuto"].includes(dev.status) && (
-                                        <button
-                                            className="px-4 py-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/30 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-rose-500/20 transition-colors mt-2"
-                                            onClick={setKO}
-                                        >
-                                            <XCircle className="w-4 h-4" /> Segna come KO
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Right Column: Details & Ricambi */}
-                        <div className="flex flex-col gap-6 min-w-0">
-                            {/* Costs and Margin */}
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                <div className="bg-white/[0.02] border border-white/5 p-4 rounded-xl">
-                                    <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Registrato</div>
-                                    <div className="text-white font-medium">{fmtDate(dev.created_at)}</div>
-                                </div>
-                                <div className="bg-white/[0.02] border border-white/5 p-4 rounded-xl">
-                                    <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1.5"><CircleDollarSign className="w-3.5 h-3.5" /> Acquisto</div>
-                                    <div className="text-white font-medium">{fmtEur(dev.purchase_price)}</div>
-                                </div>
-                                <div className="bg-white/[0.02] border border-white/5 p-4 rounded-xl">
-                                    <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1.5"><Tag className="w-3.5 h-3.5" /> Vendita</div>
-                                    <div className={cn("font-medium", dev.status === "venduto" ? "text-emerald-400 font-bold" : "text-slate-300")}>{fmtEur(dev.sale_price)}</div>
-                                </div>
-                                <div className={cn("border p-4 rounded-xl", margin > 0 ? "bg-emerald-500/10 border-emerald-500/20" : "bg-rose-500/10 border-rose-500/20")}>
-                                    <div className={cn("text-[11px] font-bold uppercase tracking-wider mb-1", margin > 0 ? "text-emerald-400" : "text-rose-400")}>Margine Lor.</div>
-                                    <div className={cn("font-bold text-lg", margin > 0 ? "text-emerald-400" : "text-rose-400")}>{fmtEur(margin)}</div>
-                                </div>
-                            </div>
-
-                            {/* Ricambi Section */}
-                            <div className="bg-[#0f111a]/50 border border-white/5 rounded-2xl p-6">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                                        <Wrench className="w-4 h-4 text-purple-400" /> Ricambi & Interventi
-                                    </h3>
-                                    {!showAdd && (
-                                        <button
-                                            className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-                                            onClick={() => setShowAdd(true)}
-                                        >
-                                            <Plus className="w-3.5 h-3.5" /> Aggiungi Ricambio
-                                        </button>
-                                    )}
-                                </div>
-
-                                {showAdd && (
-                                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 mb-4 flex flex-col gap-3">
-                                        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Nuovo Ricambio</div>
-                                        <div className="flex gap-2">
-                                            <input
-                                                autoFocus
-                                                list="ricambi-list"
-                                                className="flex-1 bg-[#0f111a] border border-white/10 text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
-                                                placeholder="Cerca o digita nome ricambio..."
-                                                value={newRicambio}
-                                                onChange={e => setNewRicambio(e.target.value)}
-                                                onKeyDown={e => e.key === "Enter" && addRicambio()}
-                                            />
-                                            <datalist id="ricambi-list">
-                                                {RICAMBI_CATALOG.map(c => <option key={c} value={c} />)}
-                                            </datalist>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-300">
-                                                <input
-                                                    type="checkbox"
-                                                    className="w-4 h-4 rounded bg-[#0f111a] border-white/20 text-indigo-500 focus:ring-indigo-500 cursor-pointer"
-                                                    checked={newRicambioInMag}
-                                                    onChange={e => setNewRicambioInMag(e.target.checked)}
-                                                />
-                                                Già in Magazzino
-                                            </label>
-                                            <div className="flex gap-2 ml-auto">
-                                                <button
-                                                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-white/5 hover:text-white transition-colors"
-                                                    onClick={() => { setShowAdd(false); setNewRicambio(""); }}
-                                                >
-                                                    Annulla
-                                                </button>
-                                                <button
-                                                    className="px-3 py-1.5 bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 rounded-lg text-xs font-bold transition-colors"
-                                                    onClick={addRicambio}
-                                                >
-                                                    Aggiungi
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {dev.ricambi.length === 0 ? (
-                                    <div className="py-6 text-center text-slate-500 text-sm">Nessun ricambio o intervento registrato.</div>
-                                ) : (
-                                    <div className="flex flex-col gap-1">
-                                        {dev.ricambi.map((r: any, idx: number) => (
-                                            <RicambioRow key={idx} r={r} idx={idx} onUpdate={updateRicambio} onRemove={removeRicambio} />
-                                        ))}
-                                    </div>
-                                )}
-
-                                {dev.ricambi.length > 0 && (
-                                    <div className="mt-4 pt-3 border-t border-white/10 flex justify-between items-center px-2">
-                                        <span className="text-sm font-medium text-slate-400">Costo totale Ricambi:</span>
-                                        <span className="text-sm font-bold text-rose-400">{fmtEur(totalRicambiCost)}</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Note Section */}
-                            <div className="bg-[#0f111a]/50 border border-white/5 rounded-2xl p-6">
-                                <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-3">
-                                    <FileText className="w-4 h-4 text-amber-400" /> Note (Amministratore & Tecnico)
-                                </h3>
-                                <textarea
-                                    className="w-full bg-[#0f111a] border border-white/10 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 resize-y min-h-[100px] custom-scrollbar"
-                                    placeholder="Aggiungi una nota interna (es. segni di usura, problemi rilevati in fase di test...)"
-                                    value={noteTecnico}
-                                    onChange={e => setNoteTecnico(e.target.value)}
-                                />
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-
-
-function RegistraUsatoPanel({ onClose, onSave }: { onClose: () => void, onSave: (d: any) => void }) {
-    const [step, setStep] = useState(1);
-
-    // Form fields
-    const [venditore, setVenditore] = useState("");
-    const [negozio, setNegozio] = useState("");
-
-    const [tipoCliente, setTipoCliente] = useState<"consumer" | "business" | "">("");
-    const [searchField, setSearchField] = useState("");
-    const [searchValue, setSearchValue] = useState("");
-    const [clienteFound, setClienteFound] = useState<boolean | null>(null);
-    const [ana, setAna] = useState({
-        nome: "", cognome: "", cf: "", piva: "", email: "", cellulare: "",
-        domicilio: "", ragioneSociale: "", referente: "", pec: "", sdi: "", sedeLegale: ""
+  const advanceStatus = () => {
+    if (needsStore && !targetStore) return;
+    setDev(p => {
+      const u: Device = { ...p, status: next!, note_tecnico: noteTecnico };
+      if (needsStore) u.target_store = targetStore;
+      if (next === "in_vendita") u.listed_date = new Date();
+      if (next === "venduto") u.sold_date = new Date();
+      return u;
     });
+  };
+  const setKO = () => setDev(p => ({ ...p, status: "ko", note_tecnico: noteTecnico }));
+  const handleSave = () => { const u: Device = { ...dev, note_tecnico: noteTecnico, sale_price: editSalePrice ? (parseFloat(salePriceVal) || 0) : 0 }; onSave(u); onClose(); };
 
-    const [brand, setBrand] = useState("");
-    const [model, setModel] = useState("");
-    const [capacita, setCapacita] = useState("");
-    const [colore, setColore] = useState("");
-    const [imei, setImei] = useState("");
-    const [prezzoAcquisto, setPrezzoAcquisto] = useState("");
-    const [gradoUsura, setGradoUsura] = useState("");
+  const confirmExtraMargine = () => setDev(p => ({ ...p, extra_margine: { ...p.extra_margine!, confermato: true, conferma_operatore: "Admin", conferma_date: new Date() } }));
 
-    const [allegDocumento, setAllegDocumento] = useState<string | null>(null);
-    const [allegDichiarazione, setAllegDichiarazione] = useState<string | null>(null);
+  const toggleBonifico = () => {
+    const nowEff = !dev.pagamento.bonifico_effettuato;
+    const upd: Device = { ...dev, pagamento: { ...dev.pagamento, bonifico_effettuato: nowEff, bonifico_operatore: nowEff ? "Admin" : null, bonifico_date: nowEff ? new Date() : null }, note_tecnico: noteTecnico, sale_price: editSalePrice ? (parseFloat(salePriceVal) || 0) : 0 };
+    setDev(upd); onSave(upd);
+  };
+  const copyIban = () => { try { navigator.clipboard.writeText(dev.pagamento.iban); setIbanCopied(true); setTimeout(() => setIbanCopied(false), 2000); } catch (e) { } };
 
-    const doSearch = () => {
-        if (!searchValue.trim()) return;
-        setClienteFound(true);
-        if (tipoCliente === "consumer") {
-            setAna({ ...ana, nome: "Mario", cognome: "Rossi", cf: "RSSMRA80A01H501U", email: "mario.rossi@email.com", cellulare: "333 1234567", domicilio: "Via Roma 15, 00100 Roma" });
-        } else {
-            setAna({ ...ana, ragioneSociale: "Rossi S.r.l.", piva: "12345678901", referente: "Mario Rossi", cellulare: "333 1234567", email: "info@rossi.it", pec: "azienda@pec.it", sdi: "Abc1234", sedeLegale: "Via Roma 15, 00100 Roma" });
-        }
-    };
-
-    const doNew = () => { setClienteFound(false); };
-
-    const canNext = () => {
-        if (step === 1) return venditore && negozio;
-        if (step === 2) return tipoCliente && clienteFound !== null;
-        if (step === 3) return brand && model && capacita && colore && imei && prezzoAcquisto && gradoUsura;
-        if (step === 4) return allegDocumento && allegDichiarazione;
-        return false;
-    };
-
-    const handleSubmit = () => {
-        onSave({
-            venditore, negozio, tipoCliente, anagrafica: ana,
-            brand, model, capacita, colore, imei, prezzo_acquisto: parseFloat(prezzoAcquisto) || 0, grado_usura: gradoUsura,
-            allegati: { documento: allegDocumento, dichiarazione: allegDichiarazione }
-        });
-    };
-
-    const renderStep = () => {
-        if (step === 1) return (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Venditore *</label>
-                    <select className="w-full bg-[#0f111a] border border-white/10 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 cursor-pointer" value={venditore} onChange={e => setVenditore(e.target.value)}>
-                        <option value="">Seleziona venditore...</option>
-                        {VENDITORI.map(v => <option key={v} value={v}>{v}</option>)}
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Negozio *</label>
-                    <select className="w-full bg-[#0f111a] border border-white/10 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 cursor-pointer" value={negozio} onChange={e => setNegozio(e.target.value)}>
-                        <option value="">Seleziona negozio...</option>
-                        {NEGOZI.map(n => <option key={n} value={n}>{n}</option>)}
-                    </select>
-                </div>
-            </div>
-        );
-
-        if (step === 2) return (
-            <div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                    <div
-                        className={cn("border rounded-xl p-5 text-center cursor-pointer transition-all", tipoCliente === "consumer" ? "border-indigo-500 bg-indigo-500/10" : "border-white/10 bg-white/[0.02] hover:bg-white/5")}
-                        onClick={() => { setTipoCliente("consumer"); setClienteFound(null); setSearchValue(""); }}
-                    >
-                        <User className={cn("w-8 h-8 mx-auto mb-2", tipoCliente === "consumer" ? "text-indigo-400" : "text-slate-400")} />
-                        <div className={cn("text-sm font-bold", tipoCliente === "consumer" ? "text-indigo-400" : "text-white")}>CONSUMER</div>
-                        <div className="text-xs text-slate-400 mt-1">Persona fisica</div>
-                    </div>
-                    <div
-                        className={cn("border rounded-xl p-5 text-center cursor-pointer transition-all", tipoCliente === "business" ? "border-indigo-500 bg-indigo-500/10" : "border-white/10 bg-white/[0.02] hover:bg-white/5")}
-                        onClick={() => { setTipoCliente("business"); setClienteFound(null); setSearchValue(""); }}
-                    >
-                        <Building2 className={cn("w-8 h-8 mx-auto mb-2", tipoCliente === "business" ? "text-indigo-400" : "text-slate-400")} />
-                        <div className={cn("text-sm font-bold", tipoCliente === "business" ? "text-indigo-400" : "text-white")}>BUSINESS</div>
-                        <div className="text-xs text-slate-400 mt-1">Azienda / P.IVA</div>
-                    </div>
-                </div>
-
-                {tipoCliente && (
-                    <div>
-                        <div className="text-xs font-semibold text-slate-400 uppercase mb-3">Verifica anagrafica esistente</div>
-                        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                            <select
-                                className="w-full sm:w-[180px] bg-[#0f111a] border border-white/10 text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
-                                value={searchField} onChange={e => setSearchField(e.target.value)}
-                            >
-                                <option value="">Ricerca tramite...</option>
-                                <option value="cf">{tipoCliente === "consumer" ? "Codice Fiscale" : "Partita IVA"}</option>
-                                <option value="tel">Cellulare</option>
-                                <option value="email">Email</option>
-                            </select>
-                            <input
-                                className="flex-1 bg-[#0f111a] border border-white/10 text-white rounded-lg px-4 py-2 text-sm outline-none focus:border-indigo-500"
-                                placeholder={`Inserisci ${searchField === 'cf' ? (tipoCliente === 'consumer' ? 'codice fiscale' : 'partita iva') : (searchField === 'tel' ? 'cellulare' : 'valore')}...`}
-                                value={searchValue} onChange={e => setSearchValue(e.target.value)} disabled={!searchField}
-                                onKeyDown={e => e.key === "Enter" && doSearch()}
-                            />
-                            <div className="flex gap-2">
-                                <button
-                                    className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
-                                    onClick={doSearch} disabled={!searchField || !searchValue.trim()}
-                                >
-                                    <Search className="w-4 h-4" /> Cerca
-                                </button>
-                                {clienteFound === null && (
-                                    <button
-                                        className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap"
-                                        onClick={doNew}
-                                    >
-                                        Nuovo Cliente
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-
-                        {clienteFound === true && (
-                            <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl mb-4">
-                                <div className="text-sm font-bold text-emerald-400 flex items-center gap-2 mb-4">
-                                    <CheckCircle2 className="w-5 h-5" /> Cliente trovato! Dati pre-compilati.
-                                </div>
-                                {tipoCliente === "consumer" ? (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Nome *</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" value={ana.nome} onChange={e => setAna({ ...ana, nome: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Cognome *</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" value={ana.cognome} onChange={e => setAna({ ...ana, cognome: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Codice Fiscale *</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" value={ana.cf} onChange={e => setAna({ ...ana, cf: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Email</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" value={ana.email} onChange={e => setAna({ ...ana, email: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Cellulare</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" value={ana.cellulare} onChange={e => setAna({ ...ana, cellulare: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Domicilio</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" value={ana.domicilio} onChange={e => setAna({ ...ana, domicilio: e.target.value })} /></div>
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Ragione Sociale *</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" value={ana.ragioneSociale} onChange={e => setAna({ ...ana, ragioneSociale: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Partita IVA *</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" value={ana.piva} onChange={e => setAna({ ...ana, piva: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Referente *</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" value={ana.referente} onChange={e => setAna({ ...ana, referente: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Cellulare</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" value={ana.cellulare} onChange={e => setAna({ ...ana, cellulare: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Email</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" value={ana.email} onChange={e => setAna({ ...ana, email: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">PEC</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" value={ana.pec} onChange={e => setAna({ ...ana, pec: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">SDI</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" value={ana.sdi} onChange={e => setAna({ ...ana, sdi: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Sede Legale</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" value={ana.sedeLegale} onChange={e => setAna({ ...ana, sedeLegale: e.target.value })} /></div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {clienteFound === false && (
-                            <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                                <div className="text-sm font-bold text-blue-400 flex items-center gap-2 mb-4">
-                                    <User className="w-5 h-5" /> Nuovo cliente — compila i dati
-                                </div>
-                                {tipoCliente === "consumer" ? (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Nome *</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" placeholder="es. Mario" value={ana.nome} onChange={e => setAna({ ...ana, nome: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Cognome *</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" placeholder="es. Rossi" value={ana.cognome} onChange={e => setAna({ ...ana, cognome: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Codice Fiscale *</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" placeholder="RSSMRA80A01H501U" value={ana.cf} onChange={e => setAna({ ...ana, cf: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Email</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" placeholder="mario@email.com" value={ana.email} onChange={e => setAna({ ...ana, email: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Cellulare</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" placeholder="333 1234567" value={ana.cellulare} onChange={e => setAna({ ...ana, cellulare: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Domicilio</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" placeholder="Via, CAP, Città" value={ana.domicilio} onChange={e => setAna({ ...ana, domicilio: e.target.value })} /></div>
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Ragione Sociale *</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" placeholder="Azienda S.r.l." value={ana.ragioneSociale} onChange={e => setAna({ ...ana, ragioneSociale: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Partita IVA *</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" placeholder="12345678901" value={ana.piva} onChange={e => setAna({ ...ana, piva: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Referente *</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" placeholder="Nome Cognome" value={ana.referente} onChange={e => setAna({ ...ana, referente: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Cellulare</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" placeholder="333 1234567" value={ana.cellulare} onChange={e => setAna({ ...ana, cellulare: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Email</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" placeholder="info@azienda.it" value={ana.email} onChange={e => setAna({ ...ana, email: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">PEC</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" placeholder="azienda@pec.it" value={ana.pec} onChange={e => setAna({ ...ana, pec: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">SDI</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" value={ana.sdi} onChange={e => setAna({ ...ana, sdi: e.target.value })} /></div>
-                                        <div><label className="block text-xs font-semibold text-slate-400 mb-1">Sede Legale</label><input className="w-full bg-[#0f111a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white" placeholder="Via, CAP, Città" value={ana.sedeLegale} onChange={e => setAna({ ...ana, sedeLegale: e.target.value })} /></div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
-        );
-
-        if (step === 3) return (
-            <div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Brand *</label>
-                        <select className="w-full bg-[#0f111a] border border-white/10 text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500" value={brand} onChange={e => { setBrand(e.target.value); setModel(""); }}>
-                            <option value="">Seleziona brand...</option>
-                            {Object.keys(PHONE_BRANDS_MODELS).map(b => <option key={b} value={b}>{b}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Modello *</label>
-                        <select className="w-full bg-[#0f111a] border border-white/10 text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500" value={model} onChange={e => setModel(e.target.value)} disabled={!brand}>
-                            <option value="">Seleziona modello...</option>
-                            {brand && PHONE_BRANDS_MODELS[brand] && PHONE_BRANDS_MODELS[brand].map(m => <option key={m} value={m}>{m}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Capacità (GB) *</label>
-                        <select className="w-full bg-[#0f111a] border border-white/10 text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500" value={capacita} onChange={e => setCapacita(e.target.value)}>
-                            <option value="">Seleziona...</option>
-                            {CAPACITA_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Colore *</label>
-                        <select className="w-full bg-[#0f111a] border border-white/10 text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500" value={colore} onChange={e => setColore(e.target.value)}>
-                            <option value="">Seleziona...</option>
-                            {COLORI_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">IMEI *</label>
-                        <input className="w-full bg-[#0f111a] border border-white/10 text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500" value={imei} onChange={e => setImei(e.target.value)} placeholder="353456789012345" maxLength={15} />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Prezzo Acquisto (€) *</label>
-                        <input type="number" step="1" min="0" className="w-full bg-[#0f111a] border border-white/10 text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500" value={prezzoAcquisto} onChange={e => setPrezzoAcquisto(e.target.value)} placeholder="es. 250" />
-                    </div>
-                </div>
-
-                <div className="mt-6">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase mb-2">Grado di Usura *</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {GRADI_USURA.map(g => (
-                            <div
-                                key={g.key}
-                                className={cn("border rounded-xl p-3 cursor-pointer transition-colors", gradoUsura === g.key ? "border-indigo-500 bg-indigo-500/10" : "border-white/10 bg-white/[0.02] hover:bg-white/5")}
-                                onClick={() => setGradoUsura(g.key)}
-                            >
-                                <div className={cn("text-[13px] font-bold", gradoUsura === g.key ? "text-indigo-400" : "text-white")}>{g.label}</div>
-                                <div className="text-[11px] text-slate-400 mt-0.5">{g.desc}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
-
-        if (step === 4) return (
-            <div className="flex flex-col gap-5">
-                <div>
-                    <label className="block text-xs font-semibold text-slate-400 uppercase mb-2">Documento di Identità *</label>
-                    <div
-                        className={cn("border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors", allegDocumento ? "border-emerald-500 bg-emerald-500/10" : "border-white/10 hover:border-white/30")}
-                        onClick={() => setAllegDocumento(allegDocumento ? null : "documento_id.pdf")}
-                    >
-                        {allegDocumento ? (
-                            <div>
-                                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                                <div className="text-[13px] font-bold text-emerald-500 mt-2">Documento caricato</div>
-                                <div className="text-[11px] text-slate-400 mt-1">{allegDocumento}</div>
-                            </div>
-                        ) : (
-                            <div>
-                                <FileText className="w-8 h-8 text-slate-500 mx-auto" />
-                                <div className="text-[13px] font-semibold text-slate-400 mt-2">Clicca per caricare il documento</div>
-                                <div className="text-[11px] text-slate-500 mt-1">PDF, JPG, PNG</div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                <div>
-                    <label className="block text-xs font-semibold text-slate-400 uppercase mb-2">Dichiarazione di Vendita (firmata) *</label>
-                    <div
-                        className={cn("border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors", allegDichiarazione ? "border-emerald-500 bg-emerald-500/10" : "border-white/10 hover:border-white/30")}
-                        onClick={() => setAllegDichiarazione(allegDichiarazione ? null : "dichiarazione_vendita.pdf")}
-                    >
-                        {allegDichiarazione ? (
-                            <div>
-                                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                                <div className="text-[13px] font-bold text-emerald-500 mt-2">Dichiarazione caricata</div>
-                                <div className="text-[11px] text-slate-400 mt-1">{allegDichiarazione}</div>
-                            </div>
-                        ) : (
-                            <div>
-                                <FileText className="w-8 h-8 text-slate-500 mx-auto" />
-                                <div className="text-[13px] font-semibold text-slate-400 mt-2">Clicca per caricare la dichiarazione firmata</div>
-                                <div className="text-[11px] text-slate-500 mt-1">PDF, JPG, PNG</div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        );
-
-        return null;
-    };
-
-    const STEP_LABELS = ["Venditore e Negozio", "Anagrafica Cliente", "Dettaglio Prodotto", "Allegati"];
-
-    return (
-        <div
-            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex justify-center items-start pt-10"
-            onClick={onClose}
-        >
-            <div
-                className="bg-[#161b22] border border-white/10 rounded-2xl w-[94%] max-w-4xl max-h-[85vh] overflow-auto shadow-[0_20px_60px_rgba(0,0,0,0.5)] custom-scrollbar flex flex-col"
-                onClick={e => e.stopPropagation()}
-                style={{ height: '700px' }}
-            >
-                {/* Header */}
-                <div className="flex justify-between items-center px-7 py-5 border-b border-white/10 sticky top-0 bg-[#161b22] z-10 shrink-0 rounded-t-2xl">
-                    <div className="flex items-center gap-3 text-lg font-bold text-white">
-                        <Smartphone className="w-5 h-5 text-indigo-400" /> Registra Usato
-                    </div>
-                    <button
-                        className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
-                        onClick={onClose}
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
-                {/* Stepper */}
-                <div className="flex justify-center flex-wrap gap-2 sm:gap-4 px-4 py-6 bg-[#0f111a]/30 shrink-0">
-                    {STEP_LABELS.map((label, i) => (
-                        <div key={i} className="flex items-center gap-2 sm:gap-4">
-                            {i > 0 && <div className={cn("w-4 sm:w-8 h-0.5", step > i ? "bg-indigo-500" : "bg-white/10")} />}
-                            <div className="flex items-center gap-2 sm:gap-3">
-                                <div className={cn(
-                                    "w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors",
-                                    step > i + 1 ? "bg-indigo-500 border-indigo-500 text-white" : (step === i + 1 ? "bg-indigo-500/20 border-indigo-500 text-indigo-400" : "bg-[#0f111a] border-white/10 text-slate-500")
-                                )}>
-                                    {step > i + 1 ? <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" /> : i + 1}
-                                </div>
-                                <span className={cn("text-[10px] sm:text-[11px] whitespace-nowrap", step >= i + 1 ? (step === i + 1 ? "font-bold text-white" : "font-medium text-slate-300") : "text-slate-500")}>{label}</span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Body */}
-                <div className="p-7 flex-1 min-h-[300px]">
-                    {renderStep()}
-                </div>
-
-                {/* Footer */}
-                <div className="flex justify-between items-center px-7 py-5 border-t border-white/10 shrink-0 mt-auto">
-                    <div>
-                        {step > 1 && (
-                            <button
-                                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:bg-white/5 border border-white/10 hover:text-white transition-colors flex items-center gap-2"
-                                onClick={() => setStep(step - 1)}
-                            >
-                                <ArrowLeft className="w-4 h-4" /> Indietro
-                            </button>
-                        )}
-                    </div>
-                    <div>
-                        {step < 4 ? (
-                            <button
-                                className={cn("px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors", canNext() ? "bg-indigo-500 hover:bg-indigo-600 text-white" : "bg-white/5 text-slate-500 border border-white/5 shadow-none opacity-60 cursor-not-allowed")}
-                                onClick={() => canNext() && setStep(step + 1)}
-                            >
-                                Avanti <ArrowRight className="w-4 h-4" />
-                            </button>
-                        ) : (
-                            <button
-                                className={cn("px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shadow-lg", canNext() ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20" : "bg-white/5 text-slate-500 border border-white/5 shadow-none opacity-60 cursor-not-allowed")}
-                                onClick={() => canNext() && handleSubmit()}
-                            >
-                                <CheckCircle2 className="w-4 h-4" /> Registra Usato
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-start justify-center pt-8 px-4" onClick={onClose}>
+      <div className="bg-[#161b22] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[88vh] overflow-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="sticky top-0 bg-[#161b22] border-b border-white/10 px-6 py-4 flex items-center justify-between z-10 rounded-t-2xl">
+          <div>
+            <div className="text-lg font-bold text-white flex items-center gap-2">{s?.icon} {dev.model}</div>
+            <div className="text-xs text-slate-500 font-mono mt-0.5">IMEI: {dev.imei}</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={handleSave} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 text-sm font-semibold hover:bg-purple-500/30 transition-all">
+              Salva
+            </button>
+            <button onClick={onClose} className="text-slate-500 hover:text-white text-xl transition-colors px-2"></button>
+          </div>
         </div>
-    );
+        {/* Body */}
+        <div className="p-6 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
+          {/* LEFT: Status Timeline */}
+          <div>
+            <div className="text-sm font-bold text-white mb-3"> Stato</div>
+            <StatusBadge statusKey={dev.status} />
+            <div className="mt-4"><StatusTimeline currentStatus={dev.status} history={dev.status_history} /></div>
+            {canAdvance && (
+              <div className="mt-4 flex flex-col gap-2">
+                {needsStore && (
+                  <select value={targetStore} onChange={e => setTargetStore(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-slate-300 outline-none">
+                    <option value="">Seleziona Negozio...</option>
+                    {NEGOZI.filter(n => n !== "Telefonico").map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                )}
+                {next && <button onClick={advanceStatus} className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-sm font-semibold hover:bg-emerald-500/30 transition-all">
+                  {statusMap[next]?.icon} {statusMap[next]?.label}
+                </button>}
+                {["in_lavorazione", "ricevuto"].includes(dev.status) && (
+                  <button onClick={setKO} className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 text-sm font-semibold hover:bg-red-500/30 transition-all"> KO</button>
+                )}
+              </div>
+            )}
+          </div>
+          {/* RIGHT: Details */}
+          <div className="space-y-5">
+            {/* Badges */}
+            <div className="flex flex-wrap gap-2">
+              {dev.provenienza_subito && <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/30"> Provenienza Subito.it</span>}
+              <span className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border",
+                dev.pagamento.metodo === "bonifico" ? "bg-blue-500/10 text-blue-400 border-blue-500/30" : "bg-white/5 text-slate-400 border-white/10")}>
+                {dev.pagamento.metodo === "contanti" ? "" : dev.pagamento.metodo === "buono" ? "" : ""} {dev.pagamento.metodo === "contanti" ? "Contanti" : dev.pagamento.metodo === "buono" ? "Buono" : "Bonifico"}
+              </span>
+            </div>
+            {/* Details grid */}
+            <div>
+              <div className="text-sm font-bold text-white mb-3"> Dettagli</div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                {([["Modello", dev.model, false], ["IMEI", dev.imei, true], ["Acquisto", fmtEur(dev.purchase_price), false], ["Negozio", dev.store, false], ["Destinazione", dev.target_store || "", false], ["Grado", dev.grado_usura || "", false], ["Data Acquisto", fmtDate(dev.purchase_date), false], ["Data Reg.", fmtDate(dev.created_at), false]] as [string, string, boolean][]).map(([l, v, mono]) => (
+                  <div key={l}>
+                    <div className="text-[10px] text-slate-500 uppercase font-semibold tracking-wide">{l}</div>
+                    <div className={cn("text-sm text-white font-medium", mono && "font-mono")}>{v}</div>
+                  </div>
+                ))}
+                {/* Sale price */}
+                <div>
+                  <div className="text-[10px] text-slate-500 uppercase font-semibold tracking-wide">Prezzo Vendita</div>
+                  {editSalePrice ? (
+                    <div className="flex items-center gap-1.5">
+                      <input type="number" step="1" min="0" value={salePriceVal} onChange={e => setSalePriceVal(e.target.value)}
+                        className="w-24 bg-black/40 border border-emerald-500/30 rounded-lg px-2 py-1 text-sm text-emerald-400 font-bold outline-none" />
+                      <span className="text-xs text-slate-500"></span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-slate-500"> Non impostato</span>
+                      <button onClick={() => setEditSalePrice(true)} className="text-[11px] px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all">Imposta</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            {/* Extra Margine alert */}
+            {dev.extra_margine && (
+              <div className={cn("p-4 rounded-xl border-2", dev.extra_margine.confermato ? "bg-emerald-500/5 border-emerald-500/30" : "bg-yellow-500/5 border-yellow-500/40")}>
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <div className={cn("text-sm font-bold", dev.extra_margine.confermato ? "text-emerald-400" : "text-yellow-400")}>
+                      {dev.extra_margine.confermato ? "" : ""} Extra Margine: {fmtEur(dev.extra_margine.importo)}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">Generato da: {dev.extra_margine.venditore}</div>
+                    {dev.extra_margine.confermato && <div className="text-xs text-slate-500">Confermato da {dev.extra_margine.conferma_operatore} il {fmtDateTime(dev.extra_margine.conferma_date)}</div>}
+                  </div>
+                  {!dev.extra_margine.confermato && (
+                    <button onClick={confirmExtraMargine} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/25 transition-all"> Conferma Extra Margine</button>
+                  )}
+                </div>
+              </div>
+            )}
+            {/* Bonifico section */}
+            {dev.pagamento.metodo === "bonifico" && (
+              <div className={cn("p-4 rounded-xl border-2", dev.pagamento.bonifico_effettuato ? "bg-emerald-500/5 border-emerald-500/30" : "bg-red-500/5 border-red-500/30")}>
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <div className={cn("text-sm font-bold", dev.pagamento.bonifico_effettuato ? "text-emerald-400" : "text-red-400")}>
+                      {dev.pagamento.bonifico_effettuato ? " Bonifico Effettuato" : " Bonifico Non Effettuato"}
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs font-mono text-slate-400">{dev.pagamento.iban}</span>
+                      <button onClick={copyIban} className="text-blue-400 hover:text-blue-300 transition-colors" title="Copia IBAN">
+                        <Copy size={13} /> {ibanCopied && <span className="text-[10px] text-emerald-400 ml-1"></span>}
+                      </button>
+                    </div>
+                    {dev.pagamento.bonifico_effettuato && dev.pagamento.bonifico_operatore && (
+                      <div className="text-xs text-slate-500 mt-1"> {dev.pagamento.bonifico_operatore}   {fmtDateTime(dev.pagamento.bonifico_date)}</div>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {!dev.pagamento.bonifico_effettuato && (
+                      <button onClick={toggleBonifico} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/25 transition-all whitespace-nowrap"> Segna Effettuato</button>
+                    )}
+                    {dev.pagamento.bonifico_effettuato && (
+                      <button onClick={toggleBonifico} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500/15 text-orange-400 border border-orange-500/30 text-xs font-semibold hover:bg-orange-500/25 transition-all"> Annulla</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Cost summary */}
+            <div className="flex gap-4 p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div><div className="text-[10px] text-slate-500 uppercase">Costo Ricambi</div><div className="text-sm font-semibold text-orange-400">{fmtEur(totalRicambi)}</div></div>
+              <div><div className="text-[10px] text-slate-500 uppercase">Margine</div><div className={cn("text-sm font-bold", editSalePrice && salePriceVal ? (margin >= 0 ? "text-emerald-400" : "text-red-400") : "text-slate-500")}>{editSalePrice && salePriceVal ? fmtEur(margin) : ""}</div></div>
+            </div>
+            {/* Ricambi */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm font-bold text-white"> Ricambi ({dev.ricambi.length})</div>
+                <button onClick={() => setShowAdd(!showAdd)} className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/30 text-xs font-semibold hover:bg-blue-500/25 transition-all">+ Aggiungi</button>
+              </div>
+              {showAdd && (
+                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 mb-3 space-y-2">
+                  <div className="flex gap-2">
+                    <select value={newRicambio} onChange={e => setNewRicambio(e.target.value)}
+                      className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 outline-none">
+                      <option value="">Seleziona ricambio...</option>
+                      {RICAMBI_CATALOG.filter(r => !dev.ricambi.some(x => x.name === r)).map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                    <button onClick={addRicambio} className="px-3 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/30 transition-all">Aggiungi</button>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                    <input type="checkbox" checked={newRicambioInMag} onChange={e => setNewRicambioInMag(e.target.checked)} className="accent-emerald-500" />
+                    Presente in magazzino
+                  </label>
+                </div>
+              )}
+              {dev.ricambi.length === 0 ? (
+                <div className="text-center py-4 text-sm text-slate-600 rounded-xl bg-white/[0.02] border border-white/5">Nessun ricambio richiesto</div>
+              ) : dev.ricambi.map((r, i) => <RicambioRow key={i} r={r} idx={i} onUpdate={updateRicambio} onRemove={removeRicambio} />)}
+            </div>
+            {/* Note */}
+            <div>
+              <div className="text-sm font-bold text-white mb-2"> Note</div>
+              <textarea value={noteTecnico} onChange={e => setNoteTecnico(e.target.value)} rows={3} placeholder="Note tecnico / amministrazione..."
+                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-slate-300 outline-none resize-none focus:border-white/20 font-inherit" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-// --- Main Page Component ---
-export default function GestioneUsatiPage() {
-    const { user } = useAuth();
+//  RegistraUsatoPanel -
+function RegistraUsatoPanel({ onClose, onSave }: { onClose: () => void; onSave: (d: any) => void }) {
+  const [step, setStep] = useState(1);
+  const [venditore, setVenditore] = useState("");
+  const [negozio, setNegozio] = useState("");
+  const [provenienzaSubito, setProvenienzaSubito] = useState(false);
+  const [tipoCliente, setTipoCliente] = useState<"consumer" | "business" | "">("");
+  const [searchField, setSearchField] = useState("");
+  const [searchValue, setSearchValue] = useState("");
+  const [clienteFound, setClienteFound] = useState<boolean | null>(null);
+  const [ana, setAna] = useState({ nome: "", cognome: "", cf: "", piva: "", email: "", cellulare: "", domicilio: "", iban: "", ragioneSociale: "", referente: "", pec: "", sdi: "", sedeLegale: "" });
+  const [tipoProdotto, setTipoProdotto] = useState("");
+  const [brand, setBrand] = useState("");
+  const [model, setModel] = useState("");
+  const [capacita, setCapacita] = useState("");
+  const [colore, setColore] = useState("");
+  const [imei, setImei] = useState("");
+  const [prezzoAcquisto, setPrezzoAcquisto] = useState("");
+  const [gradoUsura, setGradoUsura] = useState("");
+  const [hasExtraMargine, setHasExtraMargine] = useState(false);
+  const [extraMargineImporto, setExtraMargineImporto] = useState("");
+  const [metodoPagamento, setMetodoPagamento] = useState<"contanti" | "buono" | "bonifico" | "">("");
+  const [ibanPag, setIbanPag] = useState("");
+  const [allegDoc, setAllegDoc] = useState<string | null>(null);
+  const [allegDich, setAllegDich] = useState<string | null>(null);
 
-    // State
-    const [devices, setDevices] = useState<any[]>(MOCK_DEVICES);
-    const [selectedStores, setSelectedStores] = useState<string[]>([...NEGOZI]);
-    const [selectedStatuses, setSelectedStatuses] = useState<string[]>([...STATUS_KEYS]);
-    const [dateField, setDateField] = useState("created_at");
-    const [dateFrom, setDateFrom] = useState("");
-    const [dateTo, setDateTo] = useState("");
-    const [searchText, setSearchText] = useState("");
+  const doSearch = () => {
+    if (!searchValue.trim()) return;
+    setClienteFound(true);
+    if (tipoCliente === "consumer") setAna({ ...ana, nome: "Mario", cognome: "Rossi", cf: "RSSMRA80A01H501U", email: "mario.rossi@email.com", cellulare: "333 1234567", domicilio: "Via Roma 15, 00100 Roma", iban: "IT60X0542811101000000123456", piva: "", ragioneSociale: "", referente: "", pec: "", sdi: "", sedeLegale: "" });
+    else setAna({ ...ana, ragioneSociale: "Rossi S.r.l.", piva: "12345678901", referente: "Mario Rossi", cellulare: "333 1234567", email: "info@rossi.it", pec: "azienda@pec.it", sdi: "Abc1234", sedeLegale: "Via Roma 15, 00100 Roma", iban: "IT60X0542811101000000654321", nome: "", cognome: "", cf: "", domicilio: "" });
+  };
 
-    const [selectedDevice, setSelectedDevice] = useState<any | null>(null);
-    const [showRegistra, setShowRegistra] = useState(false);
+  const canNext = () => {
+    if (step === 1) return !!(venditore && negozio);
+    if (step === 2) return !!(tipoCliente && clienteFound !== null);
+    if (step === 3) return !!(tipoProdotto && brand && model && capacita && colore && imei && prezzoAcquisto && gradoUsura && (!hasExtraMargine || extraMargineImporto));
+    if (step === 4) return !!(metodoPagamento && (metodoPagamento !== "bonifico" || ibanPag));
+    if (step === 5) return !!(allegDoc && allegDich);
+    return false;
+  };
 
-    const [sortKey, setSortKey] = useState("id");
-    const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const handleSubmit = () => {
+    onSave({ venditore, negozio, provenienzaSubito, tipoCliente, anagrafica: ana, tipoProdotto, brand, model, capacita, colore, imei, prezzoAcquisto: parseFloat(prezzoAcquisto) || 0, gradoUsura, extraMargine: hasExtraMargine ? { importo: parseFloat(extraMargineImporto) || 0, venditore } : null, metodoPagamento, iban: metodoPagamento === "bonifico" ? ibanPag : null });
+    onClose();
+  };
 
-    // Memoized filtering
-    const filtered = useMemo(() => devices.filter(d => {
-        if (!selectedStores.includes(d.store)) return false;
-        if (!selectedStatuses.includes(d.status)) return false;
-        if (dateFrom) { const v = d[dateField]; if (!v || isoDate(v) < dateFrom) return false; }
-        if (dateTo) { const v = d[dateField]; if (!v || isoDate(v) > dateTo) return false; }
-        if (searchText) {
-            const q = searchText.toLowerCase();
-            if (!d.model.toLowerCase().includes(q) && !d.imei.includes(q)) return false;
-        }
-        return true;
-    }), [devices, selectedStores, selectedStatuses, dateField, dateFrom, dateTo, searchText]);
+  const inp = "w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-300 outline-none focus:border-white/20 transition-all";
+  const lbl = "block text-xs text-slate-500 font-semibold uppercase tracking-wide mb-1.5";
 
-    // KPI Calcs
-    const inCirculation = useMemo(() => devices.filter(d => d.status !== "venduto" && d.status !== "ko"), [devices]);
-    const inVetrina = useMemo(() => devices.filter(d => d.status === "in_vendita"), [devices]);
+  const STEP_LABELS = ["Venditore e Negozio", "Anagrafica Cliente", "Dettaglio Prodotto", "Pagamento", "Allegati"];
 
-    const vetrinaValue = useMemo(() => inVetrina.reduce((s, d) => s + d.sale_price, 0), [inVetrina]);
-    const totalInventoryValue = useMemo(() => inCirculation.reduce((s, d) => s + d.sale_price, 0), [inCirculation]);
-
-    const kpiData = useMemo(() => {
-        const c: Record<string, number> = {};
-        STATUS_KEYS.forEach(k => c[k] = 0);
-        filtered.forEach(d => { c[d.status] = (c[d.status] || 0) + 1; });
-        c._total = filtered.filter(d => d.status !== "venduto" && d.status !== "ko").length;
-        return c;
-    }, [filtered]);
-
-    // Sorting
-    const sorted = useMemo(() => [...filtered].sort((a, b) => {
-        let va = a[sortKey], vb = b[sortKey];
-        if (va instanceof Date) va = va.getTime();
-        if (vb instanceof Date) vb = vb.getTime();
-        if (va == null) return 1;
-        if (vb == null) return -1;
-        const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb));
-        return sortDir === "asc" ? cmp : -cmp;
-    }), [filtered, sortKey, sortDir]);
-
-    const doSort = (key: string) => {
-        if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
-        else { setSortKey(key); setSortDir("asc"); }
-    };
-
-    const handleKpiClick = (sk: string) => {
-        const isAllActive = selectedStatuses.length === STATUS_KEYS.length - 2 && !selectedStatuses.includes("venduto") && !selectedStatuses.includes("ko");
-        const isSingleActive = selectedStatuses.length === 1 && selectedStatuses[0] === sk;
-        if (sk === "_all") {
-            if (isAllActive) setSelectedStatuses([...STATUS_KEYS]);
-            else setSelectedStatuses(STATUS_KEYS.filter(k => k !== "venduto" && k !== "ko"));
-        } else {
-            if (isSingleActive) setSelectedStatuses([...STATUS_KEYS]);
-            else setSelectedStatuses([sk]);
-        }
-    };
-
-    const resetFilters = () => {
-        setSelectedStores([...NEGOZI]);
-        setSelectedStatuses([...STATUS_KEYS]);
-        setDateField("created_at");
-        setDateFrom("");
-        setDateTo("");
-        setSearchText("");
-    };
-
-    return (
-        <div className="flex flex-col min-h-[calc(100vh-theme(spacing.16))] lg:h-screen lg:overflow-hidden lg:pl-64 w-full overflow-x-hidden min-w-0 max-w-full">
-            {/* Header Area */}
-            <div className="flex-none p-4 lg:p-8 space-y-6 w-full min-w-0 max-w-full">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-                            <div className="p-2 bg-indigo-500/10 rounded-lg">
-                                <Smartphone className="w-6 h-6 text-indigo-400" />
-                            </div>
-                            Gestione Usati
-                        </h1>
-                        <p className="text-slate-400 mt-1">Gestione completa dell'inventario dispositivi usati</p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-4">
-                        <div className="glass-card px-5 py-3 rounded-xl min-w-[140px]">
-                            <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-1">Valore Inventario</p>
-                            <p className="text-2xl font-bold text-white">{fmtEur(totalInventoryValue)}</p>
-                            <p className="text-xs text-slate-400 mt-1">{inCirculation.length} dispositivi</p>
-                        </div>
-                        <div className="bg-indigo-500/10 border border-indigo-500/20 px-5 py-3 rounded-xl min-w-[140px]">
-                            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Valore Vetrina</p>
-                            <p className="text-2xl font-bold text-white">{fmtEur(vetrinaValue)}</p>
-                            <p className="text-xs text-indigo-400/80 mt-1">{inVetrina.length} in vendita</p>
-                        </div>
-                        <button
-                            className="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-3 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
-                            onClick={() => setShowRegistra(true)}
-                        >
-                            <Plus className="w-5 h-5 stroke-[2.5]" />
-                            Registra Usato
-                        </button>
-                    </div>
-                </div>
-
-                {/* Filters */}
-                <div className="flex flex-col gap-4">
-                    <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4">
-                        <div className="w-full xl:w-auto flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <MultiSelect
-                                label="Negozio"
-                                options={NEGOZI}
-                                selected={selectedStores}
-                                onChange={setSelectedStores}
-                            />
-
-                            <MultiSelect
-                                label="Stato"
-                                options={STATUS_KEYS}
-                                selected={selectedStatuses}
-                                onChange={setSelectedStatuses}
-                                renderOption={(opt) => {
-                                    const s = statusMap[opt];
-                                    if (!s) return <>{opt}</>;
-                                    const Icon = s.icon;
-                                    return (
-                                        <span className="flex items-center gap-1.5">
-                                            <Icon className={cn("w-3.5 h-3.5", s.colorClass)} />
-                                            {s.label}
-                                        </span>
-                                    );
-                                }}
-                            />
-
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Cerca</label>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                                    <input
-                                        type="text"
-                                        value={searchText}
-                                        onChange={(e) => setSearchText(e.target.value)}
-                                        className="w-full bg-[#0f111a] border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors h-[38px]"
-                                        placeholder="Modello o IMEI..."
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Filtra per Data</label>
-                                <div className="flex flex-col sm:flex-row gap-2">
-                                    <select
-                                        value={dateField}
-                                        onChange={e => setDateField(e.target.value)}
-                                        className="w-full sm:w-1/3 bg-[#0f111a] border border-white/10 rounded-lg px-2 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 h-[38px]"
-                                    >
-                                        {DATE_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
-                                    </select>
-                                    <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full sm:w-1/3 bg-[#0f111a] border border-white/10 rounded-lg px-2 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 h-[38px]" />
-                                    <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full sm:w-1/3 bg-[#0f111a] border border-white/10 rounded-lg px-2 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 h-[38px]" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3 w-full xl:w-auto justify-end">
-                            <button
-                                onClick={resetFilters}
-                                className="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 border border-white/10 transition-colors h-[38px] whitespace-nowrap"
-                            >
-                                Reset Filtri
-                            </button>
-                            <button
-                                onClick={() => setShowRegistra(true)}
-                                className="px-5 py-2 rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-500 transition-colors flex items-center gap-2 shadow-lg shadow-green-500/20 h-[38px] whitespace-nowrap"
-                            >
-                                <Plus className="w-4 h-4 shrink-0" />
-                                Registra Usato
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* KPI Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                    {KPI_CARDS.map(c => {
-                        const val = c.key === "_all" ? kpiData._total : (kpiData[c.key] || 0);
-                        const isActive = c.key === "_all"
-                            ? (selectedStatuses.length === STATUS_KEYS.length - 2 && !selectedStatuses.includes("venduto") && !selectedStatuses.includes("ko"))
-                            : selectedStatuses.length === 1 && selectedStatuses[0] === c.key;
-
-                        const Icon = c.icon;
-
-                        return (
-                            <button
-                                key={c.key}
-                                onClick={() => handleKpiClick(c.key)}
-                                className={cn(
-                                    "glass-card p-4 text-left transition-all duration-200 border group",
-                                    isActive ? `border-${c.colorClass.split('-')[1]}-500/50 ${c.bgClass}` : "border-white/5 hover:border-white/20 hover:bg-white/5"
-                                )}
-                            >
-                                <div className={cn("text-2xl font-bold mb-2", c.colorClass)}>{val}</div>
-                                <div className="text-sm text-slate-400 font-medium flex items-center gap-2">
-                                    <Icon className={cn("w-4 h-4", c.colorClass)} />
-                                    {c.label}
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* Table Area */}
-            <div className="flex-1 px-4 lg:px-8 pb-8 flex flex-col w-full min-w-0 max-w-full lg:overflow-hidden min-h-[400px]">
-                <div className="glass-card flex-1 flex flex-col w-full min-w-0 max-w-full lg:overflow-hidden">
-                    <div className="overflow-x-auto lg:overflow-y-auto flex-1 custom-scrollbar w-full min-w-0 max-w-full">
-                        {/* Mobile List View */}
-                        <div className="md:hidden flex flex-col divide-y divide-white/5">
-                            {sorted.length === 0 ? (
-                                <div className="p-8 text-center text-slate-400 text-sm">Nessun dispositivo trovato</div>
-                            ) : (
-                                sorted.map((d) => {
-                                    const stat = statusMap[d.status];
-                                    const StatIcon = stat?.icon;
-
-                                    return (
-                                        <div
-                                            key={d.id}
-                                            onClick={() => setSelectedDevice(d)}
-                                            className="p-4 hover:bg-white/[0.02] cursor-pointer transition-colors flex flex-col gap-3"
-                                        >
-                                            <div className="flex justify-between items-start gap-2">
-                                                <div className="min-w-0">
-                                                    <div className="font-bold text-white text-[15px] truncate">{d.model}</div>
-                                                    <div className="font-mono text-slate-400 text-[11px] mt-0.5 truncate">{d.imei}</div>
-                                                </div>
-                                                {stat && (
-                                                    <span className={cn("inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[9px] font-bold border shrink-0", stat.colorClass, stat.bgClass, stat.borderClass)}>
-                                                        <StatIcon className="w-2.5 h-2.5" />
-                                                        {stat.label}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-y-2 gap-x-4 bg-[#0f111a]/50 rounded-xl p-3 border border-white/5">
-                                                <div>
-                                                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Acquisto</div>
-                                                    <div className="text-sm font-medium text-slate-300">{fmtEur(d.purchase_price)}</div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Vendita</div>
-                                                    <div className="text-sm font-bold text-emerald-400">{fmtEur(d.sale_price)}</div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Negozio</div>
-                                                    <div className="text-xs font-medium text-slate-400 truncate">{d.store}</div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Data</div>
-                                                    <div className="text-xs font-medium text-slate-400 truncate">{fmtDate(d.created_at)}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-
-                        {/* Desktop Table View */}
-                        <table className="hidden md:table w-full text-left border-collapse min-w-[1000px] whitespace-nowrap text-sm">
-                            <thead className="sticky top-0 z-10 bg-[#0f111a]/95 backdrop-blur-xl border-b border-white/10 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                                <tr>
-                                    <th className="px-6 py-4 font-semibold text-slate-400 cursor-pointer hover:text-white" onClick={() => doSort("id")}>#</th>
-                                    <th className="px-6 py-4 font-semibold text-slate-400 cursor-pointer hover:text-white" onClick={() => doSort("model")}>Modello</th>
-                                    <th className="px-6 py-4 font-semibold text-slate-400 cursor-pointer hover:text-white" onClick={() => doSort("imei")}>IMEI</th>
-                                    <th className="px-6 py-4 font-semibold text-slate-400 cursor-pointer hover:text-white" onClick={() => doSort("status")}>Stato</th>
-                                    <th className="px-6 py-4 font-semibold text-slate-400 cursor-pointer hover:text-white text-right" onClick={() => doSort("purchase_price")}>Acquisto</th>
-                                    <th className="px-6 py-4 font-semibold text-slate-400 cursor-pointer hover:text-white text-right" onClick={() => doSort("sale_price")}>Vendita</th>
-                                    <th className="px-6 py-4 font-semibold text-slate-400 cursor-pointer hover:text-white" onClick={() => doSort("store")}>Negozio</th>
-                                    <th className="px-6 py-4 font-semibold text-slate-400 cursor-pointer hover:text-white" onClick={() => doSort("created_at")}>Data Reg.</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/5 text-sm">
-                                {sorted.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={8} className="px-6 py-12 text-center text-slate-400">Nessun dispositivo trovato</td>
-                                    </tr>
-                                ) : (
-                                    sorted.map((d, i) => {
-                                        const stat = statusMap[d.status];
-                                        const StatIcon = stat?.icon;
-
-                                        return (
-                                            <tr
-                                                key={d.id}
-                                                onClick={() => setSelectedDevice(d)}
-                                                className="hover:bg-white/[0.02] cursor-pointer transition-colors"
-                                            >
-                                                <td className="px-6 py-4 text-slate-500">{d.id}</td>
-                                                <td className="px-6 py-4 font-medium text-white">{d.model}</td>
-                                                <td className="px-6 py-4 font-mono text-slate-400">{d.imei}</td>
-                                                <td className="px-6 py-4">
-                                                    {stat && (
-                                                        <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border", stat.colorClass, stat.bgClass, stat.borderClass)}>
-                                                            <StatIcon className="w-3.5 h-3.5" />
-                                                            {stat.label}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4 text-right text-slate-400">{fmtEur(d.purchase_price)}</td>
-                                                <td className="px-6 py-4 text-right font-medium text-emerald-400">{fmtEur(d.sale_price)}</td>
-                                                <td className="px-6 py-4 text-slate-300">{d.store}</td>
-                                                <td className="px-6 py-4 text-slate-400">{fmtDate(d.created_at)}</td>
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div className="p-4 border-t border-white/5 text-xs text-slate-500 bg-[#0f111a]/50">
-                        Mostrando <span className="text-white font-medium">{sorted.length}</span> dispositivi
-                    </div>
-                </div>
-            </div>
-
-            {selectedDevice && (
-                <DevicePanel
-                    device={selectedDevice}
-                    onClose={() => setSelectedDevice(null)}
-                    onSave={(updatedDev) => {
-                        setDevices(prev => prev.map(d => d.id === updatedDev.id ? updatedDev : d));
-                        setSelectedDevice(null);
-                    }}
-                />
-            )}
-
-            {showRegistra && (
-                <RegistraUsatoPanel
-                    onClose={() => setShowRegistra(false)}
-                    onSave={(newDev) => {
-                        setDevices(prev => [{
-                            id: `P${Math.floor(Math.random() * 10000)}`,
-                            model: newDev.model,
-                            imei: newDev.imei,
-                            status: "invio_in_negozio",
-                            purchase_price: newDev.prezzo_acquisto,
-                            sale_price: newDev.prezzo_acquisto * 1.5,
-                            store: newDev.negozio,
-                            created_at: new Date().toISOString(),
-                            target_store: newDev.negozio,
-                            ricambi: [],
-                            grado_usura: newDev.grado_usura
-                        }, ...prev]);
-                        setShowRegistra(false);
-                    }}
-                />
-            )}
+  const renderStep = () => {
+    if (step === 1) return (
+      <div className="space-y-5">
+        <div className="grid grid-cols-2 gap-4">
+          <div><label className={lbl}>Venditore *</label>
+            <select value={venditore} onChange={e => setVenditore(e.target.value)} className={inp}>
+              <option value="">Seleziona venditore...</option>
+              {VENDITORI.map(v => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+          <div><label className={lbl}>Negozio *</label>
+            <select value={negozio} onChange={e => setNegozio(e.target.value)} className={inp}>
+              <option value="">Seleziona negozio...</option>
+              {NEGOZI.map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
         </div>
+        <label className={`flex items-center gap-3 p-4 rounded-xl cursor-pointer border transition-all ${provenienzaSubito ? "bg-orange-500/10 border-orange-500/30" : "bg-white/[0.02] border-white/5 hover:border-white/10"}`}>
+          <input type="checkbox" checked={provenienzaSubito} onChange={e => setProvenienzaSubito(e.target.checked)} className="accent-orange-500 w-4 h-4" />
+          <span className="text-sm text-slate-300"> Provenienza da Subito.it</span>
+        </label>
+      </div>
     );
+    if (step === 2) return (
+      <div className="space-y-5">
+        <div className="grid grid-cols-2 gap-3">
+          {(["consumer", "business"] as const).map(t => (
+            <div key={t} onClick={() => { setTipoCliente(t); setClienteFound(null); setSearchValue(""); }}
+              className={`p-5 rounded-xl border cursor-pointer text-center transition-all ${tipoCliente === t ? "bg-purple-500/10 border-purple-500/40" : "bg-white/[0.02] border-white/5 hover:border-white/10"}`}>
+              <div className="text-3xl mb-2">{t === "consumer" ? "" : ""}</div>
+              <div className={`text-sm font-bold ${tipoCliente === t ? "text-purple-300" : "text-white"}`}>{t === "consumer" ? "CONSUMER" : "BUSINESS"}</div>
+              <div className="text-xs text-slate-500 mt-0.5">{t === "consumer" ? "Persona fisica" : "Azienda / P.IVA"}</div>
+            </div>
+          ))}
+        </div>
+        {tipoCliente && <div className="space-y-3">
+          <div className="flex gap-2">
+            <select value={searchField} onChange={e => setSearchField(e.target.value)} className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-slate-300 outline-none">
+              <option value="">Cerca per...</option>
+              {tipoCliente === "consumer" ? <><option value="cf">Codice Fiscale</option><option value="cell">Cellulare</option></> : <><option value="piva">Partita IVA</option><option value="cell">Cellulare</option></>}
+            </select>
+            <input value={searchValue} onChange={e => setSearchValue(e.target.value)} placeholder={searchField === "cf" ? "RSSMRA80A..." : searchField === "piva" ? "12345678901" : "333..."}
+              className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-slate-300 outline-none" />
+            <button onClick={doSearch} className="px-3 py-2 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-sm font-semibold hover:bg-emerald-500/25 transition-all"> Cerca</button>
+            <button onClick={() => setClienteFound(false)} className="px-3 py-2 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/30 text-sm font-semibold hover:bg-blue-500/25 transition-all"> Nuovo</button>
+          </div>
+          {clienteFound === true && <div className="p-4 bg-emerald-500/5 border border-emerald-500/30 rounded-xl">
+            <div className="text-sm text-emerald-400 font-semibold mb-3"> Cliente trovato! Dati pre-compilati.</div>
+            <AnaFields tipoCliente={tipoCliente} ana={ana} setAna={setAna} inp={inp} lbl={lbl} />
+          </div>}
+          {clienteFound === false && <div className="p-4 bg-blue-500/5 border border-blue-500/30 rounded-xl">
+            <div className="text-sm text-blue-400 font-semibold mb-3"> Nuovo cliente  compila i dati</div>
+            <AnaFields tipoCliente={tipoCliente} ana={ana} setAna={setAna} inp={inp} lbl={lbl} />
+          </div>}
+        </div>}
+      </div>
+    );
+    if (step === 3) return (
+      <div className="space-y-5">
+        <div>
+          <label className={lbl}>Tipo Prodotto *</label>
+          <div className="grid grid-cols-4 gap-3">
+            {TIPO_PRODOTTO.map(t => (
+              <div key={t.key} onClick={() => setTipoProdotto(t.key)}
+                className={`p-4 rounded-xl border cursor-pointer text-center transition-all ${tipoProdotto === t.key ? "bg-purple-500/10 border-purple-500/40" : "bg-white/[0.02] border-white/5 hover:border-white/10"}`}>
+                <t.Icon className={`mx-auto mb-2 ${tipoProdotto === t.key ? "text-purple-400" : "text-slate-400"}`} size={28} />
+                <div className={`text-xs font-bold ${tipoProdotto === t.key ? "text-purple-300" : "text-slate-300"}`}>{t.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {tipoProdotto && <>
+          <div className="grid grid-cols-2 gap-4">
+            <div><label className={lbl}>Brand *</label>
+              <select value={brand} onChange={e => { setBrand(e.target.value); setModel(""); }} className={inp}>
+                <option value="">Seleziona brand...</option>
+                {Object.keys(PHONE_BRANDS_MODELS).map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+            <div><label className={lbl}>Modello *</label>
+              <select value={model} onChange={e => setModel(e.target.value)} disabled={!brand} className={inp}>
+                <option value="">Seleziona modello...</option>
+                {brand && PHONE_BRANDS_MODELS[brand]?.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div><label className={lbl}>Capacit� *</label>
+              <select value={capacita} onChange={e => setCapacita(e.target.value)} className={inp}>
+                <option value="">Seleziona...</option>
+                {CAPACITA_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div><label className={lbl}>Colore *</label>
+              <select value={colore} onChange={e => setColore(e.target.value)} className={inp}>
+                <option value="">Seleziona...</option>
+                {COLORI_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div><label className={lbl}>IMEI *</label>
+              <input value={imei} onChange={e => setImei(e.target.value)} maxLength={15} placeholder="353456789012345" className={inp} />
+            </div>
+            <div><label className={lbl}>Prezzo Acquisto () *</label>
+              <input type="number" step="1" min="0" value={prezzoAcquisto} onChange={e => setPrezzoAcquisto(e.target.value)} placeholder="es. 250" className={inp} />
+            </div>
+          </div>
+          <div>
+            <label className={lbl}>Grado di Usura *</label>
+            <div className="grid grid-cols-2 gap-2">
+              {GRADI_USURA.map(g => (
+                <div key={g.key} onClick={() => setGradoUsura(g.key)}
+                  className={`p-3 rounded-xl border cursor-pointer transition-all ${gradoUsura === g.key ? "bg-purple-500/10 border-purple-500/40" : "bg-white/[0.02] border-white/5 hover:border-white/10"}`}>
+                  <div className={`text-xs font-bold ${gradoUsura === g.key ? "text-purple-300" : "text-slate-300"}`}>{g.label}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">{g.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <label className={`flex items-center gap-3 p-4 rounded-xl cursor-pointer border transition-all ${hasExtraMargine ? "bg-yellow-500/10 border-yellow-500/30" : "bg-white/[0.02] border-white/5"}`}>
+            <input type="checkbox" checked={hasExtraMargine} onChange={e => setHasExtraMargine(e.target.checked)} className="accent-yellow-500 w-4 h-4" />
+            <span className="text-sm text-slate-300"> Extra Margine</span>
+          </label>
+          {hasExtraMargine && <div className="flex items-center gap-3">
+            <label className={lbl + " mb-0 whitespace-nowrap"}>Importo Extra Margine () *</label>
+            <input type="number" step="1" min="0" value={extraMargineImporto} onChange={e => setExtraMargineImporto(e.target.value)} placeholder="es. 30" className="w-32 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-slate-300 outline-none" />
+          </div>}
+        </>}
+      </div>
+    );
+    if (step === 4) return (
+      <div className="space-y-5">
+        <div className="text-sm font-bold text-white mb-2"> Metodo di Pagamento</div>
+        <div className="grid grid-cols-3 gap-3">
+          {([{ key: "contanti", label: "Contanti", icon: "" }, { key: "buono", label: "Buono", icon: "" }, { key: "bonifico", label: "Bonifico", icon: "" }] as const).map(m => (
+            <div key={m.key} onClick={() => setMetodoPagamento(m.key)}
+              className={`p-5 rounded-xl border cursor-pointer text-center transition-all ${metodoPagamento === m.key ? "bg-purple-500/10 border-purple-500/40" : "bg-white/[0.02] border-white/5 hover:border-white/10"}`}>
+              <div className="text-3xl mb-2">{m.icon}</div>
+              <div className={`text-sm font-bold ${metodoPagamento === m.key ? "text-purple-300" : "text-white"}`}>{m.label}</div>
+            </div>
+          ))}
+        </div>
+        {metodoPagamento === "bonifico" && <div>
+          <label className={lbl}>IBAN *</label>
+          <div className="flex gap-2">
+            <input value={ibanPag} onChange={e => setIbanPag(e.target.value)} placeholder="IT60X0542811101000000123456" className={inp + " flex-1"} />
+            {ana.iban && <button onClick={() => setIbanPag(ana.iban)} className="px-3 py-2 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/30 text-xs font-semibold hover:bg-blue-500/25 transition-all whitespace-nowrap"> Copia IBAN da anagrafica</button>}
+          </div>
+        </div>}
+      </div>
+    );
+    if (step === 5) return (
+      <div className="space-y-5">
+        {([{ key: "doc", label: "Documento di Identit� *", val: allegDoc, set: setAllegDoc, icon: "", fake: "documento_id.pdf" }, { key: "dich", label: "Dichiarazione di Vendita (firmata) *", val: allegDich, set: setAllegDich, icon: "", fake: "dichiarazione_vendita.pdf" }] as any[]).map(f => (
+          <div key={f.key}>
+            <label className={lbl}>{f.label}</label>
+            <div onClick={() => f.set(f.val ? null : f.fake)}
+              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${f.val ? "bg-emerald-500/5 border-emerald-500/40" : "bg-white/[0.01] border-white/10 hover:border-white/20"}`}>
+              {f.val ? <><div className="text-3xl mb-2"></div><div className="text-sm text-emerald-400 font-semibold">Documento caricato</div><div className="text-xs text-slate-500 mt-1">{f.val}</div></>
+                : <><div className="text-3xl mb-2">{f.icon}</div><div className="text-sm text-slate-500">Clicca per caricare</div><div className="text-xs text-slate-600 mt-1">PDF, JPG, PNG</div></>}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+    return null;
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-start justify-center pt-6 px-4" onClick={onClose}>
+      <div className="bg-[#161b22] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[92vh] overflow-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-[#161b22] border-b border-white/10 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+          <div className="text-lg font-bold text-white"> Registra Usato</div>
+          <button onClick={onClose} className="text-slate-500 hover:text-white text-xl transition-colors"></button>
+        </div>
+        {/* Step dots */}
+        <div className="flex items-center justify-center gap-2 px-6 py-4 border-b border-white/5">
+          {STEP_LABELS.map((label, i) => (
+            <div key={i} className="flex items-center gap-2">
+              {i > 0 && <div className={`w-8 h-px ${step > i ? "bg-purple-500" : "bg-white/10"}`} />}
+              <div className="flex items-center gap-1.5">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 ${step >= i + 1 ? "bg-purple-500/20 border-purple-500 text-purple-300" : "bg-transparent border-white/10 text-slate-600"}`}>
+                  {step > i + 1 ? "" : i + 1}
+                </div>
+                <span className={`text-[11px] whitespace-nowrap ${step === i + 1 ? "text-white font-bold" : step > i + 1 ? "text-slate-400" : "text-slate-600"}`}>{label}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="p-6">{renderStep()}</div>
+        <div className="flex items-center justify-between px-6 py-4 border-t border-white/5">
+          <div>{step > 1 && <button onClick={() => setStep(step - 1)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 text-slate-400 border border-white/10 text-sm font-semibold hover:bg-white/10 transition-all"><ArrowLeft size={14} /> Indietro</button>}</div>
+          <div>{step < 5 ?
+            <button onClick={() => canNext() && setStep(step + 1)} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${canNext() ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 hover:bg-purple-500/30" : "bg-white/5 text-slate-600 border border-white/5 cursor-not-allowed"}`}>Avanti <ArrowRight size={14} /></button> :
+            <button onClick={() => canNext() && handleSubmit()} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${canNext() ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30" : "bg-white/5 text-slate-600 border border-white/5 cursor-not-allowed"}`}> Registra Usato</button>
+          }</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+//  AnaFields sub-component (used in wizard step 2) 
+function AnaFields({ tipoCliente, ana, setAna, inp, lbl }: any) {
+  if (tipoCliente === "consumer") return (
+    <div className="grid grid-cols-2 gap-3">
+      <div><label className={lbl}>Nome *</label><input value={ana.nome} onChange={e => setAna({ ...ana, nome: e.target.value })} placeholder="Mario" className={inp} /></div>
+      <div><label className={lbl}>Cognome *</label><input value={ana.cognome} onChange={e => setAna({ ...ana, cognome: e.target.value })} placeholder="Rossi" className={inp} /></div>
+      <div><label className={lbl}>Codice Fiscale *</label><input value={ana.cf} onChange={e => setAna({ ...ana, cf: e.target.value })} placeholder="RSSMRA80A01H501U" className={inp} /></div>
+      <div><label className={lbl}>Email</label><input value={ana.email} onChange={e => setAna({ ...ana, email: e.target.value })} className={inp} /></div>
+      <div><label className={lbl}>Cellulare</label><input value={ana.cellulare} onChange={e => setAna({ ...ana, cellulare: e.target.value })} className={inp} /></div>
+      <div><label className={lbl}>Domicilio</label><input value={ana.domicilio} onChange={e => setAna({ ...ana, domicilio: e.target.value })} className={inp} /></div>
+      <div className="col-span-2"><label className={lbl}>IBAN</label><input value={ana.iban} onChange={e => setAna({ ...ana, iban: e.target.value })} placeholder="IT60X0542811101000000123456" className={inp} /></div>
+    </div>
+  );
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div><label className={lbl}>Ragione Sociale *</label><input value={ana.ragioneSociale} onChange={e => setAna({ ...ana, ragioneSociale: e.target.value })} className={inp} /></div>
+      <div><label className={lbl}>Partita IVA *</label><input value={ana.piva} onChange={e => setAna({ ...ana, piva: e.target.value })} className={inp} /></div>
+      <div><label className={lbl}>Referente *</label><input value={ana.referente} onChange={e => setAna({ ...ana, referente: e.target.value })} className={inp} /></div>
+      <div><label className={lbl}>Cellulare</label><input value={ana.cellulare} onChange={e => setAna({ ...ana, cellulare: e.target.value })} className={inp} /></div>
+      <div><label className={lbl}>Email</label><input value={ana.email} onChange={e => setAna({ ...ana, email: e.target.value })} className={inp} /></div>
+      <div><label className={lbl}>PEC</label><input value={ana.pec} onChange={e => setAna({ ...ana, pec: e.target.value })} className={inp} /></div>
+      <div><label className={lbl}>Codice Univoco / SDI</label><input value={ana.sdi} onChange={e => setAna({ ...ana, sdi: e.target.value })} className={inp} /></div>
+      <div><label className={lbl}>Sede Legale</label><input value={ana.sedeLegale} onChange={e => setAna({ ...ana, sedeLegale: e.target.value })} className={inp} /></div>
+      <div className="col-span-2"><label className={lbl}>IBAN</label><input value={ana.iban} onChange={e => setAna({ ...ana, iban: e.target.value })} placeholder="IT60X0542811101000000123456" className={inp} /></div>
+    </div>
+  );
+}
+
+//  Main Page -
+export default function GestioneUsati() {
+  const [selectedStores, setSelectedStores] = useState<string[]>([...NEGOZI]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([...STATUS_KEYS]);
+  const [dateField, setDateField] = useState("created_at");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [searchText, setSearchText] = useState("");
+  const [devices, setDevices] = useState<Device[]>(MOCK_DEVICES);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+  const [showRegistra, setShowRegistra] = useState(false);
+  const [sortKey, setSortKey] = useState<keyof Device | "">("");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [ricambiFilter, setRicambiFilter] = useState<string[]>([]);
+  const [bonificoFilter, setBonificoFilter] = useState("");
+  const [activeKpi, setActiveKpi] = useState<string | null>(null);
+
+  const RICAMBIO_STATE_KEYS = RICAMBIO_STATES.map(s => s.key);
+
+  const filtered = useMemo(() => devices.filter(d => {
+    if (!selectedStores.includes(d.store)) return false;
+    if (!selectedStatuses.includes(d.status)) return false;
+    if (dateFrom) { const v = d[dateField as keyof Device] as Date | null; if (!v || isoDate(v) < dateFrom) return false; }
+    if (dateTo) { const v = d[dateField as keyof Device] as Date | null; if (!v || isoDate(v) > dateTo) return false; }
+    if (searchText) { const q = searchText.toLowerCase(); if (!d.model.toLowerCase().includes(q) && !d.imei.includes(q)) return false; }
+    if (ricambiFilter.length > 0) { if (!d.ricambi.some(r => ricambiFilter.includes(r.stato))) return false; }
+    if (bonificoFilter === "da_effettuare") { if (!d.pagamento || d.pagamento.metodo !== "bonifico" || d.pagamento.bonifico_effettuato !== false) return false; }
+    if (bonificoFilter === "effettuato") { if (!d.pagamento || d.pagamento.metodo !== "bonifico" || d.pagamento.bonifico_effettuato !== true) return false; }
+    return true;
+  }), [devices, selectedStores, selectedStatuses, dateField, dateFrom, dateTo, searchText, ricambiFilter, bonificoFilter]);
+
+  const inCirculation = useMemo(() => devices.filter(d => d.status !== "venduto" && d.status !== "ko"), [devices]);
+  const inventoryValue = useMemo(() => inCirculation.filter(d => d.sale_price > 0).reduce((s, d) => s + d.sale_price, 0), [inCirculation]);
+  const vetrinaValue = useMemo(() => devices.filter(d => d.status === "in_vendita").reduce((s, d) => s + d.sale_price, 0), [devices]);
+
+  const kpiData = useMemo(() => {
+    const c: Record<string, number> = {};
+    STATUS_KEYS.forEach(k => c[k] = 0);
+    filtered.forEach(d => { c[d.status] = (c[d.status] || 0) + 1; });
+    c._all = filtered.filter(d => d.status !== "venduto" && d.status !== "ko").length;
+    return c;
+  }, [filtered]);
+
+  const sorted = useMemo(() => [...filtered].sort((a, b) => {
+    if (!sortKey) return 0;
+    let va: any = a[sortKey as keyof Device], vb: any = b[sortKey as keyof Device];
+    if (va instanceof Date) va = va.getTime(); if (vb instanceof Date) vb = vb.getTime();
+    if (va == null) return 1; if (vb == null) return -1;
+    const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb));
+    return sortDir === "asc" ? cmp : -cmp;
+  }), [filtered, sortKey, sortDir]);
+
+  const doSort = (key: string) => { if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc"); else { setSortKey(key as keyof Device); setSortDir("asc"); } };
+  const arrow = (key: string) => sortKey === key ? (sortDir === "asc" ? " " : " ") : "";
+
+  const handleKpiClick = (sk: string) => {
+    if (sk === "_all") {
+      const allExcl = STATUS_KEYS.filter(k => k !== "venduto" && k !== "ko");
+      const isActive = selectedStatuses.length === allExcl.length && allExcl.every(k => selectedStatuses.includes(k));
+      if (isActive) { setSelectedStatuses([...STATUS_KEYS]); setActiveKpi(null); }
+      else { setSelectedStatuses(allExcl); setActiveKpi("_all"); }
+    } else {
+      const isSingle = selectedStatuses.length === 1 && selectedStatuses[0] === sk;
+      if (isSingle) { setSelectedStatuses([...STATUS_KEYS]); setActiveKpi(null); }
+      else { setSelectedStatuses([sk]); setActiveKpi(sk); }
+    }
+  };
+
+  const resetFilters = () => { setSelectedStores([...NEGOZI]); setSelectedStatuses([...STATUS_KEYS]); setDateField("created_at"); setDateFrom(""); setDateTo(""); setSearchText(""); setRicambiFilter([]); setBonificoFilter(""); setActiveKpi(null); };
+  const handleSaveDevice = (u: Device) => setDevices(p => p.map(d => d.id === u.id ? u : d));
+  const handleRegistra = (data: any) => {
+    const newDev: Device = { ...data, id: devices.length + 1, status: "acquistato", sale_price: 0, target_store: null, created_at: new Date(), listed_date: null, sold_date: null, ricambi: [], note_tecnico: "", status_history: { acquistato: { date: new Date(), operatore: data.venditore } }, store: data.negozio, purchase_price: data.prezzoAcquisto, grado_usura: data.gradoUsura, extra_margine: data.extraMargine ? { ...data.extraMargine, confermato: false, conferma_operatore: null, conferma_date: null } : null, pagamento: { metodo: data.metodoPagamento, iban: data.iban || "", bonifico_effettuato: data.metodoPagamento === "bonifico" ? false : null, bonifico_operatore: null, bonifico_date: null }, provenienza_subito: data.provenienzaSubito || false };
+    setDevices(p => [newDev, ...p]);
+  };
+
+  const thCls = "px-4 py-3 text-left text-[11px] text-slate-500 uppercase font-semibold tracking-wide border-b border-white/5 bg-[#161b22] sticky top-0 cursor-pointer select-none hover:text-slate-300 transition-colors whitespace-nowrap";
+
+  return (
+    <div className="-m-4 sm:-m-6 md:-m-8 bg-[#0d1117] text-white" style={{ fontFamily: "inherit", overflowX: "hidden" }}>
+      {/*  Sticky Header  */}
+      <div className="sticky top-0 z-30 bg-[#0d1117]/95 backdrop-blur-sm border-b border-white/5 overflow-x-hidden">
+        {/* Title row */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">📱 Gestione Usati</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Inventario e lifecycle dispositivi usati</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Value Boxes — hidden on xs */}
+            <div className="hidden sm:flex gap-2">
+              <div className="px-3 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-right">
+                <div className="text-[10px] text-slate-500 uppercase font-semibold tracking-wide">Inventario</div>
+                <div className="text-sm font-bold text-purple-300">{fmtEur(inventoryValue)}</div>
+                <div className="text-[10px] text-slate-600">{inCirculation.length} disp.</div>
+              </div>
+              <div className="px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-right">
+                <div className="text-[10px] text-slate-500 uppercase font-semibold tracking-wide">Vetrina</div>
+                <div className="text-sm font-bold text-emerald-300">{fmtEur(vetrinaValue)}</div>
+                <div className="text-[10px] text-slate-600">{devices.filter(d => d.status === "in_vendita").length} disp.</div>
+              </div>
+            </div>
+            <button onClick={() => setShowRegistra(true)}
+              className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/40 text-sm font-semibold hover:bg-purple-500/30 transition-all">
+              <Plus size={15} /> <span className="hidden xs:inline">Registra</span> Usato
+            </button>
+          </div>
+        </div>
+        {/* Filters row — 2-col grid on mobile, flex row on desktop */}
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 px-4 sm:px-6 pb-3">
+          <MultiSelect label="Negozio" options={NEGOZI} selected={selectedStores} onChange={setSelectedStores} />
+          <MultiSelect label="Stato" options={STATUS_KEYS} selected={selectedStatuses} onChange={setSelectedStatuses}
+            renderOpt={o => <span className="flex items-center gap-1.5">{statusMap[o as UsatoStatus]?.icon} {statusMap[o as UsatoStatus]?.label}</span>} />
+          {/* Date field selector */}
+          <select value={dateField} onChange={e => setDateField(e.target.value)}
+            className="col-span-2 sm:col-span-1 w-full sm:w-auto px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-300 outline-none hover:bg-white/10 transition-all">
+            {DATE_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+          </select>
+          {/* Date range */}
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+            className="w-full sm:w-36 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-400 outline-none hover:bg-white/10 transition-all min-w-0" />
+          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+            className="w-full sm:w-36 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-400 outline-none hover:bg-white/10 transition-all min-w-0" />
+          {/* Stato Ricambi */}
+          <MultiSelect label="Ricambi" options={RICAMBIO_STATE_KEYS} selected={ricambiFilter} onChange={setRicambiFilter}
+            renderOpt={o => <span>{RICAMBIO_STATES.find(s => s.key === o)?.label || o}</span>} />
+          {/* Bonifici */}
+          <select value={bonificoFilter} onChange={e => setBonificoFilter(e.target.value)}
+            className="w-full sm:w-auto px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-300 outline-none hover:bg-white/10 transition-all">
+            <option value="">Bonifici (Tutti)</option>
+            <option value="da_effettuare">Da Effettuare</option>
+            <option value="effettuato">Effettuato</option>
+          </select>
+          <button onClick={resetFilters} className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-400 hover:bg-white/10 transition-all">
+            <RotateCcw size={13} /> Reset
+          </button>
+        </div>
+        {/* KPI Cards — 5-column grid, labels truncate cleanly */}
+        <div className="px-4 sm:px-6 pb-3">
+          <div className="grid grid-cols-5 gap-2">
+            {KPI_CARDS.map(k => (
+              <button key={k.key} onClick={() => handleKpiClick(k.key)}
+                className={cn("px-2 py-2.5 rounded-xl border transition-all text-left overflow-hidden",
+                  activeKpi === k.key ? `${k.bgClass} ${k.borderClass}` : "bg-white/[0.02] border-white/5 hover:border-white/10")}>
+                <div className="flex items-center gap-1 mb-1 min-w-0">
+                  <span className="text-sm flex-shrink-0">{k.icon}</span>
+                  <span className={cn("text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide truncate", activeKpi === k.key ? k.colorClass : "text-slate-500")}>{k.label}</span>
+                </div>
+                <div className={cn("text-lg sm:text-xl font-bold", activeKpi === k.key ? k.colorClass : "text-white")}>{kpiData[k.key] ?? 0}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Search bar */}
+        <div className="px-4 sm:px-6 pb-4">
+          <div className="relative w-full">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder="Cerca Modello / IMEI..."
+              className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-300 outline-none focus:border-white/20 transition-all" />
+          </div>
+        </div>
+      </div>
+
+      {/*  Device List — card on mobile, table on desktop  */}
+      <div className="px-3 sm:px-6 pb-8">
+
+        {/* ── Mobile card list (< sm) ──────────────────── */}
+        <div className="sm:hidden space-y-2">
+          {sorted.length === 0 ? (
+            <div className="py-16 text-center text-slate-600 text-sm">Nessun dispositivo trovato</div>
+          ) : sorted.map(d => (
+            <div key={d.id} onClick={() => setSelectedDevice(d)}
+              className="bg-white/[0.03] border border-white/5 rounded-xl px-4 py-3 cursor-pointer active:bg-white/[0.06] transition-colors">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-sm font-semibold text-slate-200 leading-tight">{d.model}</span>
+                <StatusBadge statusKey={d.status} />
+              </div>
+              <div className="flex items-center gap-3 text-xs text-slate-500">
+                <span className="font-mono">{d.imei.slice(0, 8)}…</span>
+                <span className="text-slate-700">·</span>
+                <span>{d.store}</span>
+                <span className="text-slate-700">·</span>
+                <span>{fmtDate(d.created_at)}</span>
+              </div>
+              <div className="flex items-center gap-4 mt-2 text-xs">
+                <div><span className="text-slate-600">Acq.</span> <span className="text-slate-300 font-semibold">{fmtEur(d.purchase_price)}</span></div>
+                <div><span className="text-slate-600">Vend.</span> {d.sale_price > 0 ? <span className="text-emerald-400 font-semibold">{fmtEur(d.sale_price)}</span> : <span className="text-slate-700">—</span>}</div>
+              </div>
+            </div>
+          ))}
+          <div className="pt-2 text-xs text-slate-600 text-center">{sorted.length} dispositivi mostrati</div>
+        </div>
+
+        {/* ── Desktop table (≥ sm) ─────────────────────── */}
+        <div className="hidden sm:block rounded-xl border border-white/5 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  {[["#", "id"], ["Modello", "model"], ["IMEI", "imei"], ["Stato", "status"], ["Acquisto", "purchase_price"], ["Vendita", "sale_price"], ["Negozio", "store"], ["Data Reg.", "created_at"]].map(([l, k]) => (
+                    <th key={k} className={thCls} onClick={() => doSort(k)}>{l}{arrow(k)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.length === 0 ? (
+                  <tr><td colSpan={8} className="py-16 text-center text-slate-600 text-sm">Nessun dispositivo trovato</td></tr>
+                ) : sorted.map(d => (
+                  <tr key={d.id} onClick={() => setSelectedDevice(d)}
+                    className="border-b border-white/[0.03] cursor-pointer hover:bg-white/[0.03] transition-colors group">
+                    <td className="px-4 py-3 text-xs text-slate-600 font-mono">#{d.id}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-slate-200 group-hover:text-white transition-colors whitespace-nowrap">{d.model}</td>
+                    <td className="px-4 py-3 text-xs font-mono text-slate-500 whitespace-nowrap">{d.imei}</td>
+                    <td className="px-4 py-3"><StatusBadge statusKey={d.status} /></td>
+                    <td className="px-4 py-3 text-sm text-slate-400 font-semibold whitespace-nowrap">{fmtEur(d.purchase_price)}</td>
+                    <td className="px-4 py-3 text-sm font-semibold whitespace-nowrap">{d.sale_price > 0 ? <span className="text-emerald-400">{fmtEur(d.sale_price)}</span> : <span className="text-slate-700">—</span>}</td>
+                    <td className="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">{d.store}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{fmtDate(d.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="px-4 py-3 border-t border-white/5 bg-[#161b22]/50 text-xs text-slate-600">{sorted.length} dispositivi mostrati</div>
+        </div>
+
+      </div>
+
+
+      {/* Modals */}
+      {selectedDevice && <DevicePanel device={selectedDevice} onClose={() => setSelectedDevice(null)} onSave={u => { handleSaveDevice(u); setSelectedDevice(u); }} />}
+      {showRegistra && <RegistraUsatoPanel onClose={() => setShowRegistra(false)} onSave={handleRegistra} />}
+    </div>
+  );
 }
