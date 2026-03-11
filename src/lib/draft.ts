@@ -1,6 +1,7 @@
 /**
  * Draft persistence for CRM forms. Saves to sessionStorage so that when users
  * navigate back (browser back or Back button), their filled data is restored.
+ * Drafts expire after 24h.
  */
 
 const PREFIX = "crm-draft-";
