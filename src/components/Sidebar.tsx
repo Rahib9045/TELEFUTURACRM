@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -16,7 +16,8 @@ import {
     CalendarDays,
     Users,
     Smartphone,
-    Store
+    Store,
+    Package
 } from "lucide-react";
 
 const navigation = [
@@ -32,6 +33,7 @@ const navigation = [
     { name: "Calendario", href: "/calendario", icon: CalendarDays, roles: ["admin", "agente"] },
     { name: "Documentazione", href: "/documentazione", icon: FolderOpen, roles: ["admin", "agente"] },
     { name: "Comunicazioni", href: "/comunicazioni", icon: MessageSquare, roles: ["admin", "agente"] },
+    { name: "Ordine Merce", href: "/ordine-merce", icon: Package, roles: ["admin", "store_manager", "back_office"] },
 ];
 
 interface SidebarProps {
