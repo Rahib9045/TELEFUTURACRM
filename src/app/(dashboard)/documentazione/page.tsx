@@ -163,7 +163,7 @@ export default function DocumentazionePage() {
 
     const { setOnBack } = usePageBack();
     useEffect(() => {
-        setOnBack(() => () => {
+        setOnBack(() => {
             if (catId) {
                 setCatId(null);
                 return true;
