@@ -862,12 +862,14 @@ const NoteStep = () => {
 
 const DRAFT_KEY_REGISTRA = "registra-contratto";
 const defaultAna: Record<string, string> = { nome: "", cognome: "", cellulare: "", email: "", via: "", cap: "", citta: "", ragioneSociale: "", nomeRef: "", cognomeRef: "", recapito: "" };
-const defaultCfD = { nome: "", cognome: "", sesso: "M" as const, giorno: "", mese: "", anno: "", comune: "", estero: false, paese: "" };
+const defaultCfD: { nome: string; cognome: string; sesso: "M" | "F"; giorno: string; mese: string; anno: string; comune: string; estero: boolean; paese: string } = { nome: "", cognome: "", sesso: "M", giorno: "", mese: "", anno: "", comune: "", estero: false, paese: "" };
 
 export default function CRM() {
-  const draftRef = useRef<ReturnType<typeof getDraft> | undefined>(undefined);
-  if (draftRef.current === undefined) draftRef.current = getDraft(DRAFT_KEY_REGISTRA);
-  const draft = draftRef.current;
+  // Draft is intentionally typed as any to keep state initializers simple,
+  // while the persisted shape is controlled where we call saveDraft.
+  const draftRef = useRef<any | null>(null);
+  if (draftRef.current === null) draftRef.current = getDraft(DRAFT_KEY_REGISTRA);
+  const draft = draftRef.current as any;
 
   const [brand, setBrand] = useState<string | null>(draft?.brand ?? null);
   const [showCart, setShowCart] = useState(false);
@@ -1138,7 +1140,7 @@ export default function CRM() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 16px" }}>
                     <TF l="Cognome" r v={cfD.cognome} o={v => setCfD(p => ({ ...p, cognome: v }))} p="Rossi" />
                     <TF l="Nome" r v={cfD.nome} o={v => setCfD(p => ({ ...p, nome: v }))} p="Mario" />
-                    <div><div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", marginBottom: 4 }}>Sesso</div><div style={{ display: "flex", gap: 8 }}>{["M", "F"].map(sx => <button key={sx} onClick={() => setCfD(p => ({ ...p, sesso: sx }))} style={{ flex: 1, padding: 10, borderRadius: 8, border: cfD.sesso === sx ? "2px solid #f97316" : "1px solid rgba(255, 255, 255, 0.1)", background: cfD.sesso === sx ? "rgba(249, 115, 22, 0.15)" : "rgba(255, 255, 255, 0.05)", fontSize: 13, fontWeight: 700, cursor: "pointer", color: cfD.sesso === sx ? "#fb923c" : "#94a3b8" }}>{sx === "M" ? "♂ Uomo" : "♀ Donna"}</button>)}</div></div>
+                    <div><div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", marginBottom: 4 }}>Sesso</div><div style={{ display: "flex", gap: 8 }}>{(["M", "F"] as Array<"M" | "F">).map(sx => <button key={sx} onClick={() => setCfD(p => ({ ...p, sesso: sx }))} style={{ flex: 1, padding: 10, borderRadius: 8, border: cfD.sesso === sx ? "2px solid #f97316" : "1px solid rgba(255, 255, 255, 0.1)", background: cfD.sesso === sx ? "rgba(249, 115, 22, 0.15)" : "rgba(255, 255, 255, 0.05)", fontSize: 13, fontWeight: 700, cursor: "pointer", color: cfD.sesso === sx ? "#fb923c" : "#94a3b8" }}>{sx === "M" ? "♂ Uomo" : "♀ Donna"}</button>)}</div></div>
                     <div>
                       <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", marginBottom: 4 }}>Luogo di nascita <span style={{ color: "#f43f5e" }}>*</span></div>
                       <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
