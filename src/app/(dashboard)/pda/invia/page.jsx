@@ -1093,8 +1093,8 @@ export default function InviaPda() {
             </div>
           );
         })()}
-        {/* IBAN Fastweb — PayPicker + collassabile */}
-        {brand === "fastweb" && (() => {
+        {/* IBAN Fastweb — PayPicker + collassabile (solo Fisso/Luce: per Mobile è già nel blocco Metodo/Portabilità) */}
+        {brand === "fastweb" && categoria !== "Mobile" && (() => {
           const payMeth = sale.fields?.payMeth || "";
           const kIban = `${catKey}_${si}_ibanFW`;
           const done = payMeth === "CC" || (payMeth === "IBAN" && !!ibanFW);
