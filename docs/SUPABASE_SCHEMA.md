@@ -404,6 +404,17 @@ CREATE TABLE pda_items (
 CREATE INDEX idx_pda_items_pda ON pda_items(pda_id);
 ```
 
+**PDA item `fields` JSONB — key values by category and brand**
+
+- **Mobile (all brands)**  
+  `payMeth` (IBAN | CC), `ibanMob` (when payMeth = IBAN), `portMob` (Sì | No), `domMob` (Sì | No for Consumer). For **Fastweb Mobile**, payment and IBAN are collected **once** in the payment section; Portabilità (Yes/No) must not trigger a second IBAN request. Stored in same `fields` (e.g. `payMeth`, `ibanMob`, `portMob`).
+- **Fisso (WindTre, Fastweb)**  
+  When **Portabilità = Sì**, the UI shows **Origin Operator** (current fixed-line operator). Stored in `fields.operatoreDon`. Allowed values: TIM (ex Telecom Italia), Vodafone Italia, WindTre, Fastweb, Iliad (FTTH fiber), Tiscali, Aruba, PosteMobile (Home), Vianova, Linkem (FWA), Eolo (FWA), BT Italia, Retelit, Unidata, Uno Communications. Other Fisso keys: `portabilita`, `secondaLinea`, `portabilita2`, `gnpLinea1`, `codMigr1`, `gnpLinea2`, `codMigr2`, `indirizzoImp`, `domFisso`, `ibanFisso`, `ibanW3B`, `ibanFW`, `ibanSky3P`, etc.
+- **Fisso (other brands)**  
+  No Origin Operator field; other Fisso fields as above where applicable.
+- **Luce & Gas / Sky / Dojo**  
+  Category-specific keys in `fields`; see app constants (e.g. CAT_FIELDS) for full list.
+
 ---
 
 ### 3.12 Store closures (Chiusura Negozio)
@@ -833,10 +844,12 @@ Every page, filter, table column, form field, and flow is listed below so nothin
 
 | Item | Source (mock) | DB / Notes |
 |------|----------------|------------|
-| **Constants** | VENDITORI, NEGOZI, ALL_BRANDS, PRODOTTI (per brand/segment), CAT_FIELDS, DONOR_*, SKY_*, STEP_LABELS | profiles (venditore), stores (negozio), brands, brand_products, product_categories. |
+| **Constants** | VENDITORI, NEGOZI, ALL_BRANDS, PRODOTTI (per brand/segment), CAT_FIELDS, DONOR_*, ORIGIN_OPERATORS_FISSO, SKY_*, STEP_LABELS | profiles (venditore), stores (negozio), brands, brand_products, product_categories. |
 | **Step 1** | venditore, negozio | venditore_id → profiles, negozio_id → stores. |
 | **Step 2** | tipoCliente (privato/business), lookupValue (CF/PIVA), clienteFound, anConsumer (nome, cognome, cf, email, numeroFisso, cellulare, iban, domicilio, note), anBusiness (ragioneSociale, piva, referente, numeroFisso, mobile, email, pec, codiceUnivoco, iban, sedeLegale, note) | clients lookup; anagrafica_snapshot JSONB on pda_submissions if no client_id. |
 | **Step 3–4** | brand, allSales (per category: product, fields, skyPkt, skyTech, skyDec, …) | pda_submissions.brand_id; pda_items per line: category, product_name, fields JSONB, sky_pkt, sky_tech, sky_dec. |
+| **Fixed Line — Origin Operator** | Shown only when brand = WindTre or Fastweb, category = Fisso, and Portabilità = Sì. Searchable dropdown; value stored in `fields.operatoreDon`. List: see § 3.11 (ORIGIN_OPERATORS_FISSO). | pda_items.fields.operatoreDon. |
+| **Fastweb Mobile — IBAN once** | Payment section (Metodo + IBAN) appears once; then Portabilità (Sì/No). Portabilità must NOT trigger a second IBAN block. For Fastweb Mobile the generic “IBAN Fastweb” block is hidden; payment/IBAN use the Mobile block only (`payMeth`, `ibanMob`). | pda_items.fields.payMeth, fields.ibanMob, fields.portMob. |
 | **Cart** | cart[]: brandId, brandLabel, items[] (macro, sub, saleNum, details), sv (snapshot) | On submit: one pda_submissions + N pda_items. |
 | **Submit** | finalSubmit: build payload from cart + current colItems | Insert pda_submissions, then pda_items with fields from each item. |
 

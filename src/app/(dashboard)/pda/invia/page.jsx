@@ -511,7 +511,10 @@ export default function InviaPda() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {fields.map(f => (
+            {fields.map(f => {
+              const baseOpts = f.fallbackOpts === "DONOR_MOBILE" ? DONOR_MOBILE : f.fallbackOpts === "DONOR_FISSO" ? DONOR_FISSO : f.fallbackOpts === "DONOR_LUCE_GAS" ? DONOR_LUCE_GAS : f.opts || [];
+              const opts = f.key === "tensione" && tipoCliente !== "business" ? baseOpts.filter(o => o !== "MT") : baseOpts;
+              return (
               <div key={f.key} className={f.span2 ? 'md:col-span-2' : ''}>
                 <Label text={f.label} required={f.required} />
                 {f.type === "select" ? (
@@ -520,7 +523,7 @@ export default function InviaPda() {
                     onChange={e => setField(catKey, si, f.key, e.target.value)}
                     className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-sm text-slate-300 outline-none focus:border-violet-500/50"
                   >
-                    {(f.fallbackOpts === "DONOR_MOBILE" ? DONOR_MOBILE : f.fallbackOpts === "DONOR_FISSO" ? DONOR_FISSO : f.fallbackOpts === "DONOR_LUCE_GAS" ? DONOR_LUCE_GAS : f.opts).map(o => <option key={o} value={o}>{o || "— Seleziona —"}</option>)}
+                    {opts.map(o => <option key={o} value={o}>{o || "— Seleziona —"}</option>)}
                   </select>
                 ) : (
                   <input
@@ -532,7 +535,8 @@ export default function InviaPda() {
                   />
                 )}
               </div>
-            ))}
+            );
+            })}
           </div>
         </div>
       );
