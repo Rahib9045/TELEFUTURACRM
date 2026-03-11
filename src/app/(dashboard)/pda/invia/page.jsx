@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState, useCallback, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Search, ShoppingBag, User, Check, ChevronLeft, ChevronRight, Plus, Trash2, Archive, HelpCircle, Info, LayoutGrid, Clock, Calendar, ExternalLink, MoreVertical, ChevronUp, ChevronDown } from "lucide-react";
 import { calculateCF, _CNA, _PNA } from "@/lib/cf";
 import { getDraft, saveDraft, clearDraft } from "@/lib/draft";
@@ -126,7 +127,7 @@ const CAT_FIELDS = {
   ],
   "Fisso": [
     { key: "indirizzoImp", label: "Indirizzo Impianto", type: "text", ph: "es. Via Roma 1, 00100 Roma", required: true, span2: true },
-    { key: "operatoreDon", label: "Operatore di provenienza", type: "select", opts: [], fallbackOpts: "DONOR_FISSO", required: true },
+    { key: "operatoreDon", label: "Origin Operator", type: "select", opts: [], fallbackOpts: "ORIGIN_OPERATORS_FISSO", required: true },
     { key: "gnpLinea1", label: "N. Telefono GNP Linea 1", type: "text", ph: "es. 0612345678" },
     { key: "codMigr1", label: "Codice Migrazione L.1", type: "text", ph: "es. MIG123456" },
     { key: "gnpLinea2", label: "N. Telefono GNP Linea 2", type: "text", ph: "es. 0612345679" },
@@ -171,7 +172,9 @@ const CAT_ICONS = { "Mobile": "📱", "Fisso": "🏠", "Luce & Gas": "⚡", "Mul
 const CAT_COLORS = { "Mobile": "#2E75B6", "Fisso": "#28a745", "Luce & Gas": "#fd7e14", "Multi-servizi": "#6f42c1", "Abbonamenti SKY": "#0072CE", "POS": "#6f42c1" };
 
 const DONOR_MOBILE = ["", "TIM", "Vodafone", "WindTre", "Iliad", "Fastweb Mobile", "PosteMobile", "ho. Mobile", "Kena Mobile", "Very Mobile", "CoopVoce", "Spusu", "Lyca Mobile", "1Mobile", "Tiscali Mobile", "Digi Mobil", "Noitel", "Optima Mobile", "Feder Mobile", "Rabona Mobile", "Elimobile", "BT Italia", "Segnoverde Mobile", "Uno Mobile", "Saily", "Visitel", "Ops! Mobile"];
-const DONOR_FISSO = ["", "TIM", "Vodafone", "WindTre", "Fastweb", "Iliad", "Tiscali", "Aruba", "PosteMobile", "Vianova", "Linkem", "Eolo", "BT Italia", "Retelit", "Unidata", "Uno Communications"];
+// Fixed-line origin operators (Send PDA → Fixed Line → Origin Operator). Shown only when WindTre/Fastweb + Fisso + Portabilità = Sì.
+const ORIGIN_OPERATORS_FISSO = ["", "TIM (ex Telecom Italia)", "Vodafone Italia", "WindTre", "Fastweb", "Iliad (FTTH fiber)", "Tiscali", "Aruba", "PosteMobile (Home)", "Vianova", "Linkem (FWA)", "Eolo (FWA)", "BT Italia", "Retelit", "Unidata", "Uno Communications"];
+const DONOR_FISSO = ORIGIN_OPERATORS_FISSO; // used also for SME Fisso
 const DONOR_LUCE_GAS = ["", "Enel Energia", "Eni Plenitude", "A2A Energia", "Iren", "Hera Comm", "Edison", "Sorgenia", "E.ON", "Illumia", "Engie", "Optima", "Wekiwi", "Estra", "Axpo", "Iberdrola", "Acea Energia", "Servizio Elettrico Nazionale", "Altro"];
 
 const STEP_LABELS = ["Venditore", "Cliente", "Brand", "Prodotti"];
@@ -969,9 +972,14 @@ export default function InviaPda() {
       }
     }
     if (categoria === "Fisso") {
+      // Origin Operator: show only when WindTre or Fastweb + Fixed Line + Portabilità = Sì (Consumer & Business)
+      const showOriginOperator = (brand === "w3" || brand === "fastweb") && sale.fields?.portabilita === "Sì";
+      if (!showOriginOperator) {
+        fields = fields.filter(f => f.key !== "operatoreDon");
+      }
       // Nascondi Linea 1 (GNP + migrazione) se portabilità = No
       if (sale.fields?.portabilita === "No") {
-        fields = fields.filter(f => f.key !== "gnpLinea1" && f.key !== "codMigr1" && f.key !== "operatoreDon");
+        fields = fields.filter(f => f.key !== "gnpLinea1" && f.key !== "codMigr1");
       }
 
       // Nascondi Linea 2: W3 consumer sempre | W3 business se secondaLinea=No |
@@ -1129,27 +1137,32 @@ export default function InviaPda() {
           );
         })()}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {fields.map(f => (
-            <div key={f.key} className={f.span2 ? 'md:col-span-2' : ''}>
-              <Label text={f.label} required={f.required} />
-              {f.type === "select" ? (
-                <SearchableSelect
-                  options={f.opts.filter(Boolean)}
-                  value={sale.fields?.[f.key] || ""}
-                  onChange={v => setField(catKey, si, f.key, v)}
-                  placeholder="— Seleziona —"
-                />
-              ) : (
-                <input
-                  type="text"
-                  value={sale.fields?.[f.key] || ""}
-                  onChange={e => setField(catKey, si, f.key, e.target.value)}
-                  placeholder={f.ph}
-                  className="w-full glass-input rounded-xl py-2.5 px-4 text-sm"
-                />
-              )}
-            </div>
-          ))}
+          {fields.map(f => {
+            const selectOptions = f.type === "select"
+              ? (f.opts?.length ? f.opts : (f.fallbackOpts === "DONOR_MOBILE" ? DONOR_MOBILE : f.fallbackOpts === "ORIGIN_OPERATORS_FISSO" || f.fallbackOpts === "DONOR_FISSO" ? ORIGIN_OPERATORS_FISSO : f.fallbackOpts === "DONOR_LUCE_GAS" ? DONOR_LUCE_GAS : f.opts || [])).filter(Boolean)
+              : [];
+            return (
+              <div key={f.key} className={f.span2 ? 'md:col-span-2' : ''}>
+                <Label text={f.label} required={f.required} />
+                {f.type === "select" ? (
+                  <SearchableSelect
+                    options={selectOptions}
+                    value={sale.fields?.[f.key] || ""}
+                    onChange={v => setField(catKey, si, f.key, v)}
+                    placeholder="— Seleziona —"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={sale.fields?.[f.key] || ""}
+                    onChange={e => setField(catKey, si, f.key, e.target.value)}
+                    placeholder={f.ph}
+                    className="w-full glass-input rounded-xl py-2.5 px-4 text-sm"
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -2085,18 +2098,91 @@ function SearchableSelect({ options, value, onChange, placeholder, icon }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const containerRef = useRef(null);
+  const [dropdownStyle, setDropdownStyle] = useState({});
+
+  const updatePosition = useCallback(() => {
+    if (containerRef.current && typeof document !== "undefined") {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: "fixed",
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9998,
+      });
+    }
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setOpen(false);
-      }
+      if (containerRef.current?.contains(event.target)) return;
+      if (event.target.closest?.("[data-searchable-select-dropdown]")) return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [open, updatePosition]);
+
   const filtered = options.filter(o => o.toLowerCase().includes(search.toLowerCase()));
+
+  const dropdownEl = open && (
+    <div
+      data-searchable-select-dropdown
+      className="w-full bg-[#1a1d29] border border-white/10 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-black/50"
+      style={dropdownStyle}
+    >
+      <div className="p-2 border-b border-white/5 bg-white/[0.02]">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500" />
+          <input
+            type="text"
+            autoFocus
+            className="w-full bg-black/20 border border-white/5 rounded-lg py-2 pl-8 pr-3 text-xs text-white outline-none focus:border-violet-500/50 placeholder:text-slate-600 font-medium"
+            placeholder="Cerca..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="max-h-60 overflow-y-auto p-1.5 scrollbar-hide">
+        {filtered.length > 0 ? (
+          filtered.map((opt, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => {
+                onChange(opt);
+                setOpen(false);
+                setSearch("");
+              }}
+              className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-all duration-200 flex items-center justify-between group ${value === opt
+                ? "bg-violet-500/20 text-violet-300 border border-violet-500/30"
+                : "hover:bg-white/5 text-slate-400 hover:text-white"
+                }`}
+            >
+              <span className={value === opt ? "font-bold" : "font-medium"}>{opt}</span>
+              {value === opt && <Check className="w-3 h-3 text-violet-400" />}
+            </button>
+          ))
+        ) : (
+          <div className="px-3 py-6 text-center text-[10px] text-slate-600 uppercase font-black tracking-[0.2em]">
+            Nessun risultato
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="relative" ref={containerRef}>
@@ -2113,50 +2199,7 @@ function SearchableSelect({ options, value, onChange, placeholder, icon }) {
         </div>
         <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
       </button>
-
-      {open && (
-        <div className="absolute z-[1000] mt-2 w-full bg-[#1a1d29] border border-white/10 rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 shadow-2xl ring-1 ring-black/50">
-          <div className="p-2 border-b border-white/5 bg-white/[0.02]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500" />
-              <input
-                type="text"
-                autoFocus
-                className="w-full bg-black/20 border border-white/5 rounded-lg py-2 pl-8 pr-3 text-xs text-white outline-none focus:border-violet-500/50 placeholder:text-slate-600 font-medium"
-                placeholder="Cerca..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="max-h-60 overflow-y-auto p-1.5 scrollbar-hide">
-            {filtered.length > 0 ? (
-              filtered.map((opt, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => {
-                    onChange(opt);
-                    setOpen(false);
-                    setSearch("");
-                  }}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-all duration-200 flex items-center justify-between group ${value === opt
-                    ? "bg-violet-500/20 text-violet-300 border border-violet-500/30"
-                    : "hover:bg-white/5 text-slate-400 hover:text-white"
-                    }`}
-                >
-                  <span className={value === opt ? "font-bold" : "font-medium"}>{opt}</span>
-                  {value === opt && <Check className="w-3 h-3 text-violet-400" />}
-                </button>
-              ))
-            ) : (
-              <div className="px-3 py-6 text-center text-[10px] text-slate-600 uppercase font-black tracking-[0.2em]">
-                Nessun risultato
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {typeof document !== "undefined" && dropdownEl && dropdownStyle.position === "fixed" && createPortal(dropdownEl, document.body)}
     </div>
   );
 }
