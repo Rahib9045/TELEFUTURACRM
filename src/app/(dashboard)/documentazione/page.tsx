@@ -53,7 +53,7 @@ const BRANDS = [
         text: "text-blue-500",
         bg: "bg-blue-500/10",
         icon: PhoneCall,
-        logo: "/tim.png",
+        logo: "/TIMF.png",
     },
     {
         id: "sky",
