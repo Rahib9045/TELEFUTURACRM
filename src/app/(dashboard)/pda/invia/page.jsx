@@ -552,9 +552,9 @@ export default function InviaPda() {
       const dc = "#6f42c1";
       const addr = sale.fields?.dojoAddr || "";
       const cost = parseFloat(sale.fields?.dojoCost || "5.00");
-      const comm = parseFloat(sale.fields?.dojoComm || "0.65");
+      const comm = parseFloat(sale.fields?.dojoComm || "0.50");
       const COST_MIN = 5.00, COST_MAX = 10.00, COST_STEP = 0.50;
-      const COMM_MIN = 0.65, COMM_MAX = 1.40, COMM_STEP = 0.05;
+      const COMM_MIN = 0.50, COMM_MAX = 1.10, COMM_STEP = 0.10;
       const clamp = (v, mn, mx, st) => Math.round(Math.min(mx, Math.max(mn, Math.round(v / st) * st)) * 1000) / 1000;
       const pct = (v, mn, mx) => ((v - mn) / (mx - mn)) * 100;
       const Stepper = ({ label, value, min, max, step, fieldKey, unit, decimals }) => {

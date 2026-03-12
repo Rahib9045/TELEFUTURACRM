@@ -24,6 +24,7 @@ import {
     UserCog,
     FileText,
     Store as StoreIcon,
+    Users as UsersIcon,
 } from "lucide-react";
 
 type NavLink = { name: string; href: string; icon: React.ComponentType<{ className?: string }>; roles: string[] };
@@ -63,6 +64,7 @@ const navigation: (NavGroup | NavItem)[] = [
         ],
     },
     { type: "link", name: "Calendario", href: "/calendario", icon: CalendarDays, roles: ["admin", "agente"] },
+    { type: "link", name: "Collaboratori", href: "/collaboratori", icon: UsersIcon, roles: ["admin", "store_manager", "back_office", "supervisore", "agente"] },
     { type: "link", name: "Documentazione", href: "/documentazione", icon: FolderOpen, roles: ["admin", "agente"] },
     { type: "link", name: "Comunicazioni", href: "/comunicazioni", icon: MessageSquare, roles: ["admin", "agente"] },
 ];
