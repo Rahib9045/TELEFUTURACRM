@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, X, Phone, MapPin, User, Clock, Search, Bell, Circle, CheckCircle2, PauseCircle, ChevronDown, ChevronUp, CheckSquare, Calendar, Lock, XCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, Phone, MapPin, User, Clock, Search, Bell, Circle, CheckCircle2, PauseCircle, ChevronDown, ChevronUp, CheckSquare, Calendar, Lock, XCircle, Users, Video } from "lucide-react";
 import { cn } from "@/utils";
 import { usePageView } from "@/lib/pageView";
 import { useAuth } from "@/context/AuthContext";
@@ -52,8 +52,44 @@ interface CalendarTask {
     assignedToStore?: string; // When set, task is for entire store
 }
 
+// --- MEETINGS MODULE ---
+type MeetingType = "in_person" | "video_call";
+type MeetingResponseStatus = "invited" | "confirmed" | "declined";
+
+interface MeetingRecipient {
+    id: number;
+    name: string;
+    store?: string;
+    status: MeetingResponseStatus;
+}
+
+interface CalendarMeeting {
+    id: number;
+    title: string;
+    date: string; // "YYYY-MM-DD"
+    startTime: string;
+    endTime: string;
+    type: MeetingType;
+    brand: string;
+    location?: string; // address when in_person
+    link?: string; // video link when video_call
+    notes?: string;
+    recipients: MeetingRecipient[];
+    createdBy: string;
+}
+
 const MOCK_AGENTS = ["Luca Perotta", "Alessandro Sandri", "Marco Bianchi", "Giulia Rossi", "Venditore 1"];
 const MOCK_STORES = ["Roma Centro (RM001)", "Roma Est (RM002)", "Milano Centrale (MI001)", "Milano Nord (MI002)", "Napoli Centro (NA001)"];
+
+const MEETING_BRANDS = ["Wind3", "Vodafone", "Tim", "Fastweb", "Corporate / Aziendale"];
+
+const MOCK_MEETING_USERS = [
+    { id: 1, name: "Luca Perotta", store: "Roma Centro (RM001)", brands: ["Wind3", "Vodafone"] },
+    { id: 2, name: "Alessandro Sandri", store: "Roma Est (RM002)", brands: ["Wind3"] },
+    { id: 3, name: "Marco Bianchi", store: "Milano Centrale (MI001)", brands: ["Tim", "Fastweb"] },
+    { id: 4, name: "Giulia Rossi", store: "Milano Nord (MI002)", brands: ["Vodafone"] },
+    { id: 5, name: "Venditore 1", store: "Napoli Centro (NA001)", brands: ["Wind3", "Tim"] },
+] satisfies { id: number; name: string; store: string; brands: string[] }[];
 
 const MOCK_APPOINTMENTS: Appointment[] = [
     { id: 1, date: "2026-03-03", time: "10:00", type: "outgoing", agente: "Luca Perotta", customerAddress: "Via Roma 12, Roma", customerName: "Mario Rossi", customerPhone: "3331234567", cfPiva: "RSSMRA80A01H501U", notes: "Cliente interessato a Vodafone fibra", status: "scheduled" },
@@ -120,6 +156,9 @@ export default function Calendario() {
     const [showModal, setShowModal] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showCreateMeetingModal, setShowCreateMeetingModal] = useState(false);
+    const [selectedMeeting, setSelectedMeeting] = useState<CalendarMeeting | null>(null);
+    const [showMeetingDetailModal, setShowMeetingDetailModal] = useState(false);
     const [showSearchDrawer, setShowSearchDrawer] = useState(false);
     const [appointments, setAppointments] = useState<Appointment[]>(MOCK_APPOINTMENTS);
 
@@ -162,6 +201,33 @@ export default function Calendario() {
         assignedTo: "", // Will default to current user
     });
 
+    // New meeting form state
+    const [newMeeting, setNewMeeting] = useState<{
+        title: string;
+        date: string;
+        startTime: string;
+        endTime: string;
+        type: MeetingType;
+        brand: string;
+        location: string;
+        link: string;
+        notes: string;
+        recipients: MeetingRecipient[];
+    }>({
+        title: "",
+        date: "",
+        startTime: "",
+        endTime: "",
+        type: "in_person",
+        brand: "",
+        location: "",
+        link: "",
+        notes: "",
+        recipients: [],
+    });
+
+    const [meetings, setMeetings] = useState<CalendarMeeting[]>([]);
+
     // Search Filters State
     const [searchQuery, setSearchQuery] = useState("");
     const [searchCfPiva, setSearchCfPiva] = useState("");
@@ -172,6 +238,10 @@ export default function Calendario() {
     const [filterStore, setFilterStore] = useState("");
     const [filterAgent, setFilterAgent] = useState("");
     // (Dates aren't fully wired yet in the generic mock)
+
+    // Outcome filters
+    const [appointmentOutcomeFilter, setAppointmentOutcomeFilter] = useState<AppointmentStatus | "">("");
+    const [taskOutcomeFilter, setTaskOutcomeFilter] = useState<TaskStatus | "">("");
 
     const prevMonth = () => {
         if (viewMonth === 0) { setViewYear(viewYear - 1); setViewMonth(11); }
@@ -187,6 +257,7 @@ export default function Calendario() {
 
     const isCallCenter = user?.role === "admin"; // admin = call center operator
     const isAgent = user?.role !== "admin";
+    const canCreateMeeting = ["admin", "store_manager", "supervisore", "back_office"].includes(user?.role || "");
 
     const isDateBlocked = (dateStr: string) =>
         agendaBlocks.some(b => dateStr >= b.startDate && dateStr <= b.endDate);
@@ -196,8 +267,10 @@ export default function Calendario() {
         if (user?.role === "admin") {
             if (filterStore && filterStore !== "Tutti" && a.store !== filterStore) return false;
             if (filterAgent && filterAgent !== "Tutti" && a.agente !== filterAgent) return false;
+            if (appointmentOutcomeFilter && a.status !== appointmentOutcomeFilter) return false;
             return true;
         }
+        if (appointmentOutcomeFilter && a.status !== appointmentOutcomeFilter) return false;
         // Agent: own appointments, or inbound appointments for their store
         if (a.agente === user?.name) return true;
         if (a.type === "incoming" && a.store && user?.negozio && (a.store === user.negozio || a.store.includes(user.negozio) || user.negozio.includes(a.store))) return true;
@@ -212,23 +285,35 @@ export default function Calendario() {
             if (t.date !== dateStr) return false;
             if (isCallCenter) {
                 if (filterAgent && filterAgent !== "Tutti" && !t.assignedToStore && t.assignedTo !== filterAgent) return false;
+                if (filterStore && filterStore !== "Tutti" && t.assignedToStore && t.assignedToStore !== filterStore) return false;
+                if (taskOutcomeFilter && t.status !== taskOutcomeFilter) return false;
                 return true;
             }
             // Agent: visible if assigned to me, or assigned to my store
             if (t.assignedToStore) {
                 const myStore = user?.negozio ?? "";
-                return myStore && (t.assignedToStore === myStore || myStore.includes(t.assignedToStore) || t.assignedToStore.includes(myStore));
+                const storeMatch = myStore && (t.assignedToStore === myStore || myStore.includes(t.assignedToStore) || t.assignedToStore.includes(myStore));
+                if (!storeMatch) return false;
+            } else {
+                if (!(t.assignedTo === user?.name || t.createdBy === user?.name)) return false;
             }
-            return t.assignedTo === user?.name || t.createdBy === user?.name;
+            if (taskOutcomeFilter && t.status !== taskOutcomeFilter) return false;
+            return true;
         });
     };
+
+    const meetingsByDate = (dateStr: string) => meetings.filter(m => m.date === dateStr);
 
     const handleDayClick = (day: number) => {
         const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
         setSelectedDate(dateStr);
         setShowCreateModal(false);
         setShowCreateTaskModal(false);
+        setShowCreateMeetingModal(false);
         setSelectedAppointment(null);
+        setSelectedMeeting(null);
+        setShowModal(false);
+        setShowMeetingDetailModal(false);
     };
 
     const handleCreateSubmit = (e: React.FormEvent) => {
@@ -280,8 +365,77 @@ export default function Calendario() {
         setNewTask({ title: "", date: "", time: "", status: "da_fare", notes: "", clientRef: "", assignedTo: user?.name || "", assignedToStore: undefined });
     };
 
+    const handleCreateMeetingSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newMeeting.title || !newMeeting.date || !newMeeting.startTime || !newMeeting.endTime || !newMeeting.brand) return;
+
+        const nextId = meetings.length > 0 ? Math.max(...meetings.map(m => m.id)) + 1 : 1;
+        const created: CalendarMeeting = {
+            id: nextId,
+            title: newMeeting.title,
+            date: newMeeting.date,
+            startTime: newMeeting.startTime,
+            endTime: newMeeting.endTime,
+            type: newMeeting.type,
+            brand: newMeeting.brand,
+            location: newMeeting.type === "in_person" ? newMeeting.location : undefined,
+            link: newMeeting.type === "video_call" ? newMeeting.link : undefined,
+            notes: newMeeting.notes,
+            recipients: newMeeting.recipients,
+            createdBy: user?.name || "Sconosciuto",
+        };
+        setMeetings(prev => [...prev, created]);
+        setShowCreateMeetingModal(false);
+        setNewMeeting({
+            title: "",
+            date: "",
+            startTime: "",
+            endTime: "",
+            type: "in_person",
+            brand: "",
+            location: "",
+            link: "",
+            notes: "",
+            recipients: [],
+        });
+    };
+
+    const handleMeetingBrandChange = (brand: string) => {
+        setNewMeeting(prev => {
+            const autoRecipients: MeetingRecipient[] =
+                brand && brand !== "Corporate / Aziendale"
+                    ? MOCK_MEETING_USERS.filter(u => u.brands.includes(brand)).map(u => ({
+                        id: u.id,
+                        name: u.name,
+                        store: u.store,
+                        status: "invited",
+                    }))
+                    : [];
+            return { ...prev, brand, recipients: autoRecipients };
+        });
+    };
+
+    const handleToggleRecipient = (userId: number) => {
+        setNewMeeting(prev => {
+            const exists = prev.recipients.find(r => r.id === userId);
+            if (exists) {
+                return { ...prev, recipients: prev.recipients.filter(r => r.id !== userId) };
+            }
+            const src = MOCK_MEETING_USERS.find(u => u.id === userId);
+            if (!src) return prev;
+            return {
+                ...prev,
+                recipients: [
+                    ...prev.recipients,
+                    { id: src.id, name: src.name, store: src.store, status: "invited" },
+                ],
+            };
+        });
+    };
+
     const dateAppts = selectedDate ? apptsByDate(selectedDate) : [];
     const dateTasks = selectedDate ? tasksByDate(selectedDate) : [];
+    const dateMeetings = selectedDate ? meetingsByDate(selectedDate) : [];
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
     // Search result chronological list (includes RBAC store-based filtering implicitly from visibleAppointments)
@@ -383,6 +537,15 @@ export default function Calendario() {
                         <Plus className="w-4 h-4" />
                         Nuovo appuntamento
                     </button>
+                    {canCreateMeeting && (
+                        <button
+                            onClick={() => setShowCreateMeetingModal(true)}
+                            className="h-10 px-5 flex items-center gap-2 rounded-lg font-medium transition-all shadow-lg border bg-sky-500 hover:bg-sky-600 text-white border-sky-500/50 shadow-sky-500/20"
+                        >
+                            <Users className="w-4 h-4" />
+                            Nuova riunione
+                        </button>
+                    )}
                     {isAgent && (
                         <button
                             onClick={() => {
@@ -429,6 +592,43 @@ export default function Calendario() {
                     </div>
                 </div>
             )}
+
+            {/* Outcome Filters (appointments & tasks) */}
+            <div className="mb-4 flex flex-col md:flex-row gap-3">
+                <div className="flex-1 max-w-xs">
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">
+                        Filtro esito appuntamenti
+                    </label>
+                    <select
+                        className="glass-input w-full text-sm"
+                        value={appointmentOutcomeFilter}
+                        onChange={(e) => setAppointmentOutcomeFilter(e.target.value as AppointmentStatus | "")}
+                    >
+                        <option value="">Tutti gli esiti</option>
+                        {(Object.keys(STATUS_LABELS) as AppointmentStatus[]).map((s) => (
+                            <option key={s} value={s}>
+                                {STATUS_LABELS[s]}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="flex-1 max-w-xs">
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">
+                        Filtro esito task
+                    </label>
+                    <select
+                        className="glass-input w-full text-sm"
+                        value={taskOutcomeFilter}
+                        onChange={(e) => setTaskOutcomeFilter(e.target.value as TaskStatus | "")}
+                    >
+                        <option value="">Tutti gli stati</option>
+                        <option value="da_fare">Da fare</option>
+                        <option value="fatta">Fatta</option>
+                        <option value="sospesa">Sospesa</option>
+                        <option value="abbandonata">Abbandonata</option>
+                    </select>
+                </div>
+            </div>
 
             {/* Advanced Search Drawer */}
             {showSearchDrawer && (
@@ -602,6 +802,7 @@ export default function Calendario() {
                             const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                             const dayAppts = apptsByDate(dateStr);
                             const dayTasks = tasksByDate(dateStr);
+                            const dayMeetings = meetingsByDate(dateStr);
                             const isToday = dateStr === todayStr;
                             const isSelected = dateStr === selectedDate;
                             const isBlocked = isDateBlocked(dateStr);
@@ -628,7 +829,7 @@ export default function Calendario() {
                                     {isBlocked && (
                                         <Lock className="w-3 h-3 text-amber-400 mt-0.5" />
                                     )}
-                                    {(dayAppts.length > 0 || dayTasks.length > 0) && (
+                                    {(dayAppts.length > 0 || dayTasks.length > 0 || dayMeetings.length > 0) && (
                                         <div className="flex flex-wrap gap-0.5 mt-1 justify-center items-center">
                                             {dayAppts.slice(0, 3).map(a => (
                                                 <div key={a.id}
@@ -645,6 +846,9 @@ export default function Calendario() {
                                             {dayTasks.length > 0 && (
                                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 ml-0.5" />
                                             )}
+                                            {dayMeetings.length > 0 && (
+                                                <div className="w-1.5 h-1.5 rounded-full bg-sky-400 ml-0.5" />
+                                            )}
                                         </div>
                                     )}
                                 </button>
@@ -658,6 +862,7 @@ export default function Calendario() {
                         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" />Outbound</span>
                         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-purple-400" />Auto-Generato</span>
                         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" />Task</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-sky-400" />Riunioni</span>
                         {agendaBlocks.length > 0 && <span className="flex items-center gap-1.5"><Lock className="w-3 h-3 text-amber-400" />Giorno bloccato</span>}
                     </div>
                 </div>
@@ -747,11 +952,11 @@ export default function Calendario() {
                             </h4>
 
                             {dateTasks.length === 0 ? (
-                                <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-2">
+                                <div className="flex flex-col items-center justify-center text-slate-500 gap-2 mb-4">
                                     <p className="text-sm">Nessuna task per oggi</p>
                                 </div>
                             ) : (
-                                <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-1">
+                                <div className="space-y-3 overflow-y-auto custom-scrollbar pr-1 mb-4 max-h-64">
                                     {dateTasks.map(t => (
                                     <div key={t.id} className={cn(
                                         "w-full text-left p-3 rounded-xl border transition-all",
@@ -846,6 +1051,85 @@ export default function Calendario() {
                                                 </div>
                                             )}
                                         </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Divider & Meetings Section */}
+                            <hr className="border-white/10 my-4" />
+
+                            <div className="flex items-center justify-between mb-1">
+                                <h4 className="font-semibold text-white text-base">
+                                    {new Date(selectedDate + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}
+                                </h4>
+                                {canCreateMeeting && (
+                                    <button
+                                        onClick={() => {
+                                            setNewMeeting(prev => ({
+                                                ...prev,
+                                                date: selectedDate,
+                                                startTime: prev.startTime || "09:00",
+                                                endTime: prev.endTime || "10:00",
+                                            }));
+                                            setShowCreateMeetingModal(true);
+                                        }}
+                                        className="p-1.5 rounded-lg bg-sky-500/20 border border-sky-500/40 text-sky-300 hover:bg-sky-500/30 transition-colors"
+                                        title="Nuova riunione"
+                                    >
+                                        <Users className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+                            <h4 className="font-medium text-sky-400 text-sm flex items-center gap-1.5 mb-3">
+                                <Video className="w-3.5 h-3.5" />
+                                Riunioni
+                            </h4>
+
+                            {dateMeetings.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center text-slate-500 gap-2">
+                                    <p className="text-sm">Nessuna riunione per oggi</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3 overflow-y-auto custom-scrollbar pr-1 max-h-64">
+                                    {dateMeetings.map(m => (
+                                        <button
+                                            key={m.id}
+                                            onClick={() => {
+                                                setSelectedMeeting(m);
+                                                setShowMeetingDetailModal(true);
+                                            }}
+                                            className="w-full text-left p-3 rounded-xl bg-white/[0.03] border border-sky-500/20 hover:bg-white/[0.06] transition-all"
+                                        >
+                                            <div className="flex items-center justify-between mb-1 gap-2">
+                                                <span className="text-sm font-semibold text-white truncate max-w-[180px]">
+                                                    {m.startTime}–{m.endTime} · {m.title}
+                                                </span>
+                                                <span className="text-[10px] px-2 py-0.5 rounded-full border border-sky-500/40 text-sky-300 uppercase font-semibold tracking-wider">
+                                                    {m.type === "in_person" ? "In presenza" : "Video call"}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs text-slate-400">
+                                                <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] uppercase tracking-wider">
+                                                    {m.brand}
+                                                </span>
+                                                {m.location && (
+                                                    <span className="flex items-center gap-1">
+                                                        <MapPin className="w-3 h-3" />
+                                                        {m.location}
+                                                    </span>
+                                                )}
+                                                {m.link && (
+                                                    <span className="flex items-center gap-1">
+                                                        <Video className="w-3 h-3" />
+                                                        Link
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                                                <Users className="w-3 h-3" />
+                                                <span>{m.recipients.length} invitati</span>
+                                            </div>
+                                        </button>
                                     ))}
                                 </div>
                             )}
@@ -1106,6 +1390,477 @@ export default function Calendario() {
                                 <button type="submit" className="flex-1 h-10 rounded-xl font-medium bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20 text-sm">Salva Task</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Create Meeting Modal */}
+            {showCreateMeetingModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    onClick={() => setShowCreateMeetingModal(false)}
+                >
+                    <div
+                        className="glass-card p-6 w-full max-w-2xl animate-in slide-in-from-bottom-4 zoom-in-95 duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-sky-300">Nuova riunione</h3>
+                                <p className="text-sm text-slate-500">
+                                    Crea una riunione per uno o più operatori / punti vendita.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowCreateMeetingModal(false)}
+                                className="text-slate-500 hover:text-slate-300 transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleCreateMeetingSubmit} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Titolo riunione *</label>
+                                    <input
+                                        type="text"
+                                        className="glass-input w-full"
+                                        placeholder="Es. Allineamento mensile Wind3"
+                                        value={newMeeting.title}
+                                        onChange={e => setNewMeeting(p => ({ ...p, title: e.target.value }))}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Brand *</label>
+                                    <select
+                                        className="glass-input w-full"
+                                        value={newMeeting.brand}
+                                        onChange={e => handleMeetingBrandChange(e.target.value)}
+                                        required
+                                    >
+                                        <option value="">Seleziona brand...</option>
+                                        {MEETING_BRANDS.map(b => (
+                                            <option key={b} value={b}>
+                                                {b}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Data *</label>
+                                    <input
+                                        type="date"
+                                        className="glass-input w-full"
+                                        value={newMeeting.date || (selectedDate ?? "")}
+                                        onChange={e => setNewMeeting(p => ({ ...p, date: e.target.value }))}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Ora inizio *</label>
+                                    <input
+                                        type="time"
+                                        className="glass-input w-full"
+                                        value={newMeeting.startTime}
+                                        onChange={e => setNewMeeting(p => ({ ...p, startTime: e.target.value }))}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Ora fine *</label>
+                                    <input
+                                        type="time"
+                                        className="glass-input w-full"
+                                        value={newMeeting.endTime}
+                                        onChange={e => setNewMeeting(p => ({ ...p, endTime: e.target.value }))}
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Meeting type */}
+                            <div>
+                                <label className="block text-xs font-medium text-slate-400 mb-1.5">Tipologia riunione *</label>
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setNewMeeting(p => ({ ...p, type: "in_person" }))}
+                                        className={cn(
+                                            "flex-1 py-2 rounded-xl border text-sm font-medium flex items-center justify-center gap-2",
+                                            newMeeting.type === "in_person"
+                                                ? "bg-sky-500/20 border-sky-500/50 text-sky-200"
+                                                : "bg-white/5 border-white/10 text-slate-400"
+                                        )}
+                                    >
+                                        <MapPin className="w-4 h-4" />
+                                        In presenza
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setNewMeeting(p => ({ ...p, type: "video_call" }))}
+                                        className={cn(
+                                            "flex-1 py-2 rounded-xl border text-sm font-medium flex items-center justify-center gap-2",
+                                            newMeeting.type === "video_call"
+                                                ? "bg-sky-500/20 border-sky-500/50 text-sky-200"
+                                                : "bg-white/5 border-white/10 text-slate-400"
+                                        )}
+                                    >
+                                        <Video className="w-4 h-4" />
+                                        Video call
+                                    </button>
+                                </div>
+                            </div>
+
+                            {newMeeting.type === "in_person" && (
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Indirizzo riunione *</label>
+                                    <input
+                                        type="text"
+                                        className="glass-input w-full"
+                                        placeholder="Via, numero civico, città"
+                                        value={newMeeting.location}
+                                        onChange={e => setNewMeeting(p => ({ ...p, location: e.target.value }))}
+                                        required
+                                    />
+                                </div>
+                            )}
+
+                            {newMeeting.type === "video_call" && (
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Link video call *</label>
+                                    <input
+                                        type="url"
+                                        className="glass-input w-full"
+                                        placeholder="https://..."
+                                        value={newMeeting.link}
+                                        onChange={e => setNewMeeting(p => ({ ...p, link: e.target.value }))}
+                                        required
+                                    />
+                                </div>
+                            )}
+
+                            {/* Recipients */}
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider">
+                                        Destinatari
+                                    </label>
+                                    <span className="text-[11px] text-slate-500">
+                                        Seleziona uno o più operatori o interi punti vendita.
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+                                    <div>
+                                        <p className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1">
+                                            <Users className="w-3 h-3" />
+                                            Operatori
+                                        </p>
+                                        <div className="space-y-1.5">
+                                            {MOCK_MEETING_USERS.map(u => {
+                                                const checked = !!newMeeting.recipients.find(r => r.id === u.id);
+                                                return (
+                                                    <button
+                                                        key={u.id}
+                                                        type="button"
+                                                        onClick={() => handleToggleRecipient(u.id)}
+                                                        className={cn(
+                                                            "w-full flex items-center justify-between px-2 py-1.5 rounded-lg border text-xs",
+                                                            checked
+                                                                ? "bg-sky-500/15 border-sky-500/40 text-sky-100"
+                                                                : "bg-white/5 border-white/10 text-slate-300"
+                                                        )}
+                                                    >
+                                                        <span className="flex flex-col text-left">
+                                                            <span className="font-medium">{u.name}</span>
+                                                            <span className="text-[10px] text-slate-500">{u.store}</span>
+                                                        </span>
+                                                        <span
+                                                            className={cn(
+                                                                "w-4 h-4 rounded border flex items-center justify-center text-[10px]",
+                                                                checked ? "bg-sky-500 border-sky-400" : "border-slate-500"
+                                                            )}
+                                                        >
+                                                            {checked ? "✓" : ""}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <p className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1">
+                                            <MapPin className="w-3 h-3" />
+                                            Punti vendita (selezione rapida)
+                                        </p>
+                                        <div className="space-y-1.5">
+                                            {MOCK_STORES.map(store => (
+                                                <button
+                                                    key={store}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const storeUsers = MOCK_MEETING_USERS.filter(u => u.store === store);
+                                                        storeUsers.forEach(u => {
+                                                            handleToggleRecipient(u.id);
+                                                        });
+                                                    }}
+                                                    className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg border bg-white/5 border-white/10 text-xs text-slate-300 hover:bg-white/10"
+                                                >
+                                                    <span>{store}</span>
+                                                    <span className="text-[10px] text-slate-500">
+                                                        {MOCK_MEETING_USERS.filter(u => u.store === store).length} operatori
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-slate-400 mb-1.5">Note</label>
+                                <textarea
+                                    className="glass-input w-full resize-none text-sm"
+                                    rows={3}
+                                    placeholder="Ordine del giorno, obiettivi, materiali..."
+                                    value={newMeeting.notes}
+                                    onChange={e => setNewMeeting(p => ({ ...p, notes: e.target.value }))}
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCreateMeetingModal(false)}
+                                    className="flex-1 h-10 rounded-xl font-medium bg-white/5 text-slate-300 hover:bg-white/10 transition-colors text-sm"
+                                >
+                                    Annulla
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 h-10 rounded-xl font-medium bg-sky-500 text-white hover:bg-sky-600 transition-colors shadow-lg shadow-sky-500/20 text-sm"
+                                >
+                                    Salva riunione
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Meeting Detail Modal */}
+            {showMeetingDetailModal && selectedMeeting && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    onClick={() => setShowMeetingDetailModal(false)}
+                >
+                    <div
+                        className="glass-card p-6 w-full max-w-xl"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-sky-300">Dettaglio riunione</h3>
+                                <p className="text-xs text-slate-500">
+                                    {selectedMeeting.date} · {selectedMeeting.startTime}–{selectedMeeting.endTime}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowMeetingDetailModal(false)}
+                                className="text-slate-500 hover:text-slate-300"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-3 text-sm">
+                            <div className="flex items-center justify-between">
+                                <div className="flex flex-col">
+                                    <span className="text-white font-semibold">{selectedMeeting.title}</span>
+                                    <span className="text-[11px] text-slate-400 mt-0.5">
+                                        Brand: {selectedMeeting.brand}
+                                    </span>
+                                </div>
+                                <span className="px-2.5 py-1 rounded-full border border-sky-500/40 text-sky-300 text-[11px] uppercase tracking-wider flex items-center gap-1">
+                                    {selectedMeeting.type === "in_person" ? (
+                                        <>
+                                            <MapPin className="w-3 h-3" />
+                                            In presenza
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Video className="w-3 h-3" />
+                                            Video call
+                                        </>
+                                    )}
+                                </span>
+                            </div>
+
+                            {selectedMeeting.location && (
+                                <div className="flex items-center gap-2 text-slate-300 text-xs">
+                                    <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                                    {selectedMeeting.location}
+                                </div>
+                            )}
+                            {selectedMeeting.link && (
+                                <div className="flex items-center gap-2 text-slate-300 text-xs">
+                                    <Video className="w-3.5 h-3.5 text-slate-500" />
+                                    <a
+                                        href={selectedMeeting.link}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="underline text-sky-300 hover:text-sky-200 break-all"
+                                    >
+                                        {selectedMeeting.link}
+                                    </a>
+                                </div>
+                            )}
+
+                            {selectedMeeting.notes && (
+                                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-slate-400 text-xs">
+                                    <p className="font-medium text-slate-500 mb-1 uppercase tracking-wider text-[10px]">
+                                        Note riunione
+                                    </p>
+                                    {selectedMeeting.notes}
+                                </div>
+                            )}
+
+                            {/* Recipients & confirmations */}
+                            <div className="mt-2">
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                        <Users className="w-3 h-3" />
+                                        Invitati
+                                    </p>
+                                    <div className="text-[11px] text-slate-500 flex gap-2">
+                                        <span>
+                                            ✅ {selectedMeeting.recipients.filter(r => r.status === "confirmed").length}
+                                        </span>
+                                        <span>
+                                            ⏳ {selectedMeeting.recipients.filter(r => r.status === "invited").length}
+                                        </span>
+                                        <span>
+                                            ❌ {selectedMeeting.recipients.filter(r => r.status === "declined").length}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+                                    {selectedMeeting.recipients.length === 0 && (
+                                        <p className="text-xs text-slate-500">
+                                            Nessun invitato selezionato.
+                                        </p>
+                                    )}
+                                    {selectedMeeting.recipients.map(rec => {
+                                        const isSelf = user?.name === rec.name;
+                                        const baseClasses =
+                                            "flex items-center justify-between px-3 py-1.5 rounded-lg border text-xs";
+                                        const statusLabel =
+                                            rec.status === "confirmed"
+                                                ? "Confermato"
+                                                : rec.status === "declined"
+                                                    ? "Rifiutato"
+                                                    : "Invitato";
+                                        const statusClasses =
+                                            rec.status === "confirmed"
+                                                ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-200"
+                                                : rec.status === "declined"
+                                                    ? "bg-rose-500/15 border-rose-500/40 text-rose-200"
+                                                    : "bg-white/5 border-white/10 text-slate-200";
+
+                                        return (
+                                            <div
+                                                key={rec.id}
+                                                className={cn(baseClasses, statusClasses)}
+                                            >
+                                                <div className="flex flex-col">
+                                                    <span className={cn("font-medium", isSelf && "text-sky-200")}>
+                                                        {rec.name}
+                                                        {isSelf && " (Tu)"}
+                                                    </span>
+                                                    {rec.store && (
+                                                        <span className="text-[10px] text-slate-500">
+                                                            {rec.store}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] uppercase tracking-wider">
+                                                        {statusLabel}
+                                                    </span>
+                                                    {isSelf && (
+                                                        <div className="flex gap-1.5">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setMeetings(prev =>
+                                                                        prev.map(m =>
+                                                                            m.id === selectedMeeting.id
+                                                                                ? {
+                                                                                    ...m,
+                                                                                    recipients: m.recipients.map(r =>
+                                                                                        r.id === rec.id
+                                                                                            ? { ...r, status: "confirmed" }
+                                                                                            : r
+                                                                                    ),
+                                                                                }
+                                                                                : m
+                                                                        )
+                                                                    );
+                                                                    setSelectedMeeting({
+                                                                        ...selectedMeeting,
+                                                                        recipients: selectedMeeting.recipients.map(r =>
+                                                                            r.id === rec.id ? { ...r, status: "confirmed" } : r
+                                                                        ),
+                                                                    });
+                                                                }}
+                                                                className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 text-[10px] hover:bg-emerald-500/30"
+                                                            >
+                                                                Conferma
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setMeetings(prev =>
+                                                                        prev.map(m =>
+                                                                            m.id === selectedMeeting.id
+                                                                                ? {
+                                                                                    ...m,
+                                                                                    recipients: m.recipients.map(r =>
+                                                                                        r.id === rec.id
+                                                                                            ? { ...r, status: "declined" }
+                                                                                            : r
+                                                                                    ),
+                                                                                }
+                                                                                : m
+                                                                        )
+                                                                    );
+                                                                    setSelectedMeeting({
+                                                                        ...selectedMeeting,
+                                                                        recipients: selectedMeeting.recipients.map(r =>
+                                                                            r.id === rec.id ? { ...r, status: "declined" } : r
+                                                                        ),
+                                                                    });
+                                                                }}
+                                                                className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-200 text-[10px] hover:bg-rose-500/30"
+                                                            >
+                                                                Rifiuta
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
