@@ -18,7 +18,8 @@ import {
     X,
     UploadCloud,
     FileSignature,
-    AlertCircle
+    AlertCircle,
+    PhoneCall
 } from "lucide-react";
 import { cn } from "@/utils";
 
@@ -45,6 +46,16 @@ const BRANDS = [
         logo: "/vodaphone - Copy.png",
     },
     {
+        id: "tim",
+        name: "Tim",
+        color: "from-blue-500 to-blue-600",
+        borderColor: "border-blue-500",
+        text: "text-blue-500",
+        bg: "bg-blue-500/10",
+        icon: PhoneCall,
+        logo: "/tim.png",
+    },
+    {
         id: "sky",
         name: "Sky",
         color: "from-sky-500 to-sky-600",
@@ -63,6 +74,16 @@ const BRANDS = [
         bg: "bg-emerald-500/10",
         icon: Zap,
         logo: "/energy - Copy.png",
+    },
+    {
+        id: "iliad",
+        name: "Iliad",
+        color: "from-rose-500 to-rose-600",
+        borderColor: "border-rose-500",
+        text: "text-rose-500",
+        bg: "bg-rose-500/10",
+        icon: Radio,
+        logo: "/iliad.png",
     },
 ];
 
@@ -129,6 +150,28 @@ const MOCK_DOCS: Record<string, Record<string, any[]>> = {
         ],
         operativa: [
             { id: 25, name: "Guida Lettura Bolletta", type: "pdf", size: "980 KB", date: "01/01/2026", fillable: false },
+        ],
+    },
+    tim: {
+        canvass: [
+            { id: 26, name: "Canvass Tim Mobile Marzo 2026", type: "pdf", size: "2.1 MB", date: "01/03/2026", fillable: false },
+        ],
+        modulistica: [
+            { id: 27, name: "Modulo Portabilità Tim", type: "pdf", size: "220 KB", date: "10/02/2026", fillable: true },
+        ],
+        operativa: [
+            { id: 28, name: "Guida Attivazione Tim Fibra", type: "pdf", size: "1.3 MB", date: "15/02/2026", fillable: false },
+        ],
+    },
+    iliad: {
+        canvass: [
+            { id: 29, name: "Canvass Iliad Mobile Marzo 2026", type: "pdf", size: "1.9 MB", date: "01/03/2026", fillable: false },
+        ],
+        modulistica: [
+            { id: 30, name: "Modulo Portabilità Iliad", type: "pdf", size: "210 KB", date: "08/02/2026", fillable: true },
+        ],
+        operativa: [
+            { id: 31, name: "Guida Gestione Offerte Iliad", type: "pdf", size: "890 KB", date: "20/02/2026", fillable: false },
         ],
     },
 };
