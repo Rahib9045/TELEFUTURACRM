@@ -15,6 +15,7 @@ import {
     Database,
     FilePlus,
     CalendarDays,
+    Clock,
     Users,
     Smartphone,
     Store,
@@ -24,6 +25,7 @@ import {
     UserCog,
     FileText,
     KeyRound,
+    Shield,
     Store as StoreIcon,
     Users as UsersIcon,
 } from "lucide-react";
@@ -56,14 +58,23 @@ const navigation: (NavGroup | NavItem)[] = [
     },
     {
         type: "group",
+        label: "Collaboratori",
+        icon: UsersIcon,
+        children: [
+            { name: "Badge", href: "/collaboratori?tab=badge", icon: Clock, roles: ["admin", "store_manager", "back_office", "supervisore", "agente"] },
+            { name: "Ferie", href: "/collaboratori?tab=ferie", icon: CalendarDays, roles: ["admin", "store_manager", "back_office", "supervisore", "agente"] },
+            { name: "Malattia", href: "/collaboratori?tab=malattia", icon: Shield, roles: ["admin", "store_manager", "back_office", "supervisore"] },
+        ],
+    },
+    {
+        type: "group",
         label: "Negozio",
         icon: StoreIcon,
         children: [
             { name: "Gestione Usati", href: "/usati", icon: Smartphone, roles: ["admin"] },
             { name: "Ordine Merce", href: "/ordine-merce", icon: Package, roles: ["admin", "store_manager", "back_office"] },
             { name: "Chiusura Negozio", href: "/chiusura", icon: Store, roles: ["admin", "agente"] },
-            { name: "Collaboratori", href: "/collaboratori", icon: UsersIcon, roles: ["admin", "store_manager", "back_office", "supervisore", "agente"] },
-            { name: "Password (V2 - Step)", href: "/password-v2", icon: KeyRound, roles: ["admin", "store_manager"] },
+            { name: "Password", href: "/password-v2", icon: KeyRound, roles: ["admin", "store_manager"] },
         ],
     },
     { type: "link", name: "Calendario", href: "/calendario", icon: CalendarDays, roles: ["admin", "agente"] },

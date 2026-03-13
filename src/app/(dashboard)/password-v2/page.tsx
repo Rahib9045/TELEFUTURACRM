@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { LockKeyhole, Wifi, Radio, Tv, Zap, Leaf, ArrowLeft, RotateCcw, Eye, EyeOff, Copy } from "lucide-react";
+import { useState, useEffect } from "react";
+import { LockKeyhole, Wifi, Radio, Tv, Zap, Leaf, ArrowLeft, RotateCcw, Eye, EyeOff, Copy, Key, ShieldCheck, Info, Loader2 } from "lucide-react";
 import { cn } from "@/utils";
 import { useAuth } from "@/context/AuthContext";
 
 type BrandId = "windtre" | "vodafone" | "sky" | "fastweb" | "energia";
 
-const BRANDS: { id: BrandId; name: string; color: string; bg: string; categories: number }[] = [
-    { id: "windtre", name: "WindTre", color: "text-orange-300", bg: "bg-orange-500/15 border-orange-500/40", categories: 4 },
-    { id: "vodafone", name: "Vodafone", color: "text-rose-300", bg: "bg-rose-500/15 border-rose-500/40", categories: 3 },
-    { id: "sky", name: "Sky", color: "text-sky-300", bg: "bg-sky-500/15 border-sky-500/40", categories: 3 },
-    { id: "fastweb", name: "Fastweb", color: "text-violet-300", bg: "bg-violet-500/15 border-violet-500/40", categories: 2 },
-    { id: "energia", name: "Energia", color: "text-emerald-300", bg: "bg-emerald-500/15 border-emerald-500/40", categories: 3 },
+const BRANDS: { id: BrandId; name: string; color: string; bg: string; image: string; categories: number }[] = [
+    { id: "windtre", name: "WindTre", color: "text-orange-300", bg: "bg-orange-500/15 border-orange-500/40", image: "/windtre.webp", categories: 4 },
+    { id: "vodafone", name: "Vodafone", color: "text-rose-300", bg: "bg-rose-500/15 border-rose-500/40", image: "/vodaphone - Copy.png", categories: 3 },
+    { id: "sky", name: "Sky", color: "text-sky-300", bg: "bg-sky-500/15 border-sky-500/40", image: "/sky.png", categories: 3 },
+    { id: "fastweb", name: "Fastweb", color: "text-violet-300", bg: "bg-violet-500/15 border-violet-500/40", image: "/fastweb.png", categories: 2 },
+    { id: "energia", name: "Energia", color: "text-emerald-300", bg: "bg-emerald-500/15 border-emerald-500/40", image: "/energy - Copy.png", categories: 3 },
 ];
 
 const CATEGORIES: Record<BrandId, { id: string; name: string }[]> = {
@@ -60,82 +60,69 @@ type Credential = {
     accessType: string;
     username: string;
     passwordMasked: string;
-    passwordReal: string;
+    passwordReal?: string;
 };
-
-const MOCK_CREDENTIALS: Credential[] = [
-    {
-        id: 1,
-        brandId: "windtre",
-        categoryId: "ngpos",
-        storeId: "roma-termini",
-        accessType: "NGPOS Portal",
-        username: "wind_ngpos_roma",
-        passwordMasked: "••••••••••",
-        passwordReal: "RomaNgpos2026!",
-    },
-    {
-        id: 2,
-        brandId: "windtre",
-        categoryId: "ngpos",
-        storeId: "milano-centrale",
-        accessType: "NGPOS Portal",
-        username: "wind_ngpos_milano",
-        passwordMasked: "••••••••••",
-        passwordReal: "MilanoNgpos2026!",
-    },
-];
 
 export default function PasswordV2Page() {
     const { user } = useAuth();
     const [brand, setBrand] = useState<BrandId | null>(null);
     const [category, setCategory] = useState<string | null>(null);
     const [store, setStore] = useState<string | null>(null);
-    const [revealedId, setRevealedId] = useState<number | null>(null);
+    const [credentials, setCredentials] = useState<Credential[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [revealedIds, setRevealedIds] = useState<Record<number, string>>({});
+    const [revealingId, setRevealingId] = useState<number | null>(null);
     const [copiedId, setCopiedId] = useState<number | null>(null);
 
     const isAllowed = user && ["admin", "store_manager"].includes(user.role);
-    if (!isAllowed) {
-        return (
-            <div className="flex flex-col h-[calc(100vh-theme(spacing.16))] lg:h-screen lg:pl-64 w-full overflow-hidden min-w-0 max-w-full">
-                <div className="flex-1 flex items-center justify-center px-4">
-                    <div className="glass-card max-w-md w-full p-8 text-center space-y-3">
-                        <LockKeyhole className="w-10 h-10 mx-auto text-amber-400" />
-                        <h1 className="text-xl font-bold text-white">Accesso riservato</h1>
-                        <p className="text-sm text-slate-400">
-                            La sezione Password CRM è visibile solo a ruoli <span className="font-semibold">admin</span> e{" "}
-                            <span className="font-semibold">store manager</span>.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
-    const step = !brand ? 1 : !category ? 2 : !store ? 3 : 4;
+    useEffect(() => {
+        if (brand && category && store) {
+            fetchCredentials();
+        } else {
+            setCredentials([]);
+            setRevealedIds({});
+        }
+    }, [brand, category, store]);
 
-    const filteredCredentials = MOCK_CREDENTIALS.filter((c) => {
-        if (!brand || !category || !store) return false;
-        return c.brandId === brand && c.categoryId === category && (store === "tutti" || c.storeId === store);
-    });
-
-    const currentBrand = brand ? BRANDS.find((b) => b.id === brand) : null;
-    const currentCategory = brand && category ? CATEGORIES[brand].find((c) => c.id === category) : null;
-    const currentStore = store ? STORES.find((s) => s.id === store) : null;
-
-    const resetAll = () => {
-        setBrand(null);
-        setCategory(null);
-        setStore(null);
-        setRevealedId(null);
-        setCopiedId(null);
+    const fetchCredentials = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/passwords/credentials?brandId=${brand}&categoryId=${category}&storeId=${store}`);
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setCredentials(data);
+            }
+        } catch (err) {
+            console.error("Error fetching credentials:", err);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const crumbs = [
-        brand && currentBrand?.name,
-        category && currentCategory?.name,
-        store && currentStore?.name,
-    ].filter(Boolean) as string[];
+    const handleReveal = async (id: number) => {
+        if (revealedIds[id]) {
+            setRevealedIds(prev => {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+            });
+            return;
+        }
+
+        setRevealingId(id);
+        try {
+            const res = await fetch(`/api/passwords/credentials/${id}/reveal`, { method: "POST" });
+            const data = await res.json();
+            if (data.password) {
+                setRevealedIds(prev => ({ ...prev, [id]: data.password }));
+            }
+        } catch (err) {
+            console.error("Error revealing password:", err);
+        } finally {
+            setRevealingId(null);
+        }
+    };
 
     const handleCopy = (id: number, value: string) => {
         navigator.clipboard?.writeText(value).then(() => {
@@ -144,91 +131,166 @@ export default function PasswordV2Page() {
         });
     };
 
-    const PasswordIcon = Wifi;
+    const resetAll = () => {
+        setBrand(null);
+        setCategory(null);
+        setStore(null);
+        setRevealedIds({});
+    };
 
-    return (
-        <div className="flex flex-col h-[calc(100vh-theme(spacing.16))] lg:h-screen lg:pl-64 w-full overflow-hidden min-w-0 max-w-full">
-            <div className="flex-none p-4 lg:p-8 w-full min-w-0 max-w-full">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    if (!isAllowed) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
+                <div className="glass-card max-w-md w-full p-10 space-y-6">
+                    <div className="w-20 h-20 mx-auto bg-amber-500/10 rounded-3xl border border-amber-500/20 flex items-center justify-center">
+                        <LockKeyhole className="w-10 h-10 text-amber-400" />
+                    </div>
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-indigo-500/20 rounded-lg border border-indigo-500/30">
-                                <LockKeyhole className="w-6 h-6 text-indigo-400" />
-                            </div>
-                            <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">Password CRM</h1>
-                        </div>
-                        <p className="text-sm text-slate-400">
-                            Credenziali di accesso per i vari brand — visibile solo ad admin e store manager.
+                        <h1 className="text-2xl font-black text-white tracking-tight">Accesso Riservato</h1>
+                        <p className="text-slate-400 mt-2 text-sm">
+                            La sezione Password CRM è visibile solo a ruoli <span className="font-semibold text-slate-200">admin</span> e{" "}
+                            <span className="font-semibold text-slate-200">store manager</span>.
                         </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        {step > 1 && (
-                            <button
-                                onClick={() => {
-                                    if (step === 2) { setBrand(null); setCategory(null); setStore(null); }
-                                    else if (step === 3) { setCategory(null); setStore(null); }
-                                    else if (step === 4) { setStore(null); }
-                                    setRevealedId(null); setCopiedId(null);
-                                }}
-                                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 text-xs text-slate-200 hover:bg-white/5"
-                            >
-                                <ArrowLeft className="w-4 h-4" /> Indietro
-                            </button>
-                        )}
+                </div>
+            </div>
+        );
+    }
+
+    const step = !brand ? 1 : !category ? 2 : !store ? 3 : 4;
+    const currentBrand = brand ? BRANDS.find((b) => b.id === brand) : null;
+    const currentCategory = brand && category ? CATEGORIES[brand].find((c) => c.id === category) : null;
+    const currentStore = store ? STORES.find((s) => s.id === store) : null;
+
+    return (
+        <div className="w-full max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                    <h1 className="text-4xl font-black text-white tracking-tight">Password CRM</h1>
+                    <p className="text-slate-500 font-medium mt-1">
+                        Credenziali di accesso per i vari brand — visibile solo ad admin e store manager
+                    </p>
+                </div>
+                <div className="flex items-center gap-3">
+                    {step > 1 && (
+                        <button
+                            onClick={() => {
+                                if (step === 2) setBrand(null);
+                                else if (step === 3) setCategory(null);
+                                else if (step === 4) setStore(null);
+                            }}
+                            className="bg-white/5 border border-white/10 hover:bg-white/10 text-white px-5 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2"
+                        >
+                            <ArrowLeft className="w-4 h-4" /> Indietro
+                        </button>
+                    )}
+                    {step > 1 && (
                         <button
                             onClick={resetAll}
-                            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 text-xs text-slate-300 hover:bg-white/5"
+                            className="bg-white/5 border border-white/10 hover:bg-white/10 text-slate-400 hover:text-white px-5 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2"
                         >
-                            <RotateCcw className="w-4 h-4" /> Ricomincia
+                            <RotateCcw className="w-4 h-4" /> Reset
                         </button>
-                    </div>
+                    )}
                 </div>
+            </div>
 
-                {crumbs.length > 0 && (
-                    <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                        {crumbs.map((c, i) => (
-                            <span key={i} className="flex items-center gap-2">
-                                {i > 0 && <span className="text-slate-600">›</span>}
-                                <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-slate-200">{c}</span>
-                            </span>
-                        ))}
-                    </div>
+            <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-2">
+                <button
+                    onClick={resetAll}
+                    className={cn(
+                        "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap",
+                        step === 1
+                            ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
+                            : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white border border-white/5"
+                    )}
+                >
+                    Brand
+                </button>
+
+                {brand && (
+                    <>
+                        <span className="text-slate-700 font-bold">›</span>
+                        <button
+                            onClick={() => { setCategory(null); setStore(null); }}
+                            className={cn(
+                                "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap",
+                                step === 2
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
+                                    : "bg-white/5 text-slate-300 hover:bg-white/10 border border-white/10"
+                            )}
+                        >
+                            {currentBrand?.name}
+                        </button>
+                    </>
+                )}
+
+                {category && (
+                    <>
+                        <span className="text-slate-700 font-bold">›</span>
+                        <button
+                            onClick={() => { setStore(null); }}
+                            className={cn(
+                                "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap",
+                                step === 3
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
+                                    : "bg-white/5 text-slate-300 hover:bg-white/10 border border-white/10"
+                            )}
+                        >
+                            {currentCategory?.name}
+                        </button>
+                    </>
+                )}
+
+                {store && (
+                    <>
+                        <span className="text-slate-700 font-bold">›</span>
+                        <button
+                            disabled
+                            className="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 transition-all whitespace-nowrap"
+                        >
+                            {currentStore?.name}
+                        </button>
+                    </>
                 )}
             </div>
 
-            <div className="flex-1 px-4 lg:px-8 pb-8 overflow-y-auto custom-scrollbar w-full min-w-0 max-w-full space-y-6">
+            <div className="min-h-[400px]">
                 {step === 1 && (
-                    <div className="glass-card p-6 space-y-4">
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                            Step 1 — Seleziona un Brand
-                        </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                            {BRANDS.map((b) => {
-                                const Icon = b.id === "windtre" ? Wifi : b.id === "vodafone" ? Radio : b.id === "sky" ? Tv : b.id === "fastweb" ? Zap : Leaf;
-                                const active = brand === b.id;
-                                return (
-                                    <button
-                                        key={b.id}
-                                        onClick={() => { setBrand(b.id); setCategory(null); setStore(null); setRevealedId(null); setCopiedId(null); }}
-                                        className={cn(
-                                            "relative rounded-2xl border p-4 text-left transition-all flex flex-col gap-2",
-                                            active ? b.bg : "bg-white/5 border-white/10 hover:bg-white/10"
-                                        )}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-lg", active ? "bg-black/20" : "bg-black/30")}>
-                                                <Icon className={cn("w-5 h-5", active ? b.color : "text-slate-200")} />
-                                            </div>
-                                            <span className="text-[10px] px-2 py-1 rounded-full bg-black/40 text-slate-300">
-                                                {b.categories} categorie
-                                            </span>
-                                        </div>
-                                        <div className="mt-1">
-                                            <p className={cn("font-semibold text-sm", active ? "text-white" : "text-slate-100")}>{b.name}</p>
-                                        </div>
-                                    </button>
-                                );
-                            })}
+                    <div className="space-y-8">
+                        <div className="glass-card p-12 lg:p-16 text-center space-y-6 bg-gradient-to-b from-white/[0.03] to-transparent">
+                            <div className="w-20 h-20 mx-auto bg-indigo-500/10 rounded-[2rem] border border-indigo-500/20 flex items-center justify-center rotate-12 hover:rotate-0 transition-transform duration-500">
+                                <Key className="w-10 h-10 text-indigo-400 -rotate-45" />
+                            </div>
+                            <div className="space-y-2">
+                                <h2 className="text-3xl font-black text-white">Seleziona un Brand</h2>
+                                <p className="text-slate-500 max-w-md mx-auto">
+                                    Scegli il brand per cui vuoi visualizzare le credenziali di accesso
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                            {BRANDS.map((b) => (
+                                <button
+                                    key={b.id}
+                                    onClick={() => setBrand(b.id)}
+                                    className="group glass-card p-6 flex flex-col items-center gap-4 hover:bg-white/5 transition-all text-center border-white/5 hover:border-indigo-500/30 hover:-translate-y-1"
+                                >
+                                    <div className={cn(
+                                        "w-20 h-20 rounded-3xl border flex items-center justify-center overflow-hidden p-4 group-hover:scale-110 transition-transform shadow-xl shadow-black/20",
+                                        b.bg
+                                    )}>
+                                        <img src={b.image} alt={b.name} className="w-full h-full object-contain filter drop-shadow-lg" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-black text-white text-lg">{b.name}</h3>
+                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                                            {b.categories} categorie
+                                        </p>
+                                    </div>
+                                </button>
+                            ))}
                         </div>
                     </div>
                 )}
@@ -244,7 +306,7 @@ export default function PasswordV2Page() {
                                 return (
                                     <button
                                         key={c.id}
-                                        onClick={() => { setCategory(c.id); setStore(null); setRevealedId(null); setCopiedId(null); }}
+                                        onClick={() => { setCategory(c.id); setStore(null); }}
                                         className={cn(
                                             "rounded-2xl border p-4 text-left transition-all",
                                             active ? "bg-indigo-500/20 border-indigo-500/40" : "bg-white/5 border-white/10 hover:bg-white/10"
@@ -270,7 +332,7 @@ export default function PasswordV2Page() {
                                 return (
                                     <button
                                         key={s.id}
-                                        onClick={() => { setStore(s.id); setRevealedId(null); setCopiedId(null); }}
+                                        onClick={() => { setStore(s.id); }}
                                         className={cn(
                                             "rounded-2xl border p-4 text-left transition-all",
                                             active ? "bg-slate-100/10 border-sky-500/40" : "bg-white/5 border-white/10 hover:bg-white/10"
@@ -297,93 +359,122 @@ export default function PasswordV2Page() {
                                         {currentBrand?.name} • {currentCategory?.name} • {currentStore?.name}
                                     </p>
                                 </div>
-                                <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-xs text-emerald-300">
-                                    {filteredCredentials.length} credenziali
+                                <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-[10px] font-bold text-emerald-300">
+                                    {credentials.length} credenziali
                                 </span>
                             </div>
-                            <div className="border border-white/10 rounded-xl overflow-hidden">
-                                <table className="w-full text-xs text-slate-300">
-                                    <thead className="bg-white/5 text-slate-400 uppercase tracking-wider">
+                        </div>
+                        <div className="border border-white/10 rounded-2xl overflow-hidden bg-black/20">
+                            <table className="w-full text-sm text-slate-300">
+                                <thead className="bg-white/5 text-slate-400 uppercase tracking-wider text-[10px] font-bold">
+                                    <tr>
+                                        <th className="px-4 py-2 text-left">Tipo di accesso</th>
+                                        <th className="px-4 py-2 text-left">Username</th>
+                                        <th className="px-4 py-2 text-left text-right">Password</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
                                         <tr>
-                                            <th className="px-4 py-2 text-left">Tipo di accesso</th>
-                                            <th className="px-4 py-2 text-left">Username</th>
-                                            <th className="px-4 py-2 text-left">Password</th>
+                                            <td className="px-4 py-20 text-center" colSpan={3}>
+                                                <div className="flex flex-col items-center gap-3">
+                                                    <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                                                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Caricamento credenziali...</p>
+                                                </div>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredCredentials.length === 0 ? (
-                                            <tr>
-                                                <td className="px-4 py-4 text-center text-slate-500" colSpan={3}>
-                                                    Nessuna credenziale configurata per questa combinazione.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            filteredCredentials.map((c) => {
-                                                const revealed = revealedId === c.id;
-                                                return (
-                                                    <tr key={c.id} className="border-t border-white/5">
-                                                        <td className="px-4 py-3">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="w-7 h-7 rounded-lg bg-slate-900/60 flex items-center justify-center">
-                                                                    <PasswordIcon className="w-4 h-4 text-slate-300" />
-                                                                </div>
-                                                                <span className="font-semibold text-slate-100">{c.accessType}</span>
+                                    ) : credentials.length === 0 ? (
+                                        <tr>
+                                            <td className="px-4 py-12 text-center text-slate-500" colSpan={3}>
+                                                Nessuna credenziale configurata per questa combinazione.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        credentials.map((c) => {
+                                            const revealedPassword = revealedIds[c.id];
+                                            const isRevealing = revealingId === c.id;
+                                            return (
+                                                <tr key={c.id} className="border-t border-white/5">
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-7 h-7 rounded-lg bg-slate-900/60 flex items-center justify-center">
+                                                                <Wifi className="w-4 h-4 text-slate-300" />
                                                             </div>
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-mono text-xs text-slate-100">{c.username}</span>
+                                                            <span className="font-semibold text-slate-100">{c.accessType}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-mono text-xs text-slate-100">{c.username}</span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleCopy(c.id, c.username)}
+                                                                className="p-1 rounded hover:bg-white/10 text-slate-400"
+                                                            >
+                                                                <Copy className="w-3 h-3" />
+                                                            </button>
+                                                            {copiedId === c.id && (
+                                                                <span className="text-[10px] text-emerald-400 font-semibold">Copiato</span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center gap-2 justify-end">
+                                                            <span className="font-mono text-xs text-slate-100 italic">
+                                                                {revealedPassword || c.passwordMasked}
+                                                            </span>
+                                                            <div className="flex items-center gap-1">
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => handleCopy(c.id, c.username)}
+                                                                    onClick={() => handleReveal(c.id)}
+                                                                    disabled={isRevealing}
                                                                     className="p-1 rounded hover:bg-white/10 text-slate-400"
+                                                                >
+                                                                    {isRevealing ? (
+                                                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                                                    ) : revealedPassword ? (
+                                                                        <EyeOff className="w-3 h-3 text-indigo-400" />
+                                                                    ) : (
+                                                                        <Eye className="w-3 h-3" />
+                                                                    )}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleCopy(c.id, revealedPassword || "")}
+                                                                    disabled={!revealedPassword}
+                                                                    className={cn(
+                                                                        "p-1 rounded hover:bg-white/10",
+                                                                        revealedPassword ? "text-slate-400" : "text-slate-700 pointer-events-none"
+                                                                    )}
                                                                 >
                                                                     <Copy className="w-3 h-3" />
                                                                 </button>
-                                                                {copiedId === c.id && (
-                                                                    <span className="text-[10px] text-emerald-400 font-semibold">Copiato</span>
-                                                                )}
                                                             </div>
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-mono text-xs text-slate-100">
-                                                                    {revealed ? c.passwordReal : c.passwordMasked}
-                                                                </span>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setRevealedId((prev) => (prev === c.id ? null : c.id))}
-                                                                    className="p-1 rounded hover:bg-white/10 text-slate-400"
-                                                                >
-                                                                    {revealed ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div className="glass-card border-amber-500/30 bg-amber-500/5 text-amber-100 text-xs p-4 flex gap-3">
-                            <div className="mt-0.5">
-                                <LockKeyhole className="w-4 h-4 text-amber-300" />
-                            </div>
-                            <div>
-                                <p className="font-semibold text-amber-200 mb-1">Nota di sicurezza</p>
-                                <p className="text-[11px] text-amber-100/90">
-                                    Questa sezione contiene credenziali sensibili. L&apos;accesso è limitato ai ruoli admin e store manager.
-                                    Le password sono visibili solo dopo aver cliccato sull&apos;icona dell&apos;occhio. Non condividere queste credenziali.
-                                </p>
-                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 )}
             </div>
+
+            <div className="glass-card border-amber-500/20 bg-amber-500/5 text-amber-100/80 text-xs p-6 flex gap-4 mt-8 animate-in slide-in-from-bottom-4 duration-1000">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
+                    <ShieldCheck className="w-5 h-5 text-amber-500" />
+                </div>
+                <div className="space-y-1">
+                    <p className="font-black text-amber-500 uppercase tracking-widest text-[10px]">Nota di sicurezza</p>
+                    <p className="text-[13px] leading-relaxed">
+                        Questa sezione contiene credenziali sensibili. L&apos;accesso è limitato ai ruoli <span className="text-amber-200 font-bold">admin</span> e <span className="text-amber-200 font-bold">store manager</span>.
+                        Le password sono visibili solo dopo aver cliccato sull&apos;icona dell&apos;occhio. <span className="underline decoration-amber-500/50 underline-offset-4">Non condividere queste credenziali.</span>
+                    </p>
+                </div>
+            </div>
         </div>
     );
 }
-

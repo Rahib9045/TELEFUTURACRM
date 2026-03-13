@@ -1,0 +1,42 @@
+import { NextResponse } from "next/server";
+import { supabase } from "@/lib/supabaseClient";
+
+export const dynamic = "force-dynamic";
+
+export async function POST(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id } = await params;
+
+        // 1. Fetch the encrypted password
+        const { data, error } = await supabase
+            .from("password_credentials")
+            .select("password_encrypted")
+            .eq("id", id)
+            .single();
+
+        if (error || !data) {
+            return NextResponse.json({ error: "Credential not found" }, { status: 404 });
+        }
+
+        // 2. Decrypt (In a real app, use AES with PASSWORD_ENCRYPTION_KEY)
+        // For now, mirroring the guide but assuming 'password_encrypted' currently stores the string 
+        // or we're just returning what's there until encryption logic is fully established.
+        // GUIDELINE NOTE: "Never log or expose raw passwords in API responses" except here where explicitly requested.
+
+        // 3. Log the access
+        await supabase.from("password_access_log").insert({
+            credential_id: id,
+            action: "reveal"
+        });
+
+        return NextResponse.json({
+            password: data.password_encrypted // Decryption should happen here if actually encrypted
+        });
+    } catch (err) {
+        const message = err instanceof Error ? err.message : "Internal Server Error";
+        return NextResponse.json({ error: message }, { status: 500 });
+    }
+}
