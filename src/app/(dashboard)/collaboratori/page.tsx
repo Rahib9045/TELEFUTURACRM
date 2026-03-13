@@ -77,6 +77,7 @@ function BadgeAndDashboard({ isAdminLike }: { isAdminLike: boolean }) {
     const { user } = useAuth();
     const [activeShift, setActiveShift] = useState<ShiftRow | null>(null);
     const [todayMinutes, setTodayMinutes] = useState(0);
+    const [teamStats, setTeamStats] = useState({ presenti: 0, totalMinutes: 0 });
     const [loading, setLoading] = useState(true);
 
     const status: "off" | "running" | "paused" = !activeShift ? "off" : activeShift.pause_started_at ? "paused" : "running";
@@ -94,12 +95,27 @@ function BadgeAndDashboard({ isAdminLike }: { isAdminLike: boolean }) {
         setActiveShift(data as ShiftRow | null);
     }, [user?.name]);
 
+    const fetchTeamStats = useCallback(async () => {
+        if (!isAdminLike) return;
+        const today = new Date().toISOString().slice(0, 10);
+        const { count: presenti } = await supabase.from("shifts").select("*", { count: 'exact', head: true }).is("ended_at", null);
+        const { data: todayShifts } = await supabase.from("shifts").select("*").gte("started_at", today);
+        let totalMins = 0;
+        (todayShifts || []).forEach(s => {
+            const start = new Date(s.started_at).getTime();
+            const end = s.ended_at ? new Date(s.ended_at).getTime() : Date.now();
+            const pause = Number(s.total_pause_minutes) || 0;
+            totalMins += Math.max(0, (end - start) / 60000 - pause);
+        });
+        setTeamStats({ presenti: presenti || 0, totalMinutes: Math.floor(totalMins) });
+    }, [isAdminLike]);
+
     useEffect(() => {
         (async () => {
-            await fetchActiveShift();
+            await Promise.all([fetchActiveShift(), fetchTeamStats()]);
             setLoading(false);
         })();
-    }, [fetchActiveShift]);
+    }, [fetchActiveShift, fetchTeamStats]);
 
     useEffect(() => {
         if (!activeShift) {
@@ -141,6 +157,7 @@ function BadgeAndDashboard({ isAdminLike }: { isAdminLike: boolean }) {
         if (activeShift.pause_started_at) totalPause += (Date.now() - new Date(activeShift.pause_started_at).getTime()) / 60000;
         await supabase.from("shifts").update({ ended_at: new Date().toISOString(), pause_started_at: null, total_pause_minutes: totalPause }).eq("id", activeShift.id);
         setActiveShift(null);
+        await fetchTeamStats();
     };
 
     return (
@@ -170,11 +187,13 @@ function BadgeAndDashboard({ isAdminLike }: { isAdminLike: boolean }) {
                     <>
                         <div className="glass-panel p-5 border-l-4 border-l-sky-500">
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Presenti Ora</p>
-                            <p className="text-2xl font-black text-white">--</p>
+                            <p className="text-2xl font-black text-white">{teamStats.presenti}</p>
                         </div>
                         <div className="glass-panel p-5 border-l-4 border-l-violet-500">
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Totale Ore Team</p>
-                            <p className="text-2xl font-black text-white">--</p>
+                            <p className="text-2xl font-black text-white">
+                                {Math.floor(teamStats.totalMinutes / 60)}h <span className="text-violet-400">{String(teamStats.totalMinutes % 60).padStart(2, "0")}m</span>
+                            </p>
                         </div>
                     </>
                 )}
@@ -269,7 +288,7 @@ function BadgeAndDashboard({ isAdminLike }: { isAdminLike: boolean }) {
                 {/* Dashboard admin/Team View */}
                 <div className="xl:col-span-8 flex flex-col gap-6 min-w-0">
                     {isAdminLike ? (
-                        <BadgeAdminDashboard onRefresh={fetchActiveShift} />
+                        <BadgeAdminDashboard onRefresh={async () => { await fetchActiveShift(); await fetchTeamStats(); }} />
                     ) : (
                         <div className="glass-card p-8 h-full flex flex-col items-center justify-center text-center">
                             <Shield className="w-16 h-16 text-slate-700 mb-6" />

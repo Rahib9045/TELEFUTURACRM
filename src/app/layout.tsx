@@ -3,6 +3,7 @@ import './globals.css'
 import { AuthProvider } from '@/context/AuthContext'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
+import { NotificationCenter } from '@/components/NotificationCenter'
 
 export const metadata: Metadata = {
   title: 'Telefutura - CRM',
@@ -25,6 +26,7 @@ export default function RootLayout({
     <html lang="it">
       <body className="antialiased font-sans bg-[#0f111a] text-white">
         <AuthProvider>
+          <NotificationCenter />
           <div className="flex min-h-screen">
             {children}
           </div>

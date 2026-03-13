@@ -102,9 +102,9 @@ function DocMiniRow({ docs }: { docs: Record<DocKey, number> }) {
 //  SocietaBlock 
 function SocietaBlock({ societa, files, setFiles }: { societa: string; files: FilesMap; setFiles: (u: (p: FilesMap) => FilesMap) => void }) {
     const color = SOC_ACCENT[societa];
-    const totalFiles = Object.values(files).reduce((a, b) => a + b.length, 0);
-    const mandatoryFilled = (["cassa", "pos"] as DocKey[]).filter(k => files[k].length > 0).length;
-    const progressPct = (mandatoryFilled / 2) * 100;
+    const totalFiles = useMemo(() => Object.values(files).reduce((a, b) => a + b.length, 0), [files]);
+    const mandatoryFilled = useMemo(() => (["cassa", "pos"] as DocKey[]).filter(k => files[k].length > 0).length, [files]);
+    const progressPct = useMemo(() => (mandatoryFilled / 2) * 100, [mandatoryFilled]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const pendingKeyRef = useRef<DocKey | null>(null);
 
@@ -116,14 +116,17 @@ function SocietaBlock({ societa, files, setFiles }: { societa: string; files: Fi
         const key = pendingKeyRef.current;
         pendingKeyRef.current = null;
         const selected = e.target.files;
-        e.target.value = "";
-        if (!key || !selected?.length) return;
+        if (!key || !selected?.length) {
+            e.target.value = "";
+            return;
+        }
         const toAdd: FileEntry[] = [];
         for (let i = 0; i < selected.length; i++) {
             const file = selected[i];
             toAdd.push({ name: file.name, size: formatFileSize(file.size), file });
         }
         setFiles(prev => ({ ...prev, [key]: [...prev[key], ...toAdd] }));
+        e.target.value = "";
     };
     const removeFile = (key: DocKey, i: number) => {
         setFiles(prev => { const c = { ...prev, [key]: prev[key].filter((_, j) => j !== i) }; return c; });
@@ -186,6 +189,7 @@ function SocietaBlock({ societa, files, setFiles }: { societa: string; files: Fi
 
 //  VistaInvio 
 function VistaInvio({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () => void }) {
+    const { user } = useAuth();
     type SocState = { active: boolean; files: FilesMap; note: string };
     const initState = (): Record<string, SocState> => {
         const s: Record<string, SocState> = {};
@@ -228,21 +232,22 @@ function VistaInvio({ onClose, onSuccess }: { onClose: () => void; onSuccess?: (
         if (err) { setValidErr(err); return; }
         setSending(true);
         setValidErr(null);
-        const store = "Magliana";
-        const user = "Marco Rossi";
+        const store = user?.negozio || "Magliana";
+        const userName = user?.name || "Operatore";
         const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9._-]/g, "_");
         try {
             for (const soc of activeSoc) {
-                const { data: inserted, error: e1 } = await supabase.from("chiusura").insert({ store, societa: soc, date: today, user, time: timeStr }).select("id").single();
+                const { data: inserted, error: e1 } = await supabase.from("chiusura").insert({ store, societa: soc, date: today, user: userName, time: timeStr }).select("id").single();
                 if (e1) throw new Error(e1.message);
                 const chiusuraId = (inserted as { id: number }).id;
                 const files = state[soc].files;
                 for (const key of ["cassa", "pos", "ddt_w3", "ddt_vf", "fatture"] as DocKey[]) {
-                    for (const f of files[key]) {
+                    for (let i = 0; i < files[key].length; i++) {
+                        const f = files[key][i];
                         let file_path: string | null = null;
                         if (f.file) {
                             const ext = f.name.includes(".") ? "" : (f.file.type === "application/pdf" ? ".pdf" : "");
-                            const path = `${chiusuraId}/${Date.now()}_${sanitize(f.name)}${ext}`;
+                            const path = `${chiusuraId}/${Date.now()}_${i}_${sanitize(f.name)}${ext}`;
                             const { error: upErr } = await supabase.storage.from(CHIUSURA_BUCKET).upload(path, f.file, {
                                 contentType: f.file.type || "application/octet-stream",
                                 upsert: false,
@@ -306,7 +311,11 @@ function VistaInvio({ onClose, onSuccess }: { onClose: () => void; onSuccess?: (
 
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
                 <div className="flex gap-3 flex-wrap">
-                    {[["Data", new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" })], ["Negozio", "Magliana"], ["Operatore", "Marco Rossi"]].map(([l, v]) => (
+                    {[
+                        ["Data", new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" })],
+                        ["Negozio", user?.negozio || "Magliana"],
+                        ["Operatore", user?.name || "Operatore"]
+                    ].map(([l, v]) => (
                         <div key={l} className="flex-1 min-w-28 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5">
                             <div className="text-[10px] text-slate-500 uppercase font-semibold tracking-wide mb-1">{l}</div>
                             <div className="text-sm font-bold text-white">{v}</div>
@@ -735,7 +744,7 @@ function VistaGestione({ isAdmin, userStore, history }: { isAdmin: boolean; user
 export default function ChiusuraNegozio() {
     const { user } = useAuth();
     const isAdmin = user?.role === "admin";
-    const userStore = "Magliana";
+    const userStore = user?.negozio || "Magliana";
     const [history, setHistory] = useState<Chiusura[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);

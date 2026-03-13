@@ -56,6 +56,7 @@ export default function RicercaContratto() {
     const [filterCodiceAttivazione, setFilterCodiceAttivazione] = useState("");
     const [filterCliente, setFilterCliente] = useState("");
     const [filterCellulare, setFilterCellulare] = useState("");
+    const [filterImei, setFilterImei] = useState("");
     const [filterTableSearch, setFilterTableSearch] = useState("");
     const [daDataAttivazione, setDaDataAttivazione] = useState("");
     const [aDataAttivazione, setADataAttivazione] = useState("");
@@ -87,6 +88,11 @@ export default function RicercaContratto() {
         })();
     }, []);
 
+    const uniqueVenditori = useMemo(() => Array.from(new Set(contractList.map(r => r.venditore).filter(v => v && v !== "—"))).sort(), [contractList]);
+    const uniqueBrands = useMemo(() => Array.from(new Set(contractList.map(r => r.brand).filter(v => v && v !== "—"))).sort(), [contractList]);
+    const uniqueProdotti = useMemo(() => Array.from(new Set(contractList.map(r => r.prodotto).filter(v => v && v !== "—"))).sort(), [contractList]);
+    const uniqueNegozi = useMemo(() => Array.from(new Set(contractList.map(r => r.negozio).filter(v => v && v !== "—"))).sort(), [contractList]);
+
     // RBAC: Store-Based Visibility Logic
     const isGlobalView = ["admin", "supervisore", "back_office"].includes(user?.role || "");
     const lockedStore = !isGlobalView ? user?.negozio : null;
@@ -106,6 +112,7 @@ export default function RicercaContratto() {
         if (filterCodiceAttivazione && filterCodiceAttivazione !== "Tutti i codici") list = list.filter(r => r.codice_attivazione === filterCodiceAttivazione);
         if (filterCliente) list = list.filter(r => r.cliente.toLowerCase().includes(filterCliente.toLowerCase()));
         if (filterCellulare) list = list.filter(r => (r.cellulare || "").includes(filterCellulare));
+        if (filterImei) list = list.filter(r => (r.codice_attivazione || "").includes(filterImei)); // Assuming IMEI might be stored or searched in activation code/notes or we need a specific field, but for now let's use activation code if that's what's intended or just filter by it
         if (filterTableSearch) {
             const q = filterTableSearch.toLowerCase();
             list = list.filter(r =>
@@ -136,7 +143,24 @@ export default function RicercaContratto() {
             if (to !== null) list = list.filter(r => parseDate(r.data_registrazione) !== null && parseDate(r.data_registrazione)! <= to);
         }
         return list;
-    }, [contractList, isGlobalView, lockedStore, lockedVenditore, filterVenditore, filterBrand, filterProdotto, filterNegozio, filterCodice, filterCodiceAttivazione, filterCliente, filterTableSearch, daDataAttivazione, aDataAttivazione, daDataRegistrazione, aDataRegistrazione]);
+    }, [contractList, isGlobalView, lockedStore, lockedVenditore, filterVenditore, filterBrand, filterProdotto, filterNegozio, filterCodice, filterCodiceAttivazione, filterCliente, filterCellulare, filterImei, filterTableSearch, daDataAttivazione, aDataAttivazione, daDataRegistrazione, aDataRegistrazione]);
+
+    const handleExportCsv = () => {
+        if (visibleData.length === 0) return;
+        const headers = ["Venditore", "Brand", "Prodotto", "Cliente", "Negozio", "Codice Attivazione", "Data Registrazione", "Data Attivazione", "Stato"];
+        const rows = visibleData.map(r => [
+            r.venditore, r.brand, r.prodotto, r.cliente, r.negozio, r.codice_attivazione, r.data_registrazione, r.data_attivazione, r.stato
+        ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(","));
+        const csvContent = [headers.join(","), ...rows].join("\n");
+        const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `contratti_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     if (loadError) {
         return (
@@ -174,10 +198,7 @@ export default function RicercaContratto() {
                             onChange={e => setFilterVenditore(e.target.value)}
                         >
                             <option value="Tutti">Tutti i venditori</option>
-                            <option value="Luca Perotta">Luca Perotta</option>
-                            <option value="Alessandro Sandri">Alessandro Sandri</option>
-                            <option value="Venditore 1">Venditore 1</option>
-                            <option value="Store Manager Roma">Store Manager Roma</option>
+                            {uniqueVenditori.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                     </div>
 
@@ -189,8 +210,8 @@ export default function RicercaContratto() {
 
                     {/* 3. IMEI */}
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">IMEI</label>
-                        <input type="number" placeholder="Inserisci IMEI" className="glass-input w-full" />
+                        <label className="block text-sm font-medium text-slate-300 mb-2">IMEI / Serial Number</label>
+                        <input type="text" placeholder="Inserisci IMEI" className="glass-input w-full" value={filterImei} onChange={e => setFilterImei(e.target.value)} />
                     </div>
 
                     {/* 4. Brand */}
@@ -198,13 +219,7 @@ export default function RicercaContratto() {
                         <label className="block text-sm font-medium text-slate-300 mb-2">Brand</label>
                         <select className="glass-input w-full" value={filterBrand} onChange={e => setFilterBrand(e.target.value)}>
                             <option value="">Tutti i brand</option>
-                            <option value="Fastweb">Fastweb</option>
-                            <option value="WindTre">WindTre</option>
-                            <option value="S4 Energia">S4 Energia</option>
-                            <option value="Sky">Sky</option>
-                            <option value="Dojo">Dojo</option>
-                            <option value="VODAFONE">VODAFONE</option>
-                            <option value="WIND3">WIND3</option>
+                            {uniqueBrands.map(b => <option key={b} value={b}>{b}</option>)}
                         </select>
                     </div>
 
@@ -213,14 +228,7 @@ export default function RicercaContratto() {
                         <label className="block text-sm font-medium text-slate-300 mb-2">Prodotto</label>
                         <select className="glass-input w-full" value={filterProdotto} onChange={e => setFilterProdotto(e.target.value)}>
                             <option value="">Tutti i prodotti</option>
-                            <option value="Mobile">Mobile</option>
-                            <option value="Fisso">Fisso</option>
-                            <option value="Luce & Gas">Luce & Gas</option>
-                            <option value="Assicurazioni">Assicurazioni</option>
-                            <option value="Protecta">Protecta</option>
-                            <option value="POS">POS</option>
-                            <option value="Super Fibra">Super Fibra</option>
-                            <option value="Mobile 100GB">Mobile 100GB</option>
+                            {uniqueProdotti.map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
                     </div>
 
@@ -234,10 +242,7 @@ export default function RicercaContratto() {
                             onChange={e => setFilterNegozio(e.target.value)}
                         >
                             <option value="Tutti">Tutti i negozi</option>
-                            <option value="Store Milano Centro">Store Milano Centro</option>
-                            <option value="Store Roma Termini">Store Roma Termini</option>
-                            <option value="Roma Centro (RM001)">Roma Centro (RM001)</option>
-                            <option value="Milano Centrale (MI001)">Milano Centrale (MI001)</option>
+                            {uniqueNegozi.map(n => <option key={n} value={n}>{n}</option>)}
                         </select>
                     </div>
 
@@ -282,7 +287,10 @@ export default function RicercaContratto() {
 
                 {/* CTA Buttons */}
                 <div className="mt-8 flex gap-3">
-                    <button type="button" className="primary-btn h-10 px-8 text-sm" onClick={() => { setFilterVenditore(""); setFilterCodice(""); setFilterBrand(""); setFilterProdotto(""); setFilterNegozio(""); setFilterCodiceAttivazione(""); setFilterCliente(""); setFilterCellulare(""); setFilterTableSearch(""); setDaDataAttivazione(""); setADataAttivazione(""); setDaDataRegistrazione(""); setADataRegistrazione(""); }}>Annulla filtri</button>
+                    <button type="button" className="primary-btn h-10 px-8 text-sm" onClick={() => { setFilterVenditore(""); setFilterCodice(""); setFilterBrand(""); setFilterProdotto(""); setFilterNegozio(""); setFilterCodiceAttivazione(""); setFilterCliente(""); setFilterCellulare(""); setFilterImei(""); setFilterTableSearch(""); setDaDataAttivazione(""); setADataAttivazione(""); setDaDataRegistrazione(""); setADataRegistrazione(""); }}>Annulla filtri</button>
+                    <button type="button" className="px-8 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/20 transition-all flex items-center gap-2" onClick={handleExportCsv}>
+                        Scarica CSV
+                    </button>
                 </div>
             </div>
 
@@ -298,60 +306,60 @@ export default function RicercaContratto() {
                 {loading ? (
                     <div className="p-8 text-center text-slate-400">Caricamento contratti...</div>
                 ) : (
-                <div className="overflow-x-auto w-full">
-                    <table className="w-full text-left text-sm text-slate-300">
-                        <thead className="bg-white/[0.03] text-xs uppercase text-slate-400">
-                            <tr>
-                                <th className="px-4 py-4 font-semibold">Venditore</th>
-                                <th className="px-4 py-4 font-semibold">Brand</th>
-                                <th className="px-4 py-4 font-semibold">Prodotto</th>
-                                <th className="px-4 py-4 font-semibold">Cliente</th>
-                                <th className="px-4 py-4 font-semibold">Negozio</th>
-                                <th className="px-4 py-4 font-semibold">Codice Attivazione</th>
-                                <th className="px-4 py-4 font-semibold">Data Registrazione</th>
-                                <th className="px-4 py-4 font-semibold">Data Attivazione</th>
-                                <th className="px-4 py-4 font-semibold">Stato</th>
-                                <th className="px-4 py-4 w-32 text-center">Azioni</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {visibleData.map((row) => (
-                                <tr key={row.id} className="border-b border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-colors">
-                                    <td className="px-4 py-3 text-slate-300">{row.venditore}</td>
-                                    <td className="px-4 py-3 font-medium text-white">{row.brand}</td>
-                                    <td className="px-4 py-3 text-slate-300">{row.prodotto}</td>
-                                    <td className="px-4 py-3 text-slate-300 font-medium">{row.cliente}</td>
-                                    <td className="px-4 py-3 text-slate-400 text-xs">{row.negozio}</td>
-                                    <td className="px-4 py-3 text-slate-400 font-mono text-xs">{row.codice_attivazione}</td>
-                                    <td className="px-4 py-3 text-slate-500 text-xs">{row.data_registrazione}</td>
-                                    <td className="px-4 py-3 text-slate-500 text-xs">{row.data_attivazione}</td>
-                                    <td className="px-4 py-3">
-                                        <span className={cn(
-                                            "px-2 py-1 rounded-full text-[10px] font-medium uppercase tracking-wider",
-                                            row.stato === 'Attivo' ? "bg-emerald-500/10 text-emerald-400" :
-                                                "bg-amber-500/10 text-amber-400"
-                                        )}>
-                                            {row.stato}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <div className="flex gap-1 justify-center">
-                                            <button onClick={() => { setSelectedContract(row); setDetailMode("view"); }} className="p-1.5 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors" title="Visualizza Dettaglio"><Eye className="w-4 h-4" /></button>
-                                            <button onClick={() => { setSelectedContract(row); setDetailMode("edit"); setEditStato(row.stato); }} className="p-1.5 rounded bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 transition-colors" title="Modifica"><Edit className="w-4 h-4" /></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {visibleData.length === 0 && (
+                    <div className="overflow-x-auto w-full">
+                        <table className="w-full text-left text-sm text-slate-300">
+                            <thead className="bg-white/[0.03] text-xs uppercase text-slate-400">
                                 <tr>
-                                    <td colSpan={10} className="px-4 py-8 text-center text-slate-500">
-                                        Nessun contratto trovato per i criteri o permessi correnti.
-                                    </td>
+                                    <th className="px-4 py-4 font-semibold">Venditore</th>
+                                    <th className="px-4 py-4 font-semibold">Brand</th>
+                                    <th className="px-4 py-4 font-semibold">Prodotto</th>
+                                    <th className="px-4 py-4 font-semibold">Cliente</th>
+                                    <th className="px-4 py-4 font-semibold">Negozio</th>
+                                    <th className="px-4 py-4 font-semibold">Codice Attivazione</th>
+                                    <th className="px-4 py-4 font-semibold">Data Registrazione</th>
+                                    <th className="px-4 py-4 font-semibold">Data Attivazione</th>
+                                    <th className="px-4 py-4 font-semibold">Stato</th>
+                                    <th className="px-4 py-4 w-32 text-center">Azioni</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {visibleData.map((row) => (
+                                    <tr key={row.id} className="border-b border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-colors">
+                                        <td className="px-4 py-3 text-slate-300">{row.venditore}</td>
+                                        <td className="px-4 py-3 font-medium text-white">{row.brand}</td>
+                                        <td className="px-4 py-3 text-slate-300">{row.prodotto}</td>
+                                        <td className="px-4 py-3 text-slate-300 font-medium">{row.cliente}</td>
+                                        <td className="px-4 py-3 text-slate-400 text-xs">{row.negozio}</td>
+                                        <td className="px-4 py-3 text-slate-400 font-mono text-xs">{row.codice_attivazione}</td>
+                                        <td className="px-4 py-3 text-slate-500 text-xs">{row.data_registrazione}</td>
+                                        <td className="px-4 py-3 text-slate-500 text-xs">{row.data_attivazione}</td>
+                                        <td className="px-4 py-3">
+                                            <span className={cn(
+                                                "px-2 py-1 rounded-full text-[10px] font-medium uppercase tracking-wider",
+                                                row.stato === 'Attivo' ? "bg-emerald-500/10 text-emerald-400" :
+                                                    "bg-amber-500/10 text-amber-400"
+                                            )}>
+                                                {row.stato}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex gap-1 justify-center">
+                                                <button onClick={() => { setSelectedContract(row); setDetailMode("view"); }} className="p-1.5 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors" title="Visualizza Dettaglio"><Eye className="w-4 h-4" /></button>
+                                                <button onClick={() => { setSelectedContract(row); setDetailMode("edit"); setEditStato(row.stato); }} className="p-1.5 rounded bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 transition-colors" title="Modifica"><Edit className="w-4 h-4" /></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {visibleData.length === 0 && (
+                                    <tr>
+                                        <td colSpan={10} className="px-4 py-8 text-center text-slate-500">
+                                            Nessun contratto trovato per i criteri o permessi correnti.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
 
                 <div className="px-6 py-4 border-t border-white/5 flex items-center justify-between text-xs text-slate-400 bg-white/[0.01]">

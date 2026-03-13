@@ -26,26 +26,6 @@ interface Contratto {
     stato: string;
 }
 
-// Generiamo dati fittizi
-const generateMockClienti = (): Cliente[] => {
-    const list: Cliente[] = [];
-    for (let i = 1; i <= 150; i++) {
-        const isBusiness = i % 3 === 0;
-        list.push({
-            id: `CLIENT_${i.toString().padStart(4, "0")}`,
-            tipo: isBusiness ? "business" : "consumer",
-            nome: isBusiness ? "Mario" : `Nome_${i}`,
-            cognome: isBusiness ? "Rossi" : `Cognome_${i}`,
-            ragioneSociale: isBusiness ? `Azienda Beta ${i} Srl` : undefined,
-            cellulare: `333${Math.floor(1000000 + Math.random() * 9000000)}`,
-            email: isBusiness ? `info@aziendabeta${i}.it` : `utente${i}@email.com`,
-            cf_piva: isBusiness ? `0123456789${i % 10}` : `RSSMRA80A01H501${String.fromCharCode(65 + (i % 26))}`,
-            indirizzo: `Via Roma ${i}`,
-            citta: ["Milano", "Roma", "Napoli", "Torino", "Firenze"][i % 5],
-        });
-    }
-    return list;
-};
 
 function mapRowToCliente(row: Record<string, unknown>): Cliente {
     return {
@@ -176,9 +156,227 @@ function ClienteDetailModal({ cliente, contratti, onClose }: { cliente: Cliente;
                 </div>
 
                 {/* MODAL FOOTER */}
-                <div className="flex-none px-6 py-4 border-t border-white/10 bg-white/[0.02] flex justify-end">
+                <div className="flex-none px-6 py-4 border-t border-white/10 bg-white/[0.02] flex justify-between">
+                    <button
+                        onClick={() => {
+                            onClose();
+                            window.dispatchEvent(new CustomEvent("edit-client", { detail: cliente }));
+                        }}
+                        className="px-6 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-violet-500/20"
+                    >
+                        Modifica
+                    </button>
                     <button onClick={onClose} className="px-6 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-widest transition-all">
                         Chiudi
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function ClienteFormModal({ cliente, onClose, onSave }: { cliente?: Cliente | null; onClose: () => void; onSave: () => void }) {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const [tipo, setTipo] = useState<"consumer" | "business">(cliente?.tipo ?? "consumer");
+    const [nome, setNome] = useState(cliente?.nome ?? "");
+    const [cognome, setCognome] = useState(cliente?.cognome ?? "");
+    const [ragioneSociale, setRagioneSociale] = useState(cliente?.ragioneSociale ?? "");
+    const [cellulare, setCellulare] = useState(cliente?.cellulare ?? "");
+    const [email, setEmail] = useState(cliente?.email ?? "");
+    const [cfPiva, setCfPiva] = useState(cliente?.cf_piva ?? "");
+    const [indirizzo, setIndirizzo] = useState(cliente?.indirizzo ?? "");
+    const [citta, setCitta] = useState(cliente?.citta ?? "");
+
+    const handleSave = async () => {
+        if (!nome || !cellulare || !cfPiva) {
+            setError("Nome, Cellulare e Codice Fiscale/P.IVA sono obbligatori.");
+            return;
+        }
+        if (tipo === "business" && !ragioneSociale) {
+            setError("La Ragione Sociale è obbligatoria per i clienti Business.");
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        const payload = {
+            tipo,
+            nome,
+            cognome: tipo === "consumer" ? cognome : (cognome || null),
+            ragione_sociale: tipo === "business" ? ragioneSociale : null,
+            cellulare,
+            email,
+            cf_piva: cfPiva,
+            indirizzo,
+            citta,
+        };
+
+        try {
+            if (cliente) {
+                const { error: err } = await supabase.from("clients").update(payload).eq("id", cliente.id);
+                if (err) throw err;
+            } else {
+                const { error: err } = await supabase.from("clients").insert([payload]);
+                if (err) throw err;
+            }
+            onSave();
+            onClose();
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="glass-panel w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl border-white/20">
+                <div className="flex-none px-6 py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.03]">
+                    <h2 className="text-xl font-bold text-white uppercase tracking-tight">
+                        {cliente ? "Modifica Cliente" : "Nuovo Cliente"}
+                    </h2>
+                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/5 text-slate-400 hover:text-white transition-all">
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
+                    {error && (
+                        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm">
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="space-y-4">
+                        <div className="flex flex-col gap-2">
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Tipo Cliente</span>
+                            <div className="flex bg-black/40 p-1 rounded-xl border border-white/5 w-max">
+                                {(["consumer", "business"] as const).map((t) => (
+                                    <button
+                                        key={t}
+                                        type="button"
+                                        onClick={() => setTipo(t)}
+                                        className={`px-6 py-2 rounded-lg text-sm font-bold capitalize transition-all duration-200 ${tipo === t
+                                            ? "bg-violet-500/20 text-violet-300 border border-violet-500/20 shadow-lg shadow-violet-500/5"
+                                            : "text-slate-500 hover:text-white"
+                                            }`}
+                                    >
+                                        {t}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {tipo === "business" && (
+                                <div className="md:col-span-2 space-y-1.5">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Ragione Sociale</label>
+                                    <input
+                                        type="text"
+                                        value={ragioneSociale}
+                                        onChange={(e) => setRagioneSociale(e.target.value)}
+                                        className="w-full glass-input text-sm rounded-xl py-3"
+                                        placeholder="Nome Azienda Srl"
+                                    />
+                                </div>
+                            )}
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">{tipo === "business" ? "Nome Referente" : "Nome"}</label>
+                                <input
+                                    type="text"
+                                    value={nome}
+                                    onChange={(e) => setNome(e.target.value)}
+                                    className="w-full glass-input text-sm rounded-xl py-3"
+                                    placeholder="Es. Mario"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">{tipo === "business" ? "Cognome Referente" : "Cognome"}</label>
+                                <input
+                                    type="text"
+                                    value={cognome}
+                                    onChange={(e) => setCognome(e.target.value)}
+                                    className="w-full glass-input text-sm rounded-xl py-3"
+                                    placeholder="Es. Rossi"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Cellulare</label>
+                                <input
+                                    type="text"
+                                    value={cellulare}
+                                    onChange={(e) => setCellulare(e.target.value)}
+                                    className="w-full glass-input text-sm rounded-xl py-3 font-mono"
+                                    placeholder="333 123 4567"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Email</label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full glass-input text-sm rounded-xl py-3"
+                                    placeholder="mario.rossi@email.com"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">{tipo === "business" ? "Partita IVA" : "Codice Fiscale"}</label>
+                                <input
+                                    type="text"
+                                    value={cfPiva}
+                                    onChange={(e) => setCfPiva(e.target.value)}
+                                    className="w-full glass-input text-sm rounded-xl py-3 font-mono"
+                                    placeholder="Identificativo"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Città</label>
+                                <input
+                                    type="text"
+                                    value={citta}
+                                    onChange={(e) => setCitta(e.target.value)}
+                                    className="w-full glass-input text-sm rounded-xl py-3"
+                                    placeholder="Es. Roma"
+                                />
+                            </div>
+
+                            <div className="md:col-span-2 space-y-1.5">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Indirizzo</label>
+                                <input
+                                    type="text"
+                                    value={indirizzo}
+                                    onChange={(e) => setIndirizzo(e.target.value)}
+                                    className="w-full glass-input text-sm rounded-xl py-3"
+                                    placeholder="Via Esempio 123"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex-none px-6 py-4 border-t border-white/10 bg-white/[0.03] flex justify-end gap-3">
+                    <button
+                        onClick={onClose}
+                        className="px-6 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-widest transition-all"
+                    >
+                        Annulla
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={loading}
+                        className="px-8 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-violet-500/20 disabled:opacity-50"
+                    >
+                        {loading ? "Salvataggio..." : "Salva Cliente"}
                     </button>
                 </div>
             </div>
@@ -238,27 +436,36 @@ export default function ClientiPage() {
     const setFilterIdentifier = (v: string) => setView((p) => ({ ...p, filterIdentifier: v }));
 
     const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
+    const [contrattiForModal, setContrattiForModal] = useState<Contratto[]>([]);
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [clientToEdit, setClientToEdit] = useState<Cliente | null>(null);
+
     const [clientList, setClientList] = useState<Cliente[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
-    const [contrattiForModal, setContrattiForModal] = useState<Contratto[]>([]);
+
+    const fetchClientList = async () => {
+        setLoadError(null);
+        setLoading(true);
+        const { data, error } = await supabase.from("clients").select("*").order("id");
+        if (error) {
+            setLoadError(error.message);
+            setClientList([]);
+        } else {
+            setClientList((data ?? []).map(mapRowToCliente));
+        }
+        setLoading(false);
+    };
 
     useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            setLoadError(null);
-            setLoading(true);
-            const { data, error } = await supabase.from("clients").select("*").order("id");
-            if (cancelled) return;
-            if (error) {
-                setLoadError(error.message);
-                setClientList([]);
-            } else {
-                setClientList((data ?? []).map(mapRowToCliente));
-            }
-            setLoading(false);
-        })();
-        return () => { cancelled = true; };
+        fetchClientList();
+
+        const handleEditEvent = (e: any) => {
+            setClientToEdit(e.detail);
+            setIsFormOpen(true);
+        };
+        window.addEventListener("edit-client", handleEditEvent);
+        return () => window.removeEventListener("edit-client", handleEditEvent);
     }, []);
 
     useEffect(() => {
@@ -329,6 +536,16 @@ export default function ClientiPage() {
                         <p className="text-sm text-slate-400">Anagrafica completa dei clienti Consumer e Business</p>
                     </div>
                 </div>
+                <button
+                    onClick={() => {
+                        setClientToEdit(null);
+                        setIsFormOpen(true);
+                    }}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-violet-500/20 active:scale-95"
+                >
+                    <Users className="w-4 h-4" />
+                    Nuovo Cliente
+                </button>
             </header>
 
             {/* CONTENT */}
@@ -640,6 +857,18 @@ export default function ClientiPage() {
                     cliente={selectedCliente}
                     contratti={contrattiForModal}
                     onClose={() => setSelectedCliente(null)}
+                />
+            )}
+
+            {/* MODAL FORM CLIENTE */}
+            {isFormOpen && (
+                <ClienteFormModal
+                    cliente={clientToEdit}
+                    onClose={() => {
+                        setIsFormOpen(false);
+                        setClientToEdit(null);
+                    }}
+                    onSave={fetchClientList}
                 />
             )}
         </div>

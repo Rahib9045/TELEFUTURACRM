@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useState, useCallback, useRef, useEffect, memo } from "react";
 import { getDraft, saveDraft, clearDraft } from "@/lib/draft";
+import { generateContractPDF } from "@/utils/contract-pdf";
+import { FileDown } from "lucide-react";
 
 // ── MARGINALITÀ DATA ──
 const MARG_PRODUCTS = [
@@ -1098,6 +1100,33 @@ export default function CRM() {
   };
   const editCG = (idx: number) => { const g: any = cart[idx]; if (!g) return; setBrand(g.brandId); if (g.sv) { setSales(g.sv.sales || {}); setSesCode(g.sv.sesCode || ""); setSkyS(g.sv.skyS || [{ selected: [] }]) } setCart(p => p.filter((_, i) => i !== idx)); setShowCart(false); sT("✏️ Modifica " + g.brandLabel) };
   const rmCG = (idx: number) => setCart(p => p.filter((_, i) => i !== idx));
+
+  const handleDownloadPDF = async () => {
+    try {
+      const pdfBytes = await generateContractPDF(ana, cart, margItems);
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUri = reader.result as string;
+        const link = document.createElement("a");
+        const cleanNome = (ana.nome || "Cliente").trim().replace(/\s+/g, "_");
+        const cleanCognome = (ana.cognome || "Sconosciuto").trim().replace(/\s+/g, "_");
+        const filename = `Contratto_${cleanNome}_${cleanCognome}.pdf`;
+
+        link.href = dataUri;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        sT("✅ PDF generato e scaricato");
+      };
+      reader.readAsDataURL(blob);
+    } catch (err) {
+      console.error("PDF Error:", err);
+      sT("❌ Errore generazione PDF");
+    }
+  };
   const fullReset = () => {
     clearDraft(DRAFT_KEY_REGISTRA);
     setBrand(null); setTipoCliente(null); setLookupValue(""); setClienteFound(false); setShowAna(false); setSales({}); setSesCode(""); setSkyS([{ selected: [] }]); setCart([]); setMargItems([]); setShowCart(false); setExpI({}); setConfirmReset(false); setShowStep4(false); setAna({ ...defaultAna });
@@ -1516,6 +1545,23 @@ export default function CRM() {
             ) : (
               <button onClick={() => setConfirmReset(true)} style={{ padding: "12px 24px", borderRadius: 12, border: "1px solid rgba(244, 63, 94, 0.3)", background: "transparent", color: "#fb7185", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>🗑️ Reset form</button>
             )}
+            <button onClick={handleDownloadPDF} disabled={!ana.nome && cart.length === 0}
+              style={{
+                padding: "12px 24px",
+                borderRadius: 12,
+                border: "1px solid rgba(99, 102, 241, 0.3)",
+                background: "rgba(99, 102, 241, 0.1)",
+                color: "#818cf8",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: (ana.nome || cart.length > 0) ? "pointer" : "not-allowed",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                opacity: (ana.nome || cart.length > 0) ? 1 : 0.5
+              }}>
+              <FileDown size={18} /> Scarica PDF
+            </button>
           </div>
           <button onClick={() => setShowCart(true)}
             style={{ padding: "14px 32px", borderRadius: 12, border: "none", background: "linear-gradient(135deg, #6366f1, #4f46e5)", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 10px 30px rgba(99, 102, 241, 0.4)" }}>

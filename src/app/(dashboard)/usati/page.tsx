@@ -7,7 +7,8 @@ import {
   CheckCircle2, Truck, Tag, CircleDollarSign, XCircle,
   Save, MapPin, Plus, Wrench, FileText, Copy,
   ChevronDown, ChevronUp, AlertTriangle, Banknote,
-  TicketIcon, Paperclip, ArrowRight, ArrowLeft, RotateCcw
+  TicketIcon, Paperclip, ArrowRight, ArrowLeft, RotateCcw,
+  UploadCloud, X
 } from "lucide-react";
 import { cn } from "@/utils";
 import { supabase } from "@/lib/supabaseClient";
@@ -54,6 +55,8 @@ interface Device {
   extra_margine: ExtraMargine | null;
   pagamento: Pagamento;
   grado_usura: string;
+  allegato_documento: string | null;
+  allegato_dichiarazione: string | null;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -155,6 +158,8 @@ type UsatiRow = {
   extra_margine: unknown;
   pagamento: unknown;
   grado_usura: string;
+  allegato_documento: string | null;
+  allegato_dichiarazione: string | null;
 };
 
 function parseDate(s: string | null): Date {
@@ -193,6 +198,8 @@ function rowToDevice(r: UsatiRow): Device {
     extra_margine: r.extra_margine && typeof r.extra_margine === "object" ? (r.extra_margine as ExtraMargine) : null,
     pagamento: r.pagamento && typeof r.pagamento === "object" ? (r.pagamento as Pagamento) : { metodo: "contanti", iban: "", bonifico_effettuato: null, bonifico_operatore: null, bonifico_date: null },
     grado_usura: r.grado_usura || "",
+    allegato_documento: r.allegato_documento ?? null,
+    allegato_dichiarazione: r.allegato_dichiarazione ?? null,
   };
 }
 
@@ -224,6 +231,8 @@ function deviceToRow(d: Device): Record<string, unknown> {
     extra_margine: em,
     pagamento: pag,
     grado_usura: d.grado_usura,
+    allegato_documento: d.allegato_documento,
+    allegato_dichiarazione: d.allegato_dichiarazione,
   };
 }
 
@@ -413,6 +422,7 @@ function DevicePanel({ device, onClose, onSave }: { device: Device; onClose: () 
     const upd: Device = { ...dev, pagamento: { ...dev.pagamento, bonifico_effettuato: nowEff, bonifico_operatore: nowEff ? "Admin" : null, bonifico_date: nowEff ? new Date() : null }, note_tecnico: noteTecnico, sale_price: editSalePrice ? (parseFloat(salePriceVal) || 0) : 0 };
     setDev(upd); onSave(upd);
   };
+  const getFileUrl = (path: string) => supabase.storage.from("usati_attachments").getPublicUrl(path).data.publicUrl;
   const copyIban = () => { try { navigator.clipboard.writeText(dev.pagamento.iban); setIbanCopied(true); setTimeout(() => setIbanCopied(false), 2000); } catch (e) { } };
 
   return (
@@ -571,6 +581,42 @@ function DevicePanel({ device, onClose, onSave }: { device: Device; onClose: () 
                 <div className="text-center py-4 text-sm text-slate-600 rounded-xl bg-white/[0.02] border border-white/5">Nessun ricambio richiesto</div>
               ) : dev.ricambi.map((r, i) => <RicambioRow key={i} r={r} idx={i} onUpdate={updateRicambio} onRemove={removeRicambio} />)}
             </div>
+            {/* Documents */}
+            <div>
+              <div className="text-sm font-bold text-white mb-3"> Documenti Allegati</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { label: "Documento Identità", path: dev.allegato_documento, icon: <FileText size={16} /> },
+                  { label: "Dichiarazione Vendita", path: dev.allegato_dichiarazione, icon: <FileText size={16} /> }
+                ].map((doc, idx) => (
+                  <div key={idx} className="flex flex-col p-3 rounded-xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">{doc.icon}</div>
+                      <div className="text-xs font-semibold text-slate-300">{doc.label}</div>
+                    </div>
+                    {doc.path ? (
+                      <div className="flex items-center gap-2 mt-auto">
+                        <button
+                          onClick={() => window.open(getFileUrl(doc.path!), "_blank")}
+                          className="flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-all border border-white/5"
+                        >
+                          Visualizza
+                        </button>
+                        <a
+                          href={getFileUrl(doc.path!)}
+                          download
+                          className="px-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all border border-white/5"
+                        >
+                          <Paperclip size={12} />
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="text-[10px] text-slate-600 italic mt-auto py-1.5">Nessun file presente</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
             {/* Note */}
             <div>
               <div className="text-sm font-bold text-white mb-2"> Note</div>
@@ -607,8 +653,9 @@ function RegistraUsatoPanel({ onClose, onSave }: { onClose: () => void; onSave: 
   const [extraMargineImporto, setExtraMargineImporto] = useState("");
   const [metodoPagamento, setMetodoPagamento] = useState<"contanti" | "buono" | "bonifico" | "">("");
   const [ibanPag, setIbanPag] = useState("");
-  const [allegDoc, setAllegDoc] = useState<string | null>(null);
-  const [allegDich, setAllegDich] = useState<string | null>(null);
+  const [allegDoc, setAllegDoc] = useState<File | null>(null);
+  const [allegDich, setAllegDich] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const doSearch = () => {
     if (!searchValue.trim()) return;
@@ -626,9 +673,44 @@ function RegistraUsatoPanel({ onClose, onSave }: { onClose: () => void; onSave: 
     return false;
   };
 
-  const handleSubmit = () => {
-    onSave({ venditore, negozio, provenienzaSubito, tipoCliente, anagrafica: ana, tipoProdotto, brand, model, capacita, colore, imei, prezzoAcquisto: parseFloat(prezzoAcquisto) || 0, gradoUsura, extraMargine: hasExtraMargine ? { importo: parseFloat(extraMargineImporto) || 0, venditore } : null, metodoPagamento, iban: metodoPagamento === "bonifico" ? ibanPag : null });
-    onClose();
+  const uploadFile = async (file: File, folder: string) => {
+    const ext = file.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+    const filePath = `${folder}/${fileName}`;
+
+    const { error } = await supabase.storage
+      .from("usati_attachments")
+      .upload(filePath, file);
+
+    if (error) throw error;
+    return filePath;
+  };
+
+  const handleSubmit = async () => {
+    setIsUploading(true);
+    try {
+      let docPath = null;
+      let dichPath = null;
+
+      if (allegDoc) docPath = await uploadFile(allegDoc, "documenti");
+      if (allegDich) dichPath = await uploadFile(allegDich, "dichiarazioni");
+
+      onSave({
+        venditore, negozio, provenienzaSubito, tipoCliente, anagrafica: ana,
+        tipoProdotto, brand, model, capacita, colore, imei,
+        prezzoAcquisto: parseFloat(prezzoAcquisto) || 0, gradoUsura,
+        extraMargine: hasExtraMargine ? { importo: parseFloat(extraMargineImporto) || 0, venditore } : null,
+        metodoPagamento, iban: metodoPagamento === "bonifico" ? ibanPag : null,
+        allegato_documento: docPath,
+        allegato_dichiarazione: dichPath
+      });
+      onClose();
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Errore durante il caricamento dei file. Riprova.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const inp = "w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-300 outline-none focus:border-white/20 transition-all";
@@ -786,16 +868,49 @@ function RegistraUsatoPanel({ onClose, onSave }: { onClose: () => void; onSave: 
     );
     if (step === 5) return (
       <div className="space-y-5">
-        {([{ key: "doc", label: "Documento di Identit� *", val: allegDoc, set: setAllegDoc, icon: "", fake: "documento_id.pdf" }, { key: "dich", label: "Dichiarazione di Vendita (firmata) *", val: allegDich, set: setAllegDich, icon: "", fake: "dichiarazione_vendita.pdf" }] as any[]).map(f => (
+        {[
+          { key: "doc", label: "Documento di Identità *", val: allegDoc, set: setAllegDoc },
+          { key: "dich", label: "Dichiarazione di Vendita (firmata) *", val: allegDich, set: setAllegDich }
+        ].map(f => (
           <div key={f.key}>
             <label className={lbl}>{f.label}</label>
-            <div onClick={() => f.set(f.val ? null : f.fake)}
-              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${f.val ? "bg-emerald-500/5 border-emerald-500/40" : "bg-white/[0.01] border-white/10 hover:border-white/20"}`}>
-              {f.val ? <><div className="text-3xl mb-2"></div><div className="text-sm text-emerald-400 font-semibold">Documento caricato</div><div className="text-xs text-slate-500 mt-1">{f.val}</div></>
-                : <><div className="text-3xl mb-2">{f.icon}</div><div className="text-sm text-slate-500">Clicca per caricare</div><div className="text-xs text-slate-600 mt-1">PDF, JPG, PNG</div></>}
+            <div className={`relative border-2 border-dashed rounded-xl transition-all ${f.val ? "bg-emerald-500/5 border-emerald-500/40" : "bg-white/[0.01] border-white/10 hover:border-white/20"}`}>
+              <input
+                type="file"
+                accept="application/pdf,image/*"
+                onChange={e => { f.set(e.target.files?.[0] || null); e.target.value = ""; }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              />
+              <div className="p-8 text-center">
+                {f.val ? (
+                  <>
+                    <div className="text-3xl mb-2">📄</div>
+                    <div className="text-sm text-emerald-400 font-semibold">File selezionato</div>
+                    <div className="text-xs text-slate-500 mt-1 truncate max-w-xs mx-auto">{f.val.name}</div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); f.set(null); }}
+                      className="mt-2 text-[10px] text-rose-400 hover:text-rose-300 relative z-20"
+                    >
+                      Rimuovi
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-3xl mb-2"><UploadCloud className="mx-auto w-10 h-10 text-slate-600" /></div>
+                    <div className="text-sm text-slate-500">Clicca per caricare</div>
+                    <div className="text-xs text-slate-600 mt-1">PDF, JPG, PNG</div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         ))}
+        {isUploading && (
+          <div className="text-center py-2">
+            <div className="text-xs text-purple-400 animate-pulse font-bold">Caricamento in corso...</div>
+          </div>
+        )}
       </div>
     );
     return null;
@@ -963,6 +1078,7 @@ export default function GestioneUsati() {
     tipoProdotto?: string; brand?: string; model?: string; capacita?: string; colore?: string;
     imei: string; prezzoAcquisto: number; gradoUsura: string; extraMargine?: { importo: number; venditore: string };
     metodoPagamento: "contanti" | "buono" | "bonifico"; iban?: string; provenienzaSubito?: boolean;
+    allegato_documento?: string | null; allegato_dichiarazione?: string | null;
   }) => {
     const modelName = [data.brand, data.model].filter(Boolean).join(" ") || "Modello non specificato";
     const now = new Date();
@@ -984,6 +1100,8 @@ export default function GestioneUsati() {
       extra_margine: data.extraMargine ? { importo: data.extraMargine.importo, venditore: data.extraMargine.venditore, confermato: false, conferma_operatore: null, conferma_date: null } : null,
       pagamento: { metodo: data.metodoPagamento, iban: data.iban || "", bonifico_effettuato: data.metodoPagamento === "bonifico" ? false : null, bonifico_operatore: null, bonifico_date: null },
       grado_usura: data.gradoUsura || "",
+      allegato_documento: data.allegato_documento || null,
+      allegato_dichiarazione: data.allegato_dichiarazione || null,
     };
     const { data: inserted, error: e } = await supabase.from("usati").insert(insertRow).select().single();
     if (e) return;
@@ -1090,67 +1208,67 @@ export default function GestioneUsati() {
           </div>
         )}
         {!loading && !error && (
-        <>
-        {/* ── Mobile card list (< sm) ──────────────────── */}
-        <div className="sm:hidden space-y-2">
-          {sorted.length === 0 ? (
-            <div className="py-16 text-center text-slate-600 text-sm">Nessun dispositivo trovato</div>
-          ) : sorted.map(d => (
-            <div key={d.id} onClick={() => setSelectedDevice(d)}
-              className="bg-white/[0.03] border border-white/5 rounded-xl px-4 py-3 cursor-pointer active:bg-white/[0.06] transition-colors">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="text-sm font-semibold text-slate-200 leading-tight">{d.model}</span>
-                <StatusBadge statusKey={d.status} />
-              </div>
-              <div className="flex items-center gap-3 text-xs text-slate-500">
-                <span className="font-mono">{d.imei.slice(0, 8)}…</span>
-                <span className="text-slate-700">·</span>
-                <span>{d.store}</span>
-                <span className="text-slate-700">·</span>
-                <span>{fmtDate(d.created_at)}</span>
-              </div>
-              <div className="flex items-center gap-4 mt-2 text-xs">
-                <div><span className="text-slate-600">Acq.</span> <span className="text-slate-300 font-semibold">{fmtEur(d.purchase_price)}</span></div>
-                <div><span className="text-slate-600">Vend.</span> {d.sale_price > 0 ? <span className="text-emerald-400 font-semibold">{fmtEur(d.sale_price)}</span> : <span className="text-slate-700">—</span>}</div>
-              </div>
+          <>
+            {/* ── Mobile card list (< sm) ──────────────────── */}
+            <div className="sm:hidden space-y-2">
+              {sorted.length === 0 ? (
+                <div className="py-16 text-center text-slate-600 text-sm">Nessun dispositivo trovato</div>
+              ) : sorted.map(d => (
+                <div key={d.id} onClick={() => setSelectedDevice(d)}
+                  className="bg-white/[0.03] border border-white/5 rounded-xl px-4 py-3 cursor-pointer active:bg-white/[0.06] transition-colors">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="text-sm font-semibold text-slate-200 leading-tight">{d.model}</span>
+                    <StatusBadge statusKey={d.status} />
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-slate-500">
+                    <span className="font-mono">{d.imei.slice(0, 8)}…</span>
+                    <span className="text-slate-700">·</span>
+                    <span>{d.store}</span>
+                    <span className="text-slate-700">·</span>
+                    <span>{fmtDate(d.created_at)}</span>
+                  </div>
+                  <div className="flex items-center gap-4 mt-2 text-xs">
+                    <div><span className="text-slate-600">Acq.</span> <span className="text-slate-300 font-semibold">{fmtEur(d.purchase_price)}</span></div>
+                    <div><span className="text-slate-600">Vend.</span> {d.sale_price > 0 ? <span className="text-emerald-400 font-semibold">{fmtEur(d.sale_price)}</span> : <span className="text-slate-700">—</span>}</div>
+                  </div>
+                </div>
+              ))}
+              <div className="pt-2 text-xs text-slate-600 text-center">{sorted.length} dispositivi mostrati</div>
             </div>
-          ))}
-          <div className="pt-2 text-xs text-slate-600 text-center">{sorted.length} dispositivi mostrati</div>
-        </div>
 
-        {/* ── Desktop table (≥ sm) ─────────────────────── */}
-        <div className="hidden sm:block rounded-xl border border-white/5 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  {[["#", "id"], ["Modello", "model"], ["IMEI", "imei"], ["Stato", "status"], ["Acquisto", "purchase_price"], ["Vendita", "sale_price"], ["Negozio", "store"], ["Data Reg.", "created_at"]].map(([l, k]) => (
-                    <th key={k} className={thCls} onClick={() => doSort(k)}>{l}{arrow(k)}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.length === 0 ? (
-                  <tr><td colSpan={8} className="py-16 text-center text-slate-600 text-sm">Nessun dispositivo trovato</td></tr>
-                ) : sorted.map(d => (
-                  <tr key={d.id} onClick={() => setSelectedDevice(d)}
-                    className="border-b border-white/[0.03] cursor-pointer hover:bg-white/[0.03] transition-colors group">
-                    <td className="px-4 py-3 text-xs text-slate-600 font-mono">#{d.id}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-slate-200 group-hover:text-white transition-colors whitespace-nowrap">{d.model}</td>
-                    <td className="px-4 py-3 text-xs font-mono text-slate-500 whitespace-nowrap">{d.imei}</td>
-                    <td className="px-4 py-3"><StatusBadge statusKey={d.status} /></td>
-                    <td className="px-4 py-3 text-sm text-slate-400 font-semibold whitespace-nowrap">{fmtEur(d.purchase_price)}</td>
-                    <td className="px-4 py-3 text-sm font-semibold whitespace-nowrap">{d.sale_price > 0 ? <span className="text-emerald-400">{fmtEur(d.sale_price)}</span> : <span className="text-slate-700">—</span>}</td>
-                    <td className="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">{d.store}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{fmtDate(d.created_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="px-4 py-3 border-t border-white/5 bg-[#161b22]/50 text-xs text-slate-600">{sorted.length} dispositivi mostrati</div>
-        </div>
-        </>
+            {/* ── Desktop table (≥ sm) ─────────────────────── */}
+            <div className="hidden sm:block rounded-xl border border-white/5 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      {[["#", "id"], ["Modello", "model"], ["IMEI", "imei"], ["Stato", "status"], ["Acquisto", "purchase_price"], ["Vendita", "sale_price"], ["Negozio", "store"], ["Data Reg.", "created_at"]].map(([l, k]) => (
+                        <th key={k} className={thCls} onClick={() => doSort(k)}>{l}{arrow(k)}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.length === 0 ? (
+                      <tr><td colSpan={8} className="py-16 text-center text-slate-600 text-sm">Nessun dispositivo trovato</td></tr>
+                    ) : sorted.map(d => (
+                      <tr key={d.id} onClick={() => setSelectedDevice(d)}
+                        className="border-b border-white/[0.03] cursor-pointer hover:bg-white/[0.03] transition-colors group">
+                        <td className="px-4 py-3 text-xs text-slate-600 font-mono">#{d.id}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-slate-200 group-hover:text-white transition-colors whitespace-nowrap">{d.model}</td>
+                        <td className="px-4 py-3 text-xs font-mono text-slate-500 whitespace-nowrap">{d.imei}</td>
+                        <td className="px-4 py-3"><StatusBadge statusKey={d.status} /></td>
+                        <td className="px-4 py-3 text-sm text-slate-400 font-semibold whitespace-nowrap">{fmtEur(d.purchase_price)}</td>
+                        <td className="px-4 py-3 text-sm font-semibold whitespace-nowrap">{d.sale_price > 0 ? <span className="text-emerald-400">{fmtEur(d.sale_price)}</span> : <span className="text-slate-700">—</span>}</td>
+                        <td className="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">{d.store}</td>
+                        <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{fmtDate(d.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="px-4 py-3 border-t border-white/5 bg-[#161b22]/50 text-xs text-slate-600">{sorted.length} dispositivi mostrati</div>
+            </div>
+          </>
         )}
 
       </div>
