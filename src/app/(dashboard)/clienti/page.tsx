@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search, Filter, RefreshCw, Users, FileText, Smartphone, Mail, Building, MapPin, X, ChevronRight, Calendar, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import { usePageView } from "@/lib/pageView";
+import { supabase } from "@/lib/supabaseClient";
 
 interface Cliente {
     id: string;
@@ -46,24 +47,32 @@ const generateMockClienti = (): Cliente[] => {
     return list;
 };
 
-const mockClienti = generateMockClienti();
+function mapRowToCliente(row: Record<string, unknown>): Cliente {
+    return {
+        id: row.id as string,
+        tipo: row.tipo as "consumer" | "business",
+        nome: row.nome as string,
+        cognome: (row.cognome as string) ?? undefined,
+        ragioneSociale: (row.ragione_sociale as string) ?? undefined,
+        cellulare: row.cellulare as string,
+        email: row.email as string,
+        cf_piva: row.cf_piva as string,
+        indirizzo: row.indirizzo as string,
+        citta: row.citta as string,
+    };
+}
 
-const getMockContratti = (clienteId: string): Contratto[] => {
-    const brands = ["FASTWEB", "VODAFONE", "WIND3", "EDISON", "ENI"];
-    const cats = ["ENERGIA", "GAS", "MOBILE", "FISSO"];
-    const stati = ["Attivato", "In Lavorazione", "Sospeso", "Annullato"];
+function mapRowToContratto(row: Record<string, unknown>): Contratto {
+    return {
+        id: row.id as string,
+        data: row.data as string,
+        brand: row.brand as string,
+        categoria: row.categoria as string,
+        stato: row.stato as string,
+    };
+}
 
-    return Array.from({ length: 3 }, (_, i) => ({
-        id: `CTR_${clienteId.split('_')[1]}_${i}`,
-        data: `${10 + i}/03/2024`,
-        brand: brands[Math.floor(Math.random() * brands.length)],
-        categoria: cats[Math.floor(Math.random() * cats.length)],
-        stato: stati[Math.floor(Math.random() * stati.length)]
-    }));
-};
-
-function ClienteDetailModal({ cliente, onClose }: { cliente: Cliente; onClose: () => void }) {
-    const contratti = getMockContratti(cliente.id);
+function ClienteDetailModal({ cliente, contratti, onClose }: { cliente: Cliente; contratti: Contratto[]; onClose: () => void }) {
 
     return (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -229,11 +238,52 @@ export default function ClientiPage() {
     const setFilterIdentifier = (v: string) => setView((p) => ({ ...p, filterIdentifier: v }));
 
     const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
+    const [clientList, setClientList] = useState<Cliente[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [contrattiForModal, setContrattiForModal] = useState<Contratto[]>([]);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            setLoadError(null);
+            setLoading(true);
+            const { data, error } = await supabase.from("clients").select("*").order("id");
+            if (cancelled) return;
+            if (error) {
+                setLoadError(error.message);
+                setClientList([]);
+            } else {
+                setClientList((data ?? []).map(mapRowToCliente));
+            }
+            setLoading(false);
+        })();
+        return () => { cancelled = true; };
+    }, []);
+
+    useEffect(() => {
+        if (!selectedCliente) {
+            setContrattiForModal([]);
+            return;
+        }
+        let cancelled = false;
+        (async () => {
+            const { data, error } = await supabase
+                .from("contracts")
+                .select("*")
+                .eq("client_id", selectedCliente.id)
+                .order("data", { ascending: false });
+            if (cancelled) return;
+            if (!error && data) setContrattiForModal(data.map(mapRowToContratto));
+            else setContrattiForModal([]);
+        })();
+        return () => { cancelled = true; };
+    }, [selectedCliente?.id]);
 
     const resetFilters = () => setView((p) => ({ ...p, ...defaultClientiView }));
 
     const filteredData = useMemo(() => {
-        return mockClienti.filter((c) => {
+        return clientList.filter((c) => {
             // 1. Quick Search (Full-text)
             if (quickSearch) {
                 const q = quickSearch.toLowerCase();
@@ -241,7 +291,7 @@ export default function ClientiPage() {
                 if (!fullString.includes(q)) return false;
             }
 
-            // 2. Advanced Filters
+            // 2. Advanced filters
             if (filterTipo !== "tutti" && c.tipo !== filterTipo) return false;
             if (filterNome && !c.nome.toLowerCase().includes(filterNome.toLowerCase())) return false;
             if (filterCognome && (!c.cognome || !c.cognome.toLowerCase().includes(filterCognome.toLowerCase()))) return false;
@@ -252,7 +302,7 @@ export default function ClientiPage() {
 
             return true;
         });
-    }, [quickSearch, filterTipo, filterNome, filterCognome, filterRagione, filterCellulare, filterEmail, filterIdentifier]);
+    }, [clientList, quickSearch, filterTipo, filterNome, filterCognome, filterRagione, filterCellulare, filterEmail, filterIdentifier]);
 
     // Pagination bounds
     const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
@@ -437,7 +487,19 @@ export default function ClientiPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {paginatedData.length > 0 ? (
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
+                                                Caricamento clienti...
+                                            </td>
+                                        </tr>
+                                    ) : loadError ? (
+                                        <tr>
+                                            <td colSpan={4} className="px-6 py-12 text-center text-rose-400">
+                                                Errore: {loadError}
+                                            </td>
+                                        </tr>
+                                    ) : paginatedData.length > 0 ? (
                                         paginatedData.map((cliente) => (
                                             <tr key={cliente.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
                                                 <td className="px-6 py-4">
@@ -576,6 +638,7 @@ export default function ClientiPage() {
             {selectedCliente && (
                 <ClienteDetailModal
                     cliente={selectedCliente}
+                    contratti={contrattiForModal}
                     onClose={() => setSelectedCliente(null)}
                 />
             )}

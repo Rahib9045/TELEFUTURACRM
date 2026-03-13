@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { cn } from "@/utils";
 import { usePageView } from "@/lib/pageView";
 import { useAuth } from "@/context/AuthContext";
 import { RotateCcw, Download, Eye, ArrowLeft } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
 
 //  Types ─
 type DocKey = "cassa" | "pos" | "ddt_w3" | "ddt_vf" | "fatture";
-type FilesMap = Record<DocKey, { name: string; size: string }[]>;
+type FileEntry = { name: string; size: string; file?: File };
+type FilesMap = Record<DocKey, FileEntry[]>;
 
-interface Attachment { name: string; cat: DocKey; }
+interface Attachment { id?: number; name: string; cat: DocKey; emessa?: boolean; file_path?: string | null; }
 interface Chiusura {
     id: number; store: string; societa: string; date: string; user: string;
     docs: Record<DocKey, number>; time: string;
@@ -18,7 +20,7 @@ interface Chiusura {
 }
 interface Fattura {
     id: number; filename: string; store: string; societa: string;
-    date: string; user: string; closureId: number; emessa: boolean;
+    date: string; user: string; closureId: number; emessa: boolean; file_path?: string | null;
 }
 
 //  Constants ─
@@ -38,29 +40,34 @@ const DOC_TYPES: { key: DocKey; label: string; icon: string; desc: string; requi
     { key: "fatture", label: "Fatture Clienti", icon: "", desc: "Fatture emesse ai clienti in giornata", required: false },
 ];
 
-const FAKE_NAMES = ["chiusura_cassa.pdf", "report_pos.pdf", "ddt_marzo.pdf", "fattura_0042.pdf", "scontrino.jpg", "estratto_conto.pdf", "registro_vendite.pdf"];
+const CHIUSURA_BUCKET = "chiusura";
 const emptyDocs = (): FilesMap => ({ cassa: [], pos: [], ddt_w3: [], ddt_vf: [], fatture: [] });
 
-//  Mock history 
-const MOCK_HISTORY: Chiusura[] = [
-    { id: 1, store: "Magliana", societa: "Telefutura", date: "2026-03-11", user: "Marco Rossi", docs: { cassa: 1, pos: 2, ddt_w3: 1, ddt_vf: 0, fatture: 3 }, time: "20:45", attachments: [{ name: "cassa_mag_1103.pdf", cat: "cassa" }, { name: "pos_mag_1.pdf", cat: "pos" }, { name: "pos_mag_2.pdf", cat: "pos" }, { name: "ddt_w3_mag.pdf", cat: "ddt_w3" }, { name: "fatt_0041.pdf", cat: "fatture" }, { name: "fatt_0042.pdf", cat: "fatture" }, { name: "fatt_0043.pdf", cat: "fatture" }] },
-    { id: 2, store: "Magliana", societa: "Telefutura 2SRL", date: "2026-03-11", user: "Marco Rossi", docs: { cassa: 1, pos: 1, ddt_w3: 0, ddt_vf: 0, fatture: 1 }, time: "20:47", attachments: [{ name: "cassa_mag_2srl.pdf", cat: "cassa" }, { name: "pos_mag_2srl.pdf", cat: "pos" }, { name: "fatt_2srl_001.pdf", cat: "fatture" }] },
-    { id: 3, store: "Collatina", societa: "Telefutura", date: "2026-03-11", user: "Luca Bianchi", docs: { cassa: 1, pos: 1, ddt_w3: 0, ddt_vf: 1, fatture: 2 }, time: "21:10", attachments: [{ name: "cassa_col.pdf", cat: "cassa" }, { name: "pos_col.pdf", cat: "pos" }, { name: "ddt_vf_col.pdf", cat: "ddt_vf" }, { name: "fatt_col_01.pdf", cat: "fatture" }, { name: "fatt_col_02.pdf", cat: "fatture" }] },
-    { id: 4, store: "Donna", societa: "Telefutura", date: "2026-03-11", user: "Sara Verdi", docs: { cassa: 1, pos: 2, ddt_w3: 1, ddt_vf: 1, fatture: 4 }, time: "20:30", attachments: [{ name: "cassa_don.pdf", cat: "cassa" }, { name: "pos_don_1.pdf", cat: "pos" }, { name: "pos_don_2.pdf", cat: "pos" }, { name: "ddt_w3_don.pdf", cat: "ddt_w3" }, { name: "ddt_vf_don.pdf", cat: "ddt_vf" }, { name: "fatt_don_01.pdf", cat: "fatture" }, { name: "fatt_don_02.pdf", cat: "fatture" }, { name: "fatt_don_03.pdf", cat: "fatture" }, { name: "fatt_don_04.pdf", cat: "fatture" }] },
-    { id: 5, store: "Donna", societa: "Telefutura 2SRL", date: "2026-03-11", user: "Sara Verdi", docs: { cassa: 1, pos: 1, ddt_w3: 1, ddt_vf: 1, fatture: 2 }, time: "20:32", attachments: [{ name: "cassa_don_2srl.pdf", cat: "cassa" }, { name: "pos_don_2srl.pdf", cat: "pos" }, { name: "ddt_w3_don_2srl.pdf", cat: "ddt_w3" }, { name: "ddt_vf_don_2srl.pdf", cat: "ddt_vf" }, { name: "fatt_don_2srl_01.pdf", cat: "fatture" }, { name: "fatt_don_2srl_02.pdf", cat: "fatture" }] },
-    { id: 6, store: "Libia", societa: "Telefutura", date: "2026-03-10", user: "Antonio Esposito", docs: { cassa: 1, pos: 1, ddt_w3: 1, ddt_vf: 0, fatture: 1 }, time: "21:00", attachments: [{ name: "cassa_lib.pdf", cat: "cassa" }, { name: "pos_lib.pdf", cat: "pos" }, { name: "ddt_w3_lib.pdf", cat: "ddt_w3" }, { name: "fatt_lib_01.pdf", cat: "fatture" }] },
-    { id: 7, store: "Mazzini", societa: "Telefutura", date: "2026-03-10", user: "Giulia Neri", docs: { cassa: 1, pos: 2, ddt_w3: 0, ddt_vf: 1, fatture: 5 }, time: "20:55", attachments: [{ name: "cassa_maz_10.pdf", cat: "cassa" }, { name: "pos_maz_10_1.pdf", cat: "pos" }, { name: "pos_maz_10_2.pdf", cat: "pos" }, { name: "ddt_vf_maz.pdf", cat: "ddt_vf" }, { name: "fatt_maz_01.pdf", cat: "fatture" }, { name: "fatt_maz_02.pdf", cat: "fatture" }, { name: "fatt_maz_03.pdf", cat: "fatture" }, { name: "fatt_maz_04.pdf", cat: "fatture" }, { name: "fatt_maz_05.pdf", cat: "fatture" }] },
-    { id: 8, store: "San Paolo", societa: "Telefutura 2SRL", date: "2026-03-10", user: "Federico Conti", docs: { cassa: 1, pos: 1, ddt_w3: 1, ddt_vf: 0, fatture: 2 }, time: "20:57", attachments: [{ name: "cassa_sp_2srl.pdf", cat: "cassa" }, { name: "pos_sp_2srl.pdf", cat: "pos" }, { name: "ddt_w3_sp.pdf", cat: "ddt_w3" }, { name: "fatt_sp_01.pdf", cat: "fatture" }, { name: "fatt_sp_02.pdf", cat: "fatture" }] },
-    { id: 9, store: "Acilia", societa: "Telefutura", date: "2026-03-09", user: "Eloise Blanc", docs: { cassa: 1, pos: 1, ddt_w3: 1, ddt_vf: 1, fatture: 2 }, time: "20:20", attachments: [{ name: "cassa_aci.pdf", cat: "cassa" }, { name: "pos_aci.pdf", cat: "pos" }, { name: "ddt_w3_aci.pdf", cat: "ddt_w3" }, { name: "ddt_vf_aci.pdf", cat: "ddt_vf" }, { name: "fatt_aci_01.pdf", cat: "fatture" }, { name: "fatt_aci_02.pdf", cat: "fatture" }] },
-    { id: 10, store: "Garbatella", societa: "Telefutura", date: "2026-03-09", user: "Lorenzo Ricci", docs: { cassa: 1, pos: 2, ddt_w3: 1, ddt_vf: 1, fatture: 3 }, time: "21:05", attachments: [{ name: "cassa_gar.pdf", cat: "cassa" }, { name: "pos_gar_1.pdf", cat: "pos" }, { name: "pos_gar_2.pdf", cat: "pos" }, { name: "ddt_w3_gar.pdf", cat: "ddt_w3" }, { name: "ddt_vf_gar.pdf", cat: "ddt_vf" }, { name: "fatt_gar_01.pdf", cat: "fatture" }, { name: "fatt_gar_02.pdf", cat: "fatture" }, { name: "fatt_gar_03.pdf", cat: "fatture" }] },
-];
+function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+function getChiusuraPublicUrl(filePath: string): string {
+    const { data } = supabase.storage.from(CHIUSURA_BUCKET).getPublicUrl(filePath);
+    return data.publicUrl;
+}
+
+function buildChiusuraFromRows(rows: { id: number; store: string; societa: string; date: string; user: string; time: string; attachments: { id: number; name: string; cat: string; emessa: boolean; file_path?: string | null }[] }[]): Chiusura[] {
+    return rows.map(r => {
+        const attachments: Attachment[] = r.attachments.map(a => ({ id: a.id, name: a.name, cat: a.cat as DocKey, emessa: a.emessa, file_path: a.file_path }));
+        const docs: Record<DocKey, number> = { cassa: 0, pos: 0, ddt_w3: 0, ddt_vf: 0, fatture: 0 };
+        attachments.forEach(a => { if (docs[a.cat] !== undefined) docs[a.cat]++; });
+        return { id: r.id, store: r.store, societa: r.societa, date: r.date, user: r.user, docs, time: r.time, attachments };
+    });
+}
 
 function buildFatture(history: Chiusura[]): Fattura[] {
-    let id = 1;
     const list: Fattura[] = [];
     history.forEach(row => {
         row.attachments.filter(a => a.cat === "fatture").forEach(att => {
-            list.push({ id: id++, filename: att.name, store: row.store, societa: row.societa, date: row.date, user: row.user, closureId: row.id, emessa: Math.random() > 0.55 });
+            list.push({ id: att.id ?? 0, filename: att.name, store: row.store, societa: row.societa, date: row.date, user: row.user, closureId: row.id, emessa: att.emessa ?? false, file_path: att.file_path });
         });
     });
     return list;
@@ -98,11 +105,25 @@ function SocietaBlock({ societa, files, setFiles }: { societa: string; files: Fi
     const totalFiles = Object.values(files).reduce((a, b) => a + b.length, 0);
     const mandatoryFilled = (["cassa", "pos"] as DocKey[]).filter(k => files[k].length > 0).length;
     const progressPct = (mandatoryFilled / 2) * 100;
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const pendingKeyRef = useRef<DocKey | null>(null);
 
-    const handleFile = (key: DocKey) => {
-        const name = FAKE_NAMES[Math.floor(Math.random() * FAKE_NAMES.length)];
-        const size = Math.floor(Math.random() * 900 + 100) + "KB";
-        setFiles(prev => { const c = { ...prev, [key]: [...prev[key], { name, size }] }; return c; });
+    const handleAddClick = (key: DocKey) => {
+        pendingKeyRef.current = key;
+        fileInputRef.current?.click();
+    };
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const key = pendingKeyRef.current;
+        pendingKeyRef.current = null;
+        const selected = e.target.files;
+        e.target.value = "";
+        if (!key || !selected?.length) return;
+        const toAdd: FileEntry[] = [];
+        for (let i = 0; i < selected.length; i++) {
+            const file = selected[i];
+            toAdd.push({ name: file.name, size: formatFileSize(file.size), file });
+        }
+        setFiles(prev => ({ ...prev, [key]: [...prev[key], ...toAdd] }));
     };
     const removeFile = (key: DocKey, i: number) => {
         setFiles(prev => { const c = { ...prev, [key]: prev[key].filter((_, j) => j !== i) }; return c; });
@@ -110,6 +131,14 @@ function SocietaBlock({ societa, files, setFiles }: { societa: string; files: Fi
 
     return (
         <div className="rounded-2xl border-2 overflow-hidden" style={{ borderColor: color + "60" }}>
+            <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*"
+                className="hidden"
+                onChange={handleFileChange}
+            />
             <div className="px-4 py-3 flex items-center justify-between" style={{ background: color + "10", borderBottom: `1px solid ${color}30` }}>
                 <div className="flex items-center gap-3">
                     <div className="w-3 h-3 rounded-full" style={{ background: color }} />
@@ -142,10 +171,10 @@ function SocietaBlock({ societa, files, setFiles }: { societa: string; files: Fi
                             <div key={i} className="flex items-center gap-2 bg-black/30 rounded-lg px-2 py-1 mb-1">
                                 <span className="text-[10px] text-slate-500"></span>
                                 <span className="text-[11px] text-slate-300 flex-1 truncate font-medium">{f.name}</span>
-                                <button onClick={() => removeFile(dt.key, i)} className="text-red-400 hover:text-red-300 text-xs ml-1"></button>
+                                <button type="button" onClick={() => removeFile(dt.key, i)} className="text-red-400 hover:text-red-300 text-xs ml-1 font-bold" aria-label="Rimuovi">×</button>
                             </div>
                         ))}
-                        <button onClick={() => handleFile(dt.key)} className="mt-1.5 w-full py-1.5 rounded-lg border border-dashed border-white/10 text-xs text-slate-500 font-semibold hover:border-white/20 hover:text-slate-300 transition-all">
+                        <button type="button" onClick={() => handleAddClick(dt.key)} className="mt-1.5 w-full py-1.5 rounded-lg border border-dashed border-white/10 text-xs text-slate-500 font-semibold hover:border-white/20 hover:text-slate-300 transition-all">
                             + Allega
                         </button>
                     </div>
@@ -156,7 +185,7 @@ function SocietaBlock({ societa, files, setFiles }: { societa: string; files: Fi
 }
 
 //  VistaInvio 
-function VistaInvio({ onClose }: { onClose: () => void }) {
+function VistaInvio({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () => void }) {
     type SocState = { active: boolean; files: FilesMap; note: string };
     const initState = (): Record<string, SocState> => {
         const s: Record<string, SocState> = {};
@@ -165,7 +194,10 @@ function VistaInvio({ onClose }: { onClose: () => void }) {
     };
     const [state, setState] = useState(initState);
     const [sent, setSent] = useState(false);
-    const today = new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const [sending, setSending] = useState(false);
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const timeStr = now.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
 
     const toggleSocieta = (soc: string) => {
         setState(prev => {
@@ -191,7 +223,53 @@ function VistaInvio({ onClose }: { onClose: () => void }) {
         return null;
     };
     const [validErr, setValidErr] = useState<string | null>(null);
-    const handleSend = () => { const err = validate(); if (err) { setValidErr(err); return; } setSent(true); };
+    const handleSend = async () => {
+        const err = validate();
+        if (err) { setValidErr(err); return; }
+        setSending(true);
+        setValidErr(null);
+        const store = "Magliana";
+        const user = "Marco Rossi";
+        const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9._-]/g, "_");
+        try {
+            for (const soc of activeSoc) {
+                const { data: inserted, error: e1 } = await supabase.from("chiusura").insert({ store, societa: soc, date: today, user, time: timeStr }).select("id").single();
+                if (e1) throw new Error(e1.message);
+                const chiusuraId = (inserted as { id: number }).id;
+                const files = state[soc].files;
+                for (const key of ["cassa", "pos", "ddt_w3", "ddt_vf", "fatture"] as DocKey[]) {
+                    for (const f of files[key]) {
+                        let file_path: string | null = null;
+                        if (f.file) {
+                            const ext = f.name.includes(".") ? "" : (f.file.type === "application/pdf" ? ".pdf" : "");
+                            const path = `${chiusuraId}/${Date.now()}_${sanitize(f.name)}${ext}`;
+                            const { error: upErr } = await supabase.storage.from(CHIUSURA_BUCKET).upload(path, f.file, {
+                                contentType: f.file.type || "application/octet-stream",
+                                upsert: false,
+                            });
+                            if (upErr) throw new Error(upErr.message);
+                            file_path = path;
+                        }
+                        const { error: e2 } = await supabase.from("chiusura_attachments").insert({
+                            chiusura_id: chiusuraId,
+                            name: f.name,
+                            cat: key,
+                            size: f.size,
+                            file_path,
+                            emessa: key === "fatture" ? false : undefined,
+                        });
+                        if (e2) throw new Error(e2.message);
+                    }
+                }
+            }
+            onSuccess?.();
+            setSent(true);
+        } catch (e) {
+            setValidErr(e instanceof Error ? e.message : "Errore durante l\'invio");
+        } finally {
+            setSending(false);
+        }
+    };
 
     if (sent) return (
         <div className="fixed inset-0 z-[100] bg-[#0d1117] flex items-center justify-center">
@@ -219,16 +297,16 @@ function VistaInvio({ onClose }: { onClose: () => void }) {
                         <p className="text-xs text-slate-500 hidden sm:block">Seleziona la società e allega i documenti</p>
                     </div>
                 </div>
-                <button onClick={handleSend} disabled={totalAllFiles === 0}
+                <button onClick={handleSend} disabled={totalAllFiles === 0 || sending}
                     className={cn("flex items-center gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-sm font-bold transition-all",
-                        totalAllFiles === 0 ? "bg-white/5 text-slate-600 cursor-not-allowed border border-white/5" : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30")}>
-                    Invia {totalAllFiles > 0 ? `(${totalAllFiles})` : ""}
+                        totalAllFiles === 0 || sending ? "bg-white/5 text-slate-600 cursor-not-allowed border border-white/5" : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30")}>
+                    {sending ? "Invio..." : `Invia ${totalAllFiles > 0 ? `(${totalAllFiles})` : ""}`}
                 </button>
             </div>
 
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
                 <div className="flex gap-3 flex-wrap">
-                    {[["Data", today], ["Negozio", "Magliana"], ["Operatore", "Marco Rossi"]].map(([l, v]) => (
+                    {[["Data", new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" })], ["Negozio", "Magliana"], ["Operatore", "Marco Rossi"]].map(([l, v]) => (
                         <div key={l} className="flex-1 min-w-28 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5">
                             <div className="text-[10px] text-slate-500 uppercase font-semibold tracking-wide mb-1">{l}</div>
                             <div className="text-sm font-bold text-white">{v}</div>
@@ -286,15 +364,17 @@ function VistaInvio({ onClose }: { onClose: () => void }) {
 }
 
 //  VistaFatture 
-function VistaFatture({ onClose, history }: { onClose: () => void; history: Chiusura[] }) {
-    const [fatture, setFatture] = useState<Fattura[]>(() => buildFatture(history));
+function VistaFatture({ onClose, history, onToggleEmessa }: { onClose: () => void; history: Chiusura[]; onToggleEmessa?: (attachmentId: number, emessa: boolean) => void | Promise<void> }) {
+    const fatture = useMemo(() => buildFatture(history), [history]);
     const [tab, setTab] = useState<"da_emettere" | "emesse">("da_emettere");
     const [fStore, setFStore] = useState("");
     const [fSoc, setFSoc] = useState("");
     const [fDateA, setFDateA] = useState("");
     const [fDateB, setFDateB] = useState("");
 
-    const toggleEmessa = (id: number) => setFatture(prev => prev.map(f => f.id === id ? { ...f, emessa: !f.emessa } : f));
+    const toggleEmessa = (id: number, currentEmessa: boolean) => {
+        onToggleEmessa?.(id, !currentEmessa);
+    };
     const countDa = fatture.filter(f => !f.emessa).length;
     const countEm = fatture.filter(f => f.emessa).length;
     const shown = fatture.filter(f => {
@@ -375,13 +455,23 @@ function VistaFatture({ onClose, history }: { onClose: () => void; history: Chiu
                                 <span className="text-xs text-slate-600">{f.date}</span>
                             </div>
                             <div className="flex gap-2 pt-1">
-                                <button className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg bg-white/5 text-blue-400 border border-white/10 text-xs font-semibold">
+                                <button
+                                    type="button"
+                                    onClick={() => f.file_path && window.open(getChiusuraPublicUrl(f.file_path), "_blank")}
+                                    disabled={!f.file_path}
+                                    className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg bg-white/5 text-blue-400 border border-white/10 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
                                     <Eye size={11} /> Apri
                                 </button>
-                                <button className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg bg-white/5 text-slate-400 border border-white/10 text-xs font-semibold">
+                                <button
+                                    type="button"
+                                    onClick={() => f.file_path && window.open(getChiusuraPublicUrl(f.file_path), "_blank")}
+                                    disabled={!f.file_path}
+                                    className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg bg-white/5 text-slate-400 border border-white/10 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
                                     <Download size={11} /> PDF
                                 </button>
-                                <button onClick={() => toggleEmessa(f.id)}
+                                <button onClick={() => toggleEmessa(f.id, f.emessa)}
                                     className={cn("flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-bold", f.emessa ? "bg-amber-500/10 text-amber-400 border border-amber-500/30" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30")}>
                                     {f.emessa ? " Riapri" : " Emessa"}
                                 </button>
@@ -421,9 +511,9 @@ function VistaFatture({ onClose, history }: { onClose: () => void; history: Chiu
                                     </td>
                                     <td className="px-4 py-3">
                                         <div className="flex gap-1.5">
-                                            <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 text-blue-400 border border-white/10 text-xs font-semibold hover:bg-white/10"><Eye size={11} /> Apri</button>
-                                            <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 text-slate-400 border border-white/10 text-xs font-semibold hover:bg-white/10"><Download size={11} /> PDF</button>
-                                            <button onClick={() => toggleEmessa(f.id)}
+                                            <button type="button" onClick={() => f.file_path && window.open(getChiusuraPublicUrl(f.file_path), "_blank")} disabled={!f.file_path} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 text-blue-400 border border-white/10 text-xs font-semibold hover:bg-white/10 disabled:opacity-50"><Eye size={11} /> Apri</button>
+                                            <button type="button" onClick={() => f.file_path && window.open(getChiusuraPublicUrl(f.file_path), "_blank")} disabled={!f.file_path} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 text-slate-400 border border-white/10 text-xs font-semibold hover:bg-white/10 disabled:opacity-50"><Download size={11} /> PDF</button>
+                                            <button onClick={() => toggleEmessa(f.id, f.emessa)}
                                                 className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold", f.emessa ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20")}>
                                                 {f.emessa ? " Riapri" : " Segna Emessa"}
                                             </button>
@@ -457,7 +547,7 @@ function VistaGestione({ isAdmin, userStore, history }: { isAdmin: boolean; user
     }), [baseData, fStore, fSoc, fDateA, fDateB]);
 
     const today = new Date().toISOString().split("T")[0];
-    const todayRows = baseData.filter(r => r.date === today || r.date === "2026-03-11");
+    const todayRows = baseData.filter(r => r.date === today);
     const storesWithClosures = new Set(todayRows.map(r => r.store));
     const missingCount = NEGOZI.length - storesWithClosures.size;
     const hasFilters = !!(fStore || fSoc || fDateA || fDateB);
@@ -547,7 +637,11 @@ function VistaGestione({ isAdmin, userStore, history }: { isAdmin: boolean; user
                                                 <div key={i} className="flex items-center gap-2 bg-black/20 rounded-lg px-2 py-1 mb-1">
                                                     <span className="text-blue-400 text-xs"></span>
                                                     <span className="text-[11px] text-slate-300 flex-1 truncate">{att.name}</span>
-                                                    <button className="text-[10px] text-blue-400 font-semibold"></button>
+                                                    {att.file_path ? (
+                                                        <button type="button" onClick={() => window.open(getChiusuraPublicUrl(att.file_path!), "_blank")} className="text-[10px] text-blue-400 font-semibold hover:text-blue-300">Apri</button>
+                                                    ) : (
+                                                        <span className="text-[10px] text-slate-600">—</span>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
@@ -612,7 +706,11 @@ function VistaGestione({ isAdmin, userStore, history }: { isAdmin: boolean; user
                                                                         <div key={i} className="flex items-center gap-2 bg-black/20 rounded-lg px-2 py-1 mb-1">
                                                                             <span className="text-blue-400 text-xs"></span>
                                                                             <span className="text-[11px] text-slate-300 flex-1 truncate">{att.name}</span>
-                                                                            <button className="flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300 font-semibold"><Download size={10} /></button>
+                                                                            {att.file_path ? (
+                                                                                <button type="button" onClick={() => window.open(getChiusuraPublicUrl(att.file_path!), "_blank")} className="flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300 font-semibold"><Download size={10} /> Scarica</button>
+                                                                            ) : (
+                                                                                <span className="text-[10px] text-slate-600">—</span>
+                                                                            )}
                                                                         </div>
                                                                     ))}
                                                                 </div>
@@ -638,10 +736,50 @@ export default function ChiusuraNegozio() {
     const { user } = useAuth();
     const isAdmin = user?.role === "admin";
     const userStore = "Magliana";
-    const [history] = useState<Chiusura[]>(MOCK_HISTORY);
+    const [history, setHistory] = useState<Chiusura[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [view, setView] = usePageView<{ overlay: "invio" | "fatture" | null }>("chiusura", { overlay: null });
     const overlay = view.overlay;
     const setOverlay = (v: "invio" | "fatture" | null) => setView((prev) => ({ ...prev, overlay: v }));
+
+    const fetchHistory = useCallback(async () => {
+        const { data: closures, error: e1 } = await supabase.from("chiusura").select("id, store, societa, date, user, time").order("created_at", { ascending: false });
+        if (e1) {
+            setLoadError(e1.message);
+            setHistory([]);
+            setLoading(false);
+            return;
+        }
+        const list = (closures ?? []) as { id: number; store: string; societa: string; date: string; user: string; time: string }[];
+        if (list.length === 0) {
+            setHistory([]);
+            setLoading(false);
+            return;
+        }
+        const ids = list.map((c) => c.id);
+        const { data: atts, error: e2 } = await supabase.from("chiusura_attachments").select("id, chiusura_id, name, cat, emessa, file_path").in("chiusura_id", ids);
+        if (e2) {
+            setLoadError(e2.message);
+            setHistory([]);
+            setLoading(false);
+            return;
+        }
+        const attList = (atts ?? []) as { id: number; chiusura_id: number; name: string; cat: string; emessa: boolean; file_path?: string | null }[];
+        const byClosure: Record<number, { id: number; name: string; cat: string; emessa: boolean; file_path?: string | null }[]> = {};
+        attList.forEach((a) => {
+            if (!byClosure[a.chiusura_id]) byClosure[a.chiusura_id] = [];
+            byClosure[a.chiusura_id].push({ id: a.id, name: a.name, cat: a.cat, emessa: a.emessa, file_path: a.file_path });
+        });
+        const rows = list.map((c) => ({ ...c, attachments: byClosure[c.id] ?? [] }));
+        setHistory(buildChiusuraFromRows(rows));
+        setLoadError(null);
+        setLoading(false);
+    }, []);
+
+    useEffect(() => {
+        fetchHistory();
+    }, [fetchHistory]);
 
     return (
         <div className="-m-4 sm:-m-6 md:-m-8 bg-[#0d1117] text-white" style={{ overflowX: "hidden" }}>
@@ -667,11 +805,24 @@ export default function ChiusuraNegozio() {
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-                <VistaGestione isAdmin={isAdmin} userStore={userStore} history={history} />
+                {loadError && (
+                    <div className="mb-4 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm">{loadError}</div>
+                )}
+                {loading ? (
+                    <div className="py-12 text-center text-slate-400">Caricamento...</div>
+                ) : (
+                    <VistaGestione isAdmin={isAdmin} userStore={userStore} history={history} />
+                )}
             </div>
 
-            {overlay === "invio" && <VistaInvio onClose={() => setOverlay(null)} />}
-            {overlay === "fatture" && <VistaFatture onClose={() => setOverlay(null)} history={history} />}
+            {overlay === "invio" && <VistaInvio onClose={() => setOverlay(null)} onSuccess={fetchHistory} />}
+            {overlay === "fatture" && <VistaFatture onClose={() => setOverlay(null)} history={history} onToggleEmessa={async (attachmentId, emessa) => {
+                await supabase.from("chiusura_attachments").update({ emessa }).eq("id", attachmentId);
+                setHistory((prev) => prev.map((c) => ({
+                    ...c,
+                    attachments: c.attachments.map((a) => (a.id === attachmentId ? { ...a, emessa } : a)),
+                })));
+            }} />}
         </div>
     );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
     Folder,
     FileText,
@@ -22,6 +22,7 @@ import {
     PhoneCall
 } from "lucide-react";
 import { cn } from "@/utils";
+import { supabase } from "@/lib/supabaseClient";
 
 /* ─── BRAND CONFIG ─── */
 const BRANDS = [
@@ -93,98 +94,9 @@ const CATEGORIES = [
     { id: "operativa", name: "Documentazione Operativa", icon: FileText, desc: "Procedure, guide e manuali" },
 ];
 
-/* ─── MOCK DOCUMENTS ─── */
-const MOCK_DOCS: Record<string, Record<string, any[]>> = {
-    windtre: {
-        canvass: [
-            { id: 1, name: "Canvass Consumer Marzo 2026", type: "pdf", size: "2.4 MB", date: "01/03/2026", fillable: false },
-            { id: 2, name: "Canvass Business Marzo 2026", type: "pdf", size: "3.1 MB", date: "01/03/2026", fillable: false },
-            { id: 3, name: "Listino Accessori Q1 2026", type: "pdf", size: "1.8 MB", date: "15/01/2026", fillable: false },
-        ],
-        modulistica: [
-            { id: 4, name: "Modulo Recesso", type: "pdf", size: "180 KB", date: "10/02/2026", fillable: true },
-            { id: 5, name: "Modulo Cambio Intestatario", type: "pdf", size: "210 KB", date: "10/02/2026", fillable: true },
-            { id: 6, name: "Modulo Reclamo", type: "pdf", size: "150 KB", date: "05/01/2026", fillable: true },
-        ],
-        operativa: [
-            { id: 7, name: "Guida Attivazione MNP", type: "pdf", size: "850 KB", date: "20/02/2026", fillable: false },
-            { id: 8, name: "Procedura Verifica Credito", type: "pdf", size: "420 KB", date: "15/02/2026", fillable: false },
-            { id: 9, name: "Manuale CRM Agenti", type: "pdf", size: "5.2 MB", date: "01/01/2026", fillable: false },
-        ],
-    },
-    vodafone_fastweb: {
-        canvass: [
-            { id: 10, name: "Canvass Vodafone Consumer Marzo 2026", type: "pdf", size: "2.8 MB", date: "01/03/2026", fillable: false },
-            { id: 11, name: "Canvass Fastweb Casa Marzo 2026", type: "pdf", size: "1.9 MB", date: "01/03/2026", fillable: false },
-        ],
-        modulistica: [
-            { id: 12, name: "Modulo Migrazione Vodafone-Fastweb", type: "pdf", size: "290 KB", date: "15/02/2026", fillable: true },
-            { id: 13, name: "Modulo SDD Bancario", type: "pdf", size: "175 KB", date: "10/01/2026", fillable: true },
-        ],
-        operativa: [
-            { id: 14, name: "Guida Convergenza Fisso-Mobile", type: "pdf", size: "1.1 MB", date: "01/02/2026", fillable: false },
-            { id: 15, name: "Troubleshooting Linea Fissa", type: "pdf", size: "680 KB", date: "20/01/2026", fillable: false },
-        ],
-    },
-    sky: {
-        canvass: [
-            { id: 16, name: "Canvass Sky TV Marzo 2026", type: "pdf", size: "3.5 MB", date: "01/03/2026", fillable: false },
-            { id: 17, name: "Canvass Sky WiFi Marzo 2026", type: "pdf", size: "2.0 MB", date: "01/03/2026", fillable: false },
-        ],
-        modulistica: [
-            { id: 18, name: "Modulo Attivazione Sky Q", type: "pdf", size: "320 KB", date: "01/02/2026", fillable: true },
-            { id: 19, name: "Modulo Recesso Sky", type: "pdf", size: "190 KB", date: "15/01/2026", fillable: true },
-        ],
-        operativa: [
-            { id: 20, name: "Guida Installazione Sky Glass", type: "pdf", size: "4.2 MB", date: "01/03/2026", fillable: false },
-        ],
-    },
-    energia: {
-        canvass: [
-            { id: 21, name: "Canvass Luce Marzo 2026", type: "pdf", size: "1.6 MB", date: "01/03/2026", fillable: false },
-            { id: 22, name: "Canvass Gas Marzo 2026", type: "pdf", size: "1.4 MB", date: "01/03/2026", fillable: false },
-        ],
-        modulistica: [
-            { id: 23, name: "Modulo Voltura", type: "pdf", size: "250 KB", date: "10/02/2026", fillable: true },
-            { id: 24, name: "Modulo Subentro", type: "pdf", size: "230 KB", date: "10/02/2026", fillable: true },
-        ],
-        operativa: [
-            { id: 25, name: "Guida Lettura Bolletta", type: "pdf", size: "980 KB", date: "01/01/2026", fillable: false },
-        ],
-    },
-    tim: {
-        canvass: [
-            { id: 26, name: "Canvass Tim Mobile Marzo 2026", type: "pdf", size: "2.1 MB", date: "01/03/2026", fillable: false },
-        ],
-        modulistica: [
-            { id: 27, name: "Modulo Portabilità Tim", type: "pdf", size: "220 KB", date: "10/02/2026", fillable: true },
-        ],
-        operativa: [
-            { id: 28, name: "Guida Attivazione Tim Fibra", type: "pdf", size: "1.3 MB", date: "15/02/2026", fillable: false },
-        ],
-    },
-    iliad: {
-        canvass: [
-            { id: 29, name: "Canvass Iliad Mobile Marzo 2026", type: "pdf", size: "1.9 MB", date: "01/03/2026", fillable: false },
-        ],
-        modulistica: [
-            { id: 30, name: "Modulo Portabilità Iliad", type: "pdf", size: "210 KB", date: "08/02/2026", fillable: true },
-        ],
-        operativa: [
-            { id: 31, name: "Guida Gestione Offerte Iliad", type: "pdf", size: "890 KB", date: "20/02/2026", fillable: false },
-        ],
-    },
-};
-
 /* ─── HELPERS ─── */
 function getBrand(id: string) { return BRANDS.find(b => b.id === id); }
 function getCat(id: string) { return CATEGORIES.find(c => c.id === id); }
-function getDocs(brandId: string, catId: string) { return (MOCK_DOCS[brandId] && MOCK_DOCS[brandId][catId]) || []; }
-function getTotalDocs(brandId: string) {
-    let total = 0;
-    CATEGORIES.forEach(c => { total += getDocs(brandId, c.id).length; });
-    return total;
-}
 
 const DOC_VIEW_KEY = "crm-view-documentazione";
 
@@ -202,10 +114,64 @@ function readDocViewFromStorage(): { brandId: string | null; catId: string | nul
     }
 }
 
+type DocEntry = { id: number; name: string; type: string; size: string; date: string; fillable: boolean; file_path?: string | null };
+
+function formatBytes(bytes: number): string {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+function formatDateForDoc(d: Date): string {
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+}
+
 export default function DocumentazionePage() {
     const [view, setView] = useState<{ brandId: string | null; catId: string | null }>({ brandId: null, catId: null });
     const didRestore = useRef(false);
     const skipNextSave = useRef(true);
+    const [docList, setDocList] = useState<{ id: number; brand_id: string; category_id: string; name: string; type: string; size: string | null; date: string | null; fillable: boolean; file_path?: string | null }[]>([]);
+
+    const fetchDocs = useCallback(async () => {
+        const { data, error } = await supabase.from("documentation").select("id, brand_id, category_id, name, type, size, date, fillable, file_path").order("brand_id").order("category_id");
+        if (!error && data) setDocList(data as typeof docList);
+    }, []);
+
+    useEffect(() => {
+        fetchDocs();
+    }, [fetchDocs]);
+
+    const docsByBrandCategory = useMemo(() => {
+        const m: Record<string, Record<string, DocEntry[]>> = {};
+        docList.forEach((d) => {
+            if (!m[d.brand_id]) m[d.brand_id] = {};
+            if (!m[d.brand_id][d.category_id]) m[d.brand_id][d.category_id] = [];
+            m[d.brand_id][d.category_id].push({
+                id: d.id,
+                name: d.name,
+                type: d.type,
+                size: d.size ?? "",
+                date: d.date ?? "",
+                fillable: d.fillable,
+                file_path: d.file_path ?? undefined,
+            });
+        });
+        return m;
+    }, [docList]);
+
+    function getDocPublicUrl(filePath: string): string {
+        const { data } = supabase.storage.from("documentation").getPublicUrl(filePath);
+        return data.publicUrl;
+    }
+
+    const getDocs = useCallback((brandId: string, catId: string) => (docsByBrandCategory[brandId]?.[catId] ?? []), [docsByBrandCategory]);
+    const getTotalDocs = useCallback((brandId: string) => {
+        let total = 0;
+        CATEGORIES.forEach((c) => { total += (docsByBrandCategory[brandId]?.[c.id]?.length ?? 0); });
+        return total;
+    }, [docsByBrandCategory]);
 
     useEffect(() => {
         if (didRestore.current) return;
@@ -230,10 +196,19 @@ export default function DocumentazionePage() {
     const catId = view.catId && CATEGORIES.some((c) => c.id === view.catId) ? view.catId : null;
 
     const [isAdmin, setIsAdmin] = useState(false);
-    const [previewDoc, setPreviewDoc] = useState<any>(null);
-    const [fillDoc, setFillDoc] = useState<any>(null);
+    const [previewDoc, setPreviewDoc] = useState<DocEntry | null>(null);
+    const [fillDoc, setFillDoc] = useState<DocEntry | null>(null);
     const [showUpload, setShowUpload] = useState(false);
-    const [adminAct, setAdminAct] = useState<{ doc: any, action: string } | null>(null);
+    const [adminAct, setAdminAct] = useState<{ doc: DocEntry; action: string } | null>(null);
+
+    const [uploadName, setUploadName] = useState("");
+    const [uploadCategory, setUploadCategory] = useState("");
+    const [uploadFillable, setUploadFillable] = useState(false);
+    const [uploadFile, setUploadFile] = useState<File | null>(null);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [renameValue, setRenameValue] = useState("");
 
     const brand = brandId ? getBrand(brandId) : null;
     const cat = catId ? getCat(catId) : null;
@@ -415,7 +390,14 @@ export default function DocumentazionePage() {
                             </div>
                             {isAdmin && (
                                 <button
-                                    onClick={() => setShowUpload(true)}
+                                    onClick={() => {
+                                        setUploadCategory(catId ?? "");
+                                        setUploadName("");
+                                        setUploadFillable(false);
+                                        setUploadFile(null);
+                                        setUploadError(null);
+                                        setShowUpload(true);
+                                    }}
                                     className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold inline-flex items-center gap-2 transition-colors"
                                 >
                                     <Plus className="w-4 h-4" />
@@ -473,8 +455,10 @@ export default function DocumentazionePage() {
                                                             <Eye className="w-4 h-4" />
                                                         </button>
                                                         <button
-                                                            className="p-1.5 hover:bg-white/10 rounded-lg text-slate-300 hover:text-white transition-colors tooltip-trigger"
-                                                            title="Scarica"
+                                                            onClick={() => doc.file_path && window.open(getDocPublicUrl(doc.file_path), "_blank", "noopener")}
+                                                            disabled={!doc.file_path}
+                                                            className="p-1.5 hover:bg-white/10 rounded-lg text-slate-300 hover:text-white transition-colors tooltip-trigger disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            title={doc.file_path ? "Scarica" : "Nessun file"}
                                                         >
                                                             <Download className="w-4 h-4" />
                                                         </button>
@@ -490,7 +474,7 @@ export default function DocumentazionePage() {
                                                         {isAdmin && (
                                                             <div className="flex items-center ml-2 border-l border-white/10 pl-2 gap-1">
                                                                 <button
-                                                                    onClick={() => setAdminAct({ doc, action: "rename" })}
+                                                                    onClick={() => { setAdminAct({ doc, action: "rename" }); setRenameValue(doc.name); }}
                                                                     className="p-1.5 hover:bg-amber-500/20 rounded-lg text-amber-500 transition-colors"
                                                                     title="Rinomina"
                                                                 >
@@ -533,14 +517,22 @@ export default function DocumentazionePage() {
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <div className="p-6 flex-1 overflow-auto bg-[#0a0a0f] flex flex-col items-center justify-center rounded-b-2xl">
-                            <div className="w-full h-full min-h-[500px] border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center text-slate-500 gap-4">
-                                <Eye className="w-12 h-12 opacity-50" />
-                                <div className="text-center">
-                                    <p className="font-bold text-white mb-1">Integrazione in corso</p>
-                                    <p className="text-sm">Qui verrà renderizzato il PDF con `react-pdf`</p>
+                        <div className="p-6 flex-1 overflow-auto bg-[#0a0a0f] flex flex-col rounded-b-2xl min-h-[500px]">
+                            {previewDoc.file_path ? (
+                                <iframe
+                                    src={getDocPublicUrl(previewDoc.file_path)}
+                                    title={previewDoc.name}
+                                    className="w-full flex-1 min-h-[500px] rounded-xl border border-white/10 bg-white"
+                                />
+                            ) : (
+                                <div className="w-full h-full min-h-[500px] border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center text-slate-500 gap-4">
+                                    <Eye className="w-12 h-12 opacity-50" />
+                                    <div className="text-center">
+                                        <p className="font-bold text-white mb-1">Nessun file caricato</p>
+                                        <p className="text-sm">Questo documento non ha un PDF associato. Carica un file dalla modalità Admin.</p>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -560,6 +552,15 @@ export default function DocumentazionePage() {
                             </button>
                         </div>
                         <div className="p-6 overflow-y-auto custom-scrollbar">
+                            {fillDoc.file_path && (
+                                <div className="mb-6 rounded-xl border border-white/10 overflow-hidden bg-white">
+                                    <iframe
+                                        src={getDocPublicUrl(fillDoc.file_path)}
+                                        title={fillDoc.name}
+                                        className="w-full h-[400px]"
+                                    />
+                                </div>
+                            )}
                             <div className={cn("p-4 rounded-xl border mb-6 flex items-start gap-3", brand.bg, brand.borderColor)}>
                                 <AlertCircle className={cn("w-5 h-5 shrink-0", brand.text)} />
                                 <div>
@@ -595,7 +596,12 @@ export default function DocumentazionePage() {
                                 <button onClick={() => setFillDoc(null)} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
                                     Annulla
                                 </button>
-                                <button className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-indigo-500 hover:bg-indigo-600 text-white transition-colors">
+                                <button
+                                    type="button"
+                                    onClick={() => fillDoc?.file_path && window.open(getDocPublicUrl(fillDoc.file_path), "_blank", "noopener")}
+                                    disabled={!fillDoc?.file_path}
+                                    className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-indigo-500 hover:bg-indigo-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
                                     Esporta PDF
                                 </button>
                             </div>
@@ -618,13 +624,28 @@ export default function DocumentazionePage() {
                             </button>
                         </div>
                         <div className="p-6 space-y-4">
+                            {uploadError && (
+                                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm">
+                                    {uploadError}
+                                </div>
+                            )}
                             <div className="space-y-1.5">
                                 <label className="text-xs font-semibold text-slate-400">Nome Documento</label>
-                                <input type="text" className="w-full bg-[#0f111a] border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors" placeholder="es. Canvass Consumer Aprile 2026" />
+                                <input
+                                    type="text"
+                                    value={uploadName}
+                                    onChange={e => setUploadName(e.target.value)}
+                                    className="w-full bg-[#0f111a] border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+                                    placeholder="es. Canvass Consumer Aprile 2026"
+                                />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-semibold text-slate-400">Categoria</label>
-                                <select className="w-full bg-[#0f111a] border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors appearance-none" defaultValue={catId || ""}>
+                                <select
+                                    value={uploadCategory}
+                                    onChange={e => setUploadCategory(e.target.value)}
+                                    className="w-full bg-[#0f111a] border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors appearance-none"
+                                >
                                     {CATEGORIES.map(c => (
                                         <option key={c.id} value={c.id}>{c.name}</option>
                                     ))}
@@ -632,16 +653,40 @@ export default function DocumentazionePage() {
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-semibold text-slate-400">Tipo Documento</label>
-                                <select className="w-full bg-[#0f111a] border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors appearance-none">
+                                <select
+                                    value={uploadFillable ? "fillable" : "flat"}
+                                    onChange={e => setUploadFillable(e.target.value === "fillable")}
+                                    className="w-full bg-[#0f111a] border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors appearance-none"
+                                >
                                     <option value="flat">PDF statico (sola lettura)</option>
                                     <option value="fillable">PDF compilabile (con campi)</option>
                                 </select>
                             </div>
                             <div className="space-y-1.5 pt-2">
                                 <label className="text-xs font-semibold text-slate-400">File</label>
-                                <div className="border-2 border-dashed border-white/10 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-white/[0.02] transition-colors cursor-pointer group">
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="application/pdf"
+                                    className="hidden"
+                                    onChange={e => setUploadFile(e.target.files?.[0] ?? null)}
+                                />
+                                <div
+                                    onClick={() => fileInputRef.current?.click()}
+                                    onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("border-indigo-500/50", "bg-indigo-500/5"); }}
+                                    onDragLeave={e => { e.preventDefault(); e.currentTarget.classList.remove("border-indigo-500/50", "bg-indigo-500/5"); }}
+                                    onDrop={e => {
+                                        e.preventDefault();
+                                        e.currentTarget.classList.remove("border-indigo-500/50", "bg-indigo-500/5");
+                                        const f = e.dataTransfer.files[0];
+                                        if (f?.type === "application/pdf") setUploadFile(f);
+                                    }}
+                                    className="border-2 border-dashed border-white/10 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-white/[0.02] transition-colors cursor-pointer group"
+                                >
                                     <UploadCloud className="w-10 h-10 text-slate-500 group-hover:text-indigo-400 transition-colors mb-3" />
-                                    <p className="font-semibold text-white mb-1">Trascina un file o clicca per selezionare</p>
+                                    <p className="font-semibold text-white mb-1">
+                                        {uploadFile ? uploadFile.name : "Trascina un file o clicca per selezionare"}
+                                    </p>
                                     <p className="text-xs text-slate-400">PDF, massimo 25 MB</p>
                                 </div>
                             </div>
@@ -650,8 +695,42 @@ export default function DocumentazionePage() {
                             <button onClick={() => setShowUpload(false)} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
                                 Annulla
                             </button>
-                            <button className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-indigo-500 hover:bg-indigo-600 text-white transition-colors">
-                                Carica File
+                            <button
+                                disabled={uploading || !uploadName.trim() || !uploadCategory || !uploadFile}
+                                onClick={async () => {
+                                    if (!brandId || !uploadName.trim() || !uploadCategory || !uploadFile) return;
+                                    setUploadError(null);
+                                    setUploading(true);
+                                    try {
+                                        const ext = uploadFile.name.toLowerCase().endsWith(".pdf") ? "" : ".pdf";
+                                        const safeName = uploadFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+                                        const storagePath = `${brandId}/${uploadCategory}/${Date.now()}_${safeName}${ext}`;
+                                        const { error: upErr } = await supabase.storage.from("documentation").upload(storagePath, uploadFile, { contentType: "application/pdf", upsert: false });
+                                        if (upErr) throw new Error(upErr.message);
+                                        const { error: dbErr } = await supabase.from("documentation").insert({
+                                            brand_id: brandId,
+                                            category_id: uploadCategory,
+                                            name: uploadName.trim(),
+                                            type: "pdf",
+                                            size: formatBytes(uploadFile.size),
+                                            date: formatDateForDoc(new Date()),
+                                            fillable: uploadFillable,
+                                            file_path: storagePath,
+                                        });
+                                        if (dbErr) throw new Error(dbErr.message);
+                                        await fetchDocs();
+                                        setShowUpload(false);
+                                        setUploadName("");
+                                        setUploadFile(null);
+                                    } catch (err) {
+                                        setUploadError(err instanceof Error ? err.message : "Errore durante il caricamento.");
+                                    } finally {
+                                        setUploading(false);
+                                    }
+                                }}
+                                className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-indigo-500 hover:bg-indigo-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {uploading ? "Caricamento..." : "Carica File"}
                             </button>
                         </div>
                     </div>
@@ -680,7 +759,16 @@ export default function DocumentazionePage() {
                                 <button onClick={() => setAdminAct(null)} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
                                     Annulla
                                 </button>
-                                <button className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-rose-500 hover:bg-rose-600 text-white transition-colors">
+                                <button
+                                    onClick={async () => {
+                                        const doc = adminAct.doc;
+                                        if (doc.file_path) await supabase.storage.from("documentation").remove([doc.file_path]);
+                                        await supabase.from("documentation").delete().eq("id", doc.id);
+                                        await fetchDocs();
+                                        setAdminAct(null);
+                                    }}
+                                    className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-rose-500 hover:bg-rose-600 text-white transition-colors"
+                                >
                                     Sì, Elimina
                                 </button>
                             </div>
@@ -704,13 +792,28 @@ export default function DocumentazionePage() {
                         <div className="p-6">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-semibold text-slate-400">Nuovo Nome</label>
-                                <input type="text" className="w-full bg-[#0f111a] border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors" defaultValue={adminAct.doc.name} />
+                                <input
+                                    type="text"
+                                    value={renameValue || adminAct.doc.name}
+                                    onChange={e => setRenameValue(e.target.value)}
+                                    className="w-full bg-[#0f111a] border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+                                />
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
-                                <button onClick={() => setAdminAct(null)} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+                                <button onClick={() => { setAdminAct(null); setRenameValue(""); }} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
                                     Annulla
                                 </button>
-                                <button className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-indigo-500 hover:bg-indigo-600 text-white transition-colors">
+                                <button
+                                    onClick={async () => {
+                                        const newName = (renameValue || adminAct.doc.name).trim();
+                                        if (!newName) return;
+                                        await supabase.from("documentation").update({ name: newName }).eq("id", adminAct.doc.id);
+                                        await fetchDocs();
+                                        setAdminAct(null);
+                                        setRenameValue("");
+                                    }}
+                                    className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-indigo-500 hover:bg-indigo-600 text-white transition-colors"
+                                >
                                     Salva Modifiche
                                 </button>
                             </div>

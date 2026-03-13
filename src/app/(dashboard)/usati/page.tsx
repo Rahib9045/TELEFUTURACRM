@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   Smartphone, Tablet, Laptop, Watch,
   Calendar, Search, User, Building2, CalendarDays,
@@ -10,6 +10,7 @@ import {
   TicketIcon, Paperclip, ArrowRight, ArrowLeft, RotateCcw
 } from "lucide-react";
 import { cn } from "@/utils";
+import { supabase } from "@/lib/supabaseClient";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type UsatoStatus =
@@ -131,66 +132,100 @@ const fmtEur = (v: number) => v.toLocaleString("it-IT", { style: "currency", cur
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 const genIMEI = () => { let s = "35"; for (let i = 0; i < 13; i++) s += Math.floor(Math.random() * 10); return s; };
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ─── Data layer ──────────────────────────────────────────────────────────────
 const BRANDS_FLAT = Object.entries(PHONE_BRANDS_MODELS).flatMap(([b, ms]) => ms.map(m => `${b} ${m}`));
-const statusDist = [
-  ...Array(6).fill("acquistato"), ...Array(4).fill("in_transito"), ...Array(5).fill("ricevuto"),
-  ...Array(8).fill("in_lavorazione"), ...Array(5).fill("pronto"), ...Array(4).fill("invio_in_negozio"),
-  ...Array(18).fill("in_vendita"), ...Array(14).fill("venduto"), ...Array(4).fill("ko"),
-] as UsatoStatus[];
 
-const MOCK_DEVICES: Device[] = statusDist.map((status, i) => {
-  const price = Math.round((80 + Math.random() * 720) / 10) * 10;
-  const store = NEGOZI[Math.floor(Math.random() * NEGOZI.length)];
-  const hasR = ["pronto", "invio_in_negozio", "in_vendita", "venduto"].includes(status);
-  const inLav = status === "in_lavorazione";
-  const rc = hasR ? Math.floor(Math.random() * 3) : (inLav ? 1 + Math.floor(Math.random() * 2) : 0);
-  const ricambi: Ricambio[] = []; const used = new Set<number>();
-  for (let r = 0; r < rc; r++) {
-    let idx; do { idx = Math.floor(Math.random() * RICAMBI_CATALOG.length); } while (used.has(idx)); used.add(idx);
-    const rState = hasR ? "arrivato" : (inLav ? ["in_magazzino", "da_ordinare", "ordinato", "arrivato"][Math.floor(Math.random() * 4)] : "da_ordinare") as RicambioState;
-    ricambi.push({ name: RICAMBI_CATALOG[idx], stato: rState, cost: Math.round((5 + Math.random() * 45) * 100) / 100, data_consegna_prevista: rState === "ordinato" ? isoDate(rnd("2026-03-10", "2026-03-25")) : "" });
+type UsatiRow = {
+  id: number;
+  model: string;
+  imei: string;
+  status: string;
+  sale_price: number;
+  purchase_price: number;
+  store: string;
+  target_store: string | null;
+  created_at: string;
+  purchase_date: string | null;
+  listed_date: string | null;
+  sold_date: string | null;
+  ricambi: unknown;
+  note_tecnico: string;
+  status_history: unknown;
+  provenienza_subito: boolean;
+  extra_margine: unknown;
+  pagamento: unknown;
+  grado_usura: string;
+};
+
+function parseDate(s: string | null): Date {
+  if (!s) return new Date(0);
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? new Date(0) : d;
+}
+
+function parseHistory(h: unknown): Record<string, { date: Date; operatore: string }> {
+  if (!h || typeof h !== "object") return {};
+  const out: Record<string, { date: Date; operatore: string }> = {};
+  for (const [k, v] of Object.entries(h as Record<string, { date?: string; operatore?: string }>)) {
+    if (v && typeof v === "object" && v.date != null) out[k] = { date: parseDate(v.date as string), operatore: (v.operatore as string) || "" };
   }
-  const isKO = status === "ko";
-  const lcIdx = isKO ? 4 : LIFECYCLE.indexOf(status as any);
-  const base = new Date("2025-08-01").getTime();
-  const history: Record<string, { date: Date; operatore: string }> = {};
-  for (let h = 0; h <= Math.min(lcIdx, LIFECYCLE.length - 1); h++) {
-    const dt = new Date(base + h * (2 + Math.random() * 5) * 86400000);
-    dt.setHours(8 + Math.floor(Math.random() * 10), Math.floor(Math.random() * 60));
-    history[LIFECYCLE[h]] = { date: dt, operatore: OPERATORI[Math.floor(Math.random() * OPERATORI.length)] };
-  }
-  if (isKO) { const dt = new Date(base + 5 * 86400000); dt.setHours(14); history["ko"] = { date: dt, operatore: OPERATORI[Math.floor(Math.random() * OPERATORI.length)] }; }
-  const m = ["contanti", "buono", "bonifico"][Math.floor(Math.random() * 3)] as "contanti" | "buono" | "bonifico";
-  const eff = m === "bonifico" && ["pronto", "invio_in_negozio", "in_vendita", "venduto"].includes(status) && Math.random() > 0.3;
-  const grads = ["Km0", "A", "B", "C", "D"];
+  return out;
+}
+
+function rowToDevice(r: UsatiRow): Device {
   return {
-    id: i + 1, model: BRANDS_FLAT[Math.floor(Math.random() * BRANDS_FLAT.length)], imei: genIMEI(), status,
-    sale_price: ["acquistato", "in_transito", "ricevuto", "in_lavorazione"].includes(status) ? (Math.random() > 0.7 ? price : 0) : price,
-    purchase_price: Math.round(price * (0.35 + Math.random() * 0.25)),
-    store, target_store: ["invio_in_negozio", "in_vendita", "venduto"].includes(status) ? NEGOZI[Math.floor(Math.random() * 12)] : null,
-    created_at: rnd("2025-06-01", "2026-03-10"), purchase_date: rnd("2025-04-01", "2026-02-28"),
-    listed_date: ["in_vendita", "venduto"].includes(status) ? rnd("2025-07-01", "2026-03-08") : null,
-    sold_date: status === "venduto" ? rnd("2026-01-01", "2026-03-09") : null,
-    ricambi, note_tecnico: inLav ? "Verifica componenti in corso" : (status === "ko" ? "Scheda madre irrecuperabile" : ""),
-    status_history: history,
-    provenienza_subito: Math.random() > 0.7,
-    grado_usura: grads[Math.floor(Math.random() * grads.length)],
-    extra_margine: Math.random() > 0.6 ? {
-      importo: Math.round(15 + Math.random() * 50), venditore: OPERATORI[Math.floor(Math.random() * OPERATORI.length)],
-      confermato: ["pronto", "invio_in_negozio", "in_vendita", "venduto"].includes(status),
-      conferma_operatore: ["pronto", "invio_in_negozio", "in_vendita", "venduto"].includes(status) ? OPERATORI[Math.floor(Math.random() * OPERATORI.length)] : null,
-      conferma_date: ["pronto", "invio_in_negozio", "in_vendita", "venduto"].includes(status) ? rnd("2025-09-01", "2026-03-01") : null,
-    } : null,
-    pagamento: {
-      metodo: m,
-      iban: m === "bonifico" ? "IT60X054281110100000" + String(Math.floor(Math.random() * 999999)).padStart(6, "0") : "",
-      bonifico_effettuato: m === "bonifico" ? eff : null,
-      bonifico_operatore: eff ? OPERATORI[Math.floor(Math.random() * OPERATORI.length)] : null,
-      bonifico_date: eff ? rnd("2025-10-01", "2026-03-05") : null,
-    },
+    id: r.id,
+    model: r.model,
+    imei: r.imei,
+    status: r.status as UsatoStatus,
+    sale_price: Number(r.sale_price) || 0,
+    purchase_price: Number(r.purchase_price) || 0,
+    store: r.store,
+    target_store: r.target_store ?? null,
+    created_at: parseDate(r.created_at),
+    purchase_date: parseDate(r.purchase_date),
+    listed_date: r.listed_date ? parseDate(r.listed_date) : null,
+    sold_date: r.sold_date ? parseDate(r.sold_date) : null,
+    ricambi: Array.isArray(r.ricambi) ? (r.ricambi as Ricambio[]) : [],
+    note_tecnico: r.note_tecnico || "",
+    status_history: parseHistory(r.status_history),
+    provenienza_subito: !!r.provenienza_subito,
+    extra_margine: r.extra_margine && typeof r.extra_margine === "object" ? (r.extra_margine as ExtraMargine) : null,
+    pagamento: r.pagamento && typeof r.pagamento === "object" ? (r.pagamento as Pagamento) : { metodo: "contanti", iban: "", bonifico_effettuato: null, bonifico_operatore: null, bonifico_date: null },
+    grado_usura: r.grado_usura || "",
   };
-});
+}
+
+function deviceToRow(d: Device): Record<string, unknown> {
+  const hist: Record<string, { date: string; operatore: string }> = {};
+  for (const [k, v] of Object.entries(d.status_history)) {
+    if (v?.date) hist[k] = { date: v.date instanceof Date ? v.date.toISOString() : String(v.date), operatore: v.operatore || "" };
+  }
+  const em = d.extra_margine ? {
+    ...d.extra_margine,
+    conferma_date: d.extra_margine.conferma_date instanceof Date ? d.extra_margine.conferma_date.toISOString() : d.extra_margine.conferma_date,
+  } : null;
+  const pag = { ...d.pagamento, bonifico_date: d.pagamento.bonifico_date instanceof Date ? d.pagamento.bonifico_date.toISOString() : d.pagamento.bonifico_date };
+  return {
+    model: d.model,
+    imei: d.imei,
+    status: d.status,
+    sale_price: d.sale_price,
+    purchase_price: d.purchase_price,
+    store: d.store,
+    target_store: d.target_store,
+    purchase_date: d.purchase_date instanceof Date ? d.purchase_date.toISOString() : d.purchase_date,
+    listed_date: d.listed_date instanceof Date ? d.listed_date.toISOString() : d.listed_date,
+    sold_date: d.sold_date instanceof Date ? d.sold_date.toISOString() : d.sold_date,
+    ricambi: d.ricambi,
+    note_tecnico: d.note_tecnico,
+    status_history: hist,
+    provenienza_subito: d.provenienza_subito,
+    extra_margine: em,
+    pagamento: pag,
+    grado_usura: d.grado_usura,
+  };
+}
 
 //  MultiSelect 
 function MultiSelect({ label, options, selected, onChange, renderOpt }: {
@@ -830,13 +865,15 @@ function AnaFields({ tipoCliente, ana, setAna, inp, lbl }: any) {
 
 //  Main Page -
 export default function GestioneUsati() {
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedStores, setSelectedStores] = useState<string[]>([...NEGOZI]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([...STATUS_KEYS]);
   const [dateField, setDateField] = useState("created_at");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [searchText, setSearchText] = useState("");
-  const [devices, setDevices] = useState<Device[]>(MOCK_DEVICES);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [showRegistra, setShowRegistra] = useState(false);
   const [sortKey, setSortKey] = useState<keyof Device | "">("");
@@ -844,6 +881,23 @@ export default function GestioneUsati() {
   const [ricambiFilter, setRicambiFilter] = useState<string[]>([]);
   const [bonificoFilter, setBonificoFilter] = useState("");
   const [activeKpi, setActiveKpi] = useState<string | null>(null);
+
+  const fetchDevices = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const { data, error: e } = await supabase.from("usati").select("*").order("created_at", { ascending: false });
+    setLoading(false);
+    if (e) {
+      setError(e.message);
+      setDevices([]);
+      return;
+    }
+    setDevices((data || []).map((r) => rowToDevice(r as UsatiRow)));
+  }, []);
+
+  useEffect(() => {
+    fetchDevices();
+  }, [fetchDevices]);
 
   const RICAMBIO_STATE_KEYS = RICAMBIO_STATES.map(s => s.key);
 
@@ -897,11 +951,44 @@ export default function GestioneUsati() {
   };
 
   const resetFilters = () => { setSelectedStores([...NEGOZI]); setSelectedStatuses([...STATUS_KEYS]); setDateField("created_at"); setDateFrom(""); setDateTo(""); setSearchText(""); setRicambiFilter([]); setBonificoFilter(""); setActiveKpi(null); };
-  const handleSaveDevice = (u: Device) => setDevices(p => p.map(d => d.id === u.id ? u : d));
-  const handleRegistra = (data: any) => {
-    const newDev: Device = { ...data, id: devices.length + 1, status: "acquistato", sale_price: 0, target_store: null, created_at: new Date(), listed_date: null, sold_date: null, ricambi: [], note_tecnico: "", status_history: { acquistato: { date: new Date(), operatore: data.venditore } }, store: data.negozio, purchase_price: data.prezzoAcquisto, grado_usura: data.gradoUsura, extra_margine: data.extraMargine ? { ...data.extraMargine, confermato: false, conferma_operatore: null, conferma_date: null } : null, pagamento: { metodo: data.metodoPagamento, iban: data.iban || "", bonifico_effettuato: data.metodoPagamento === "bonifico" ? false : null, bonifico_operatore: null, bonifico_date: null }, provenienza_subito: data.provenienzaSubito || false };
-    setDevices(p => [newDev, ...p]);
-  };
+
+  const handleSaveDevice = useCallback(async (u: Device) => {
+    const row = deviceToRow(u);
+    const { error: e } = await supabase.from("usati").update(row).eq("id", u.id);
+    if (!e) setDevices(p => p.map(d => d.id === u.id ? u : d));
+  }, []);
+
+  const handleRegistra = useCallback(async (data: {
+    venditore: string; negozio: string; tipoCliente?: string; anagrafica?: unknown;
+    tipoProdotto?: string; brand?: string; model?: string; capacita?: string; colore?: string;
+    imei: string; prezzoAcquisto: number; gradoUsura: string; extraMargine?: { importo: number; venditore: string };
+    metodoPagamento: "contanti" | "buono" | "bonifico"; iban?: string; provenienzaSubito?: boolean;
+  }) => {
+    const modelName = [data.brand, data.model].filter(Boolean).join(" ") || "Modello non specificato";
+    const now = new Date();
+    const insertRow = {
+      model: modelName,
+      imei: data.imei,
+      status: "acquistato",
+      sale_price: 0,
+      purchase_price: Number(data.prezzoAcquisto) || 0,
+      store: data.negozio,
+      target_store: null,
+      purchase_date: now.toISOString(),
+      listed_date: null,
+      sold_date: null,
+      ricambi: [],
+      note_tecnico: "",
+      status_history: { acquistato: { date: now.toISOString(), operatore: data.venditore } },
+      provenienza_subito: !!data.provenienzaSubito,
+      extra_margine: data.extraMargine ? { importo: data.extraMargine.importo, venditore: data.extraMargine.venditore, confermato: false, conferma_operatore: null, conferma_date: null } : null,
+      pagamento: { metodo: data.metodoPagamento, iban: data.iban || "", bonifico_effettuato: data.metodoPagamento === "bonifico" ? false : null, bonifico_operatore: null, bonifico_date: null },
+      grado_usura: data.gradoUsura || "",
+    };
+    const { data: inserted, error: e } = await supabase.from("usati").insert(insertRow).select().single();
+    if (e) return;
+    setDevices(p => [rowToDevice(inserted as UsatiRow), ...p]);
+  }, []);
 
   const thCls = "px-4 py-3 text-left text-[11px] text-slate-500 uppercase font-semibold tracking-wide border-b border-white/5 bg-[#161b22] sticky top-0 cursor-pointer select-none hover:text-slate-300 transition-colors whitespace-nowrap";
 
@@ -991,7 +1078,19 @@ export default function GestioneUsati() {
 
       {/*  Device List — scrollable; header above stays fixed  */}
       <div className="flex-1 min-h-0 overflow-auto px-3 sm:px-6 pb-8">
-
+        {loading && (
+          <div className="flex items-center justify-center py-24">
+            <div className="text-slate-500 text-sm">Caricamento usati...</div>
+          </div>
+        )}
+        {!loading && error && (
+          <div className="py-12 text-center">
+            <p className="text-amber-400 text-sm mb-3">{error}</p>
+            <button onClick={fetchDevices} className="px-4 py-2 rounded-lg bg-white/10 text-slate-300 text-sm hover:bg-white/20">Riprova</button>
+          </div>
+        )}
+        {!loading && !error && (
+        <>
         {/* ── Mobile card list (< sm) ──────────────────── */}
         <div className="sm:hidden space-y-2">
           {sorted.length === 0 ? (
@@ -1051,6 +1150,8 @@ export default function GestioneUsati() {
           </div>
           <div className="px-4 py-3 border-t border-white/5 bg-[#161b22]/50 text-xs text-slate-600">{sorted.length} dispositivi mostrati</div>
         </div>
+        </>
+        )}
 
       </div>
 

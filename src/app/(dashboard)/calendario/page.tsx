@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, X, Phone, MapPin, User, Clock, Search, Bell, Circle, CheckCircle2, PauseCircle, ChevronDown, ChevronUp, CheckSquare, Calendar, Lock, XCircle, Users, Video } from "lucide-react";
 import { cn } from "@/utils";
 import { usePageView } from "@/lib/pageView";
 import { useAuth } from "@/context/AuthContext";
 import { DatePickerInput } from "@/components/DatePickerInput";
+import { supabase } from "@/lib/supabaseClient";
 
 // Mock appointment data — will be replaced with Supabase queries
 type AppointmentType = "incoming" | "outgoing" | "self_generated";
@@ -106,6 +107,58 @@ const MOCK_TASKS: CalendarTask[] = [
     { id: 3, title: "Sollecito pagamento", date: "2026-03-05", time: "16:00", status: "sospesa", clientRef: "Giuseppe Ferrari", createdBy: "Marco Bianchi", assignedTo: "Giulia Rossi" },
 ];
 
+function mapAppointmentRow(r: Record<string, unknown>): Appointment {
+    return {
+        id: Number(r.id),
+        date: r.date as string,
+        time: r.time as string,
+        type: r.type as AppointmentType,
+        agente: (r.agente as string) ?? "",
+        store: r.store as string | undefined,
+        customerAddress: r.customer_address as string | undefined,
+        customerName: r.customer_name as string,
+        customerPhone: r.customer_phone as string,
+        cfPiva: r.cf_piva as string | undefined,
+        notes: (r.notes as string) ?? "",
+        esitoNote: r.esito_note as string | undefined,
+        status: r.status as AppointmentStatus,
+    };
+}
+function mapTaskRow(r: Record<string, unknown>): CalendarTask {
+    return {
+        id: Number(r.id),
+        title: r.title as string,
+        date: r.date as string,
+        time: r.time as string | undefined,
+        status: r.status as TaskStatus,
+        notes: r.notes as string | undefined,
+        outcomeNote: r.outcome_note as string | undefined,
+        clientRef: r.client_ref as string | undefined,
+        createdBy: r.created_by as string,
+        assignedTo: (r.assigned_to as string) ?? "",
+        assignedToStore: r.assigned_to_store as string | undefined,
+    };
+}
+function mapAgendaBlockRow(r: Record<string, unknown>): AgendaBlock {
+    return { id: Number(r.id), startDate: r.start_date as string, endDate: r.end_date as string, note: r.note as string };
+}
+function mapMeetingRow(r: Record<string, unknown>): CalendarMeeting {
+    return {
+        id: Number(r.id),
+        title: r.title as string,
+        date: r.date as string,
+        startTime: r.start_time as string,
+        endTime: r.end_time as string,
+        type: r.type as MeetingType,
+        brand: r.brand as string,
+        location: r.location as string | undefined,
+        link: r.link as string | undefined,
+        notes: r.notes as string | undefined,
+        recipients: Array.isArray(r.recipients) ? (r.recipients as MeetingRecipient[]) : [],
+        createdBy: r.created_by as string,
+    };
+}
+
 const STATUS_COLORS: Record<AppointmentStatus, string> = {
     scheduled: "bg-blue-500/20 text-blue-300 border-blue-500/30",
     attivato: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
@@ -160,10 +213,10 @@ export default function Calendario() {
     const [selectedMeeting, setSelectedMeeting] = useState<CalendarMeeting | null>(null);
     const [showMeetingDetailModal, setShowMeetingDetailModal] = useState(false);
     const [showSearchDrawer, setShowSearchDrawer] = useState(false);
-    const [appointments, setAppointments] = useState<Appointment[]>(MOCK_APPOINTMENTS);
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
 
     // Tasks State
-    const [tasks, setTasks] = useState<CalendarTask[]>(MOCK_TASKS);
+    const [tasks, setTasks] = useState<CalendarTask[]>([]);
     const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
     const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
 
@@ -228,11 +281,31 @@ export default function Calendario() {
 
     const [meetings, setMeetings] = useState<CalendarMeeting[]>([]);
 
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            const [apptRes, taskRes, blockRes, meetRes] = await Promise.all([
+                supabase.from("appointments").select("*").order("date"),
+                supabase.from("calendar_tasks").select("*").order("date"),
+                supabase.from("agenda_blocks").select("*"),
+                supabase.from("calendar_meetings").select("*").order("date"),
+            ]);
+            if (cancelled) return;
+            if (!apptRes.error) setAppointments((apptRes.data ?? []).map(mapAppointmentRow));
+            if (!taskRes.error) setTasks((taskRes.data ?? []).map(mapTaskRow));
+            if (!blockRes.error) setAgendaBlocks((blockRes.data ?? []).map(mapAgendaBlockRow));
+            if (!meetRes.error) setMeetings((meetRes.data ?? []).map(mapMeetingRow));
+        })();
+        return () => { cancelled = true; };
+    }, []);
+
     // Search Filters State
     const [searchQuery, setSearchQuery] = useState("");
     const [searchCfPiva, setSearchCfPiva] = useState("");
     const [searchPhone, setSearchPhone] = useState("");
     const [searchAgent, setSearchAgent] = useState("");
+    const [searchDateFrom, setSearchDateFrom] = useState("");
+    const [searchDateTo, setSearchDateTo] = useState("");
 
     // Admin Grid Filters State
     const [filterStore, setFilterStore] = useState("");
@@ -316,7 +389,7 @@ export default function Calendario() {
         setShowMeetingDetailModal(false);
     };
 
-    const handleCreateSubmit = (e: React.FormEvent) => {
+    const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedDate) return;
         if (isDateBlocked(selectedDate)) {
@@ -324,67 +397,78 @@ export default function Calendario() {
             alert(`Questa data è bloccata in agenda. Motivo: ${block?.note ?? "—"}`);
             return;
         }
-        const newId = Math.max(...appointments.map(a => a.id)) + 1;
-        const created: Appointment = {
-            id: newId,
+        const payload = {
             date: selectedDate,
-            ...newAppt,
-            status: "scheduled",
-            // Inbound: only store, no agent
+            time: newAppt.time,
+            type: newAppt.type,
             agente: newAppt.type === "incoming" ? "" : newAppt.agente,
-            store: newAppt.type === "incoming" ? newAppt.store : undefined,
-            customerAddress: newAppt.type === "outgoing" ? newAppt.customerAddress : undefined,
+            store: newAppt.type === "incoming" ? newAppt.store : null,
+            customer_address: newAppt.type === "outgoing" ? newAppt.customerAddress : null,
+            customer_name: newAppt.customerName,
+            customer_phone: newAppt.customerPhone,
+            cf_piva: newAppt.cfPiva || null,
+            notes: newAppt.notes || "",
+            status: "scheduled",
         };
-        setAppointments(prev => [...prev, created]);
+        const { data, error } = await supabase.from("appointments").insert(payload).select().single();
+        if (error) {
+            alert("Errore salvataggio: " + error.message);
+            return;
+        }
+        setAppointments(prev => [...prev, mapAppointmentRow(data)]);
         setShowCreateModal(false);
         setNewAppt({ time: "10:00", type: "incoming", agente: "", store: "", customerAddress: "", customerName: "", customerPhone: "", cfPiva: "", notes: "" });
     };
 
-    const handleCreateTaskSubmit = (e: React.FormEvent) => {
+    const handleCreateTaskSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const assignee = newTask.assignedToStore ? "" : (newTask.assignedTo ?? "");
         if (!newTask.date || !newTask.title || (!newTask.assignedToStore && !assignee)) return;
 
-        const nextId = tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
-
-        const created: CalendarTask = {
-            id: nextId,
+        const payload = {
             title: newTask.title,
             date: newTask.date,
-            time: newTask.time || undefined,
+            time: newTask.time || null,
             status: "da_fare",
-            notes: newTask.notes,
-            clientRef: newTask.clientRef,
-            createdBy: user?.name || "Sconosciuto",
-            assignedTo: assignee,
-            assignedToStore: newTask.assignedToStore,
+            notes: newTask.notes || null,
+            client_ref: newTask.clientRef || null,
+            created_by: user?.name || "Sconosciuto",
+            assigned_to: assignee,
+            assigned_to_store: newTask.assignedToStore || null,
         };
-
-        setTasks(prev => [...prev, created]);
+        const { data, error } = await supabase.from("calendar_tasks").insert(payload).select().single();
+        if (error) {
+            alert("Errore salvataggio task: " + error.message);
+            return;
+        }
+        setTasks(prev => [...prev, mapTaskRow(data)]);
         setShowCreateTaskModal(false);
         setNewTask({ title: "", date: "", time: "", status: "da_fare", notes: "", clientRef: "", assignedTo: user?.name || "", assignedToStore: undefined });
     };
 
-    const handleCreateMeetingSubmit = (e: React.FormEvent) => {
+    const handleCreateMeetingSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newMeeting.title || !newMeeting.date || !newMeeting.startTime || !newMeeting.endTime || !newMeeting.brand) return;
 
-        const nextId = meetings.length > 0 ? Math.max(...meetings.map(m => m.id)) + 1 : 1;
-        const created: CalendarMeeting = {
-            id: nextId,
+        const payload = {
             title: newMeeting.title,
             date: newMeeting.date,
-            startTime: newMeeting.startTime,
-            endTime: newMeeting.endTime,
+            start_time: newMeeting.startTime,
+            end_time: newMeeting.endTime,
             type: newMeeting.type,
             brand: newMeeting.brand,
-            location: newMeeting.type === "in_person" ? newMeeting.location : undefined,
-            link: newMeeting.type === "video_call" ? newMeeting.link : undefined,
-            notes: newMeeting.notes,
+            location: newMeeting.type === "in_person" ? newMeeting.location : null,
+            link: newMeeting.type === "video_call" ? newMeeting.link : null,
+            notes: newMeeting.notes || null,
             recipients: newMeeting.recipients,
-            createdBy: user?.name || "Sconosciuto",
+            created_by: user?.name || "Sconosciuto",
         };
-        setMeetings(prev => [...prev, created]);
+        const { data, error } = await supabase.from("calendar_meetings").insert(payload).select().single();
+        if (error) {
+            alert("Errore salvataggio riunione: " + error.message);
+            return;
+        }
+        setMeetings(prev => [...prev, mapMeetingRow(data)]);
         setShowCreateMeetingModal(false);
         setNewMeeting({
             title: "",
@@ -438,6 +522,14 @@ export default function Calendario() {
     const dateMeetings = selectedDate ? meetingsByDate(selectedDate) : [];
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
+    const parseSearchDate = (val: string): string | null => {
+        if (!val || !val.trim()) return null;
+        const m = val.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+        if (val.match(/^\d{4}-\d{2}-\d{2}$/)) return val;
+        return null;
+    };
+
     // Search result chronological list (includes RBAC store-based filtering implicitly from visibleAppointments)
     const searchResults = visibleAppointments.filter(a => {
         // Apply Name / Ragione Sociale (case-insensitive)
@@ -448,6 +540,10 @@ export default function Calendario() {
         if (searchPhone && !a.customerPhone.includes(searchPhone)) return false;
         // Apply Agent (Admin only filter)
         if (isCallCenter && searchAgent && searchAgent !== "Tutti gli agenti" && a.agente !== searchAgent) return false;
+        const from = parseSearchDate(searchDateFrom);
+        const to = parseSearchDate(searchDateTo);
+        if (from && a.date < from) return false;
+        if (to && a.date > to) return false;
         return true;
     }).sort((a, b) => {
         // Chronological sort: newest/future first for easy viewing
@@ -478,7 +574,7 @@ export default function Calendario() {
         setShowCreateTaskModal(true);
     };
 
-    const handleBlockAgendaSubmit = (e: React.FormEvent) => {
+    const handleBlockAgendaSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const start = blockAgendaForm.startDate.trim();
         const end = blockAgendaForm.mode === "range" ? (blockAgendaForm.endDate.trim() || start) : start;
@@ -491,8 +587,12 @@ export default function Calendario() {
             alert("La data fine deve essere uguale o successiva alla data inizio.");
             return;
         }
-        const nextId = agendaBlocks.length > 0 ? Math.max(...agendaBlocks.map(b => b.id)) + 1 : 1;
-        setAgendaBlocks(prev => [...prev, { id: nextId, startDate: start, endDate: end, note }]);
+        const { data, error } = await supabase.from("agenda_blocks").insert({ start_date: start, end_date: end, note }).select().single();
+        if (error) {
+            alert("Errore salvataggio blocco: " + error.message);
+            return;
+        }
+        setAgendaBlocks(prev => [...prev, mapAgendaBlockRow(data)]);
         setShowBlockAgendaModal(false);
         setBlockAgendaForm({ mode: "single", startDate: "", endDate: "", note: "" });
     };
@@ -699,18 +799,19 @@ export default function Calendario() {
                         <div className="md:col-span-2 lg:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-white/5 mt-2">
                             <div>
                                 <label className="block text-sm font-medium text-slate-300 mb-2">Da data appuntamento</label>
-                                <DatePickerInput id="da_data_appuntamento" name="da_data_appuntamento" placeholder="Seleziona data" />
+                                <DatePickerInput id="da_data_appuntamento" value={searchDateFrom} onChange={setSearchDateFrom} placeholder="Seleziona data" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-300 mb-2">A data appuntamento</label>
-                                <DatePickerInput id="a_data_appuntamento" name="a_data_appuntamento" placeholder="Seleziona data" />
+                                <DatePickerInput id="a_data_appuntamento" value={searchDateTo} onChange={setSearchDateTo} placeholder="Seleziona data" />
                             </div>
                         </div>
                     </div>
 
                     <div className="mt-6 flex gap-3">
-                        <button className="primary-btn h-10 px-6 text-sm">Cerca</button>
+                        <button type="button" onClick={() => setShowSearchDrawer(false)} className="primary-btn h-10 px-6 text-sm">Cerca</button>
                         <button
+                            type="button"
                             onClick={() => setShowSearchDrawer(false)}
                             className="h-10 px-6 rounded-lg font-medium bg-white/5 text-slate-300 hover:bg-white/10 transition-colors text-sm"
                         >
@@ -987,11 +1088,12 @@ export default function Calendario() {
                                                 </div>
 
                                                 <button
-                                                    onClick={(e) => {
+                                                    onClick={async (e) => {
                                                         e.stopPropagation();
                                                         const order: TaskStatus[] = ["da_fare", "fatta", "sospesa", "abbandonata"];
                                                         const idx = order.indexOf(t.status);
                                                         const nextStatus = order[(idx + 1) % order.length];
+                                                        await supabase.from("calendar_tasks").update({ status: nextStatus }).eq("id", t.id);
                                                         setTasks(prev => prev.map(task => task.id === t.id ? { ...task, status: nextStatus } : task));
                                                     }}
                                                     className={cn(
@@ -1029,8 +1131,9 @@ export default function Calendario() {
                                                         <select
                                                             className="glass-input w-full text-xs py-1.5"
                                                             value={t.status}
-                                                            onChange={e => {
+                                                            onChange={async e => {
                                                                 const s = e.target.value as TaskStatus;
+                                                                await supabase.from("calendar_tasks").update({ status: s }).eq("id", t.id);
                                                                 setTasks(prev => prev.map(task => task.id === t.id ? { ...task, status: s } : task));
                                                             }}
                                                         >
@@ -1045,7 +1148,11 @@ export default function Calendario() {
                                                             rows={2}
                                                             placeholder="Aggiungi una nota quando chiudi o aggiorni la task..."
                                                             value={t.outcomeNote ?? ""}
-                                                            onChange={e => setTasks(prev => prev.map(task => task.id === t.id ? { ...task, outcomeNote: e.target.value } : task))}
+                                                            onChange={async e => {
+                                                                const v = e.target.value;
+                                                                await supabase.from("calendar_tasks").update({ outcome_note: v }).eq("id", t.id);
+                                                                setTasks(prev => prev.map(task => task.id === t.id ? { ...task, outcomeNote: v } : task));
+                                                            }}
                                                         />
                                                     </div>
                                                 </div>
@@ -1182,8 +1289,9 @@ export default function Calendario() {
                                 <select
                                     className="glass-input w-full text-sm"
                                     value={selectedAppointment.status}
-                                    onChange={e => {
+                                    onChange={async e => {
                                         const s = e.target.value as AppointmentStatus;
+                                        await supabase.from("appointments").update({ status: s }).eq("id", selectedAppointment.id);
                                         setAppointments(prev => prev.map(a => a.id === selectedAppointment.id ? { ...a, status: s } : a));
                                         setSelectedAppointment({ ...selectedAppointment, status: s });
                                     }}
@@ -1197,8 +1305,9 @@ export default function Calendario() {
                                     rows={2}
                                     placeholder="Note sull'esito dell'appuntamento..."
                                     value={selectedAppointment.esitoNote ?? ""}
-                                    onChange={e => {
+                                    onChange={async e => {
                                         const v = e.target.value;
+                                        await supabase.from("appointments").update({ esito_note: v }).eq("id", selectedAppointment.id);
                                         setAppointments(prev => prev.map(a => a.id === selectedAppointment.id ? { ...a, esitoNote: v } : a));
                                         setSelectedAppointment({ ...selectedAppointment, esitoNote: v });
                                     }}
@@ -1798,27 +1907,15 @@ export default function Calendario() {
                                                         <div className="flex gap-1.5">
                                                             <button
                                                                 type="button"
-                                                                onClick={() => {
-                                                                    setMeetings(prev =>
-                                                                        prev.map(m =>
-                                                                            m.id === selectedMeeting.id
-                                                                                ? {
-                                                                                    ...m,
-                                                                                    recipients: m.recipients.map(r =>
-                                                                                        r.id === rec.id
-                                                                                            ? { ...r, status: "confirmed" }
-                                                                                            : r
-                                                                                    ),
-                                                                                }
-                                                                                : m
-                                                                        )
+                                                                onClick={async () => {
+                                                                    const updated = selectedMeeting.recipients.map(r =>
+                                                                        r.id === rec.id ? { ...r, status: "confirmed" as const } : r
                                                                     );
-                                                                    setSelectedMeeting({
-                                                                        ...selectedMeeting,
-                                                                        recipients: selectedMeeting.recipients.map(r =>
-                                                                            r.id === rec.id ? { ...r, status: "confirmed" } : r
-                                                                        ),
-                                                                    });
+                                                                    await supabase.from("calendar_meetings").update({ recipients: updated }).eq("id", selectedMeeting.id);
+                                                                    setMeetings(prev =>
+                                                                        prev.map(m => m.id === selectedMeeting.id ? { ...m, recipients: updated } : m)
+                                                                    );
+                                                                    setSelectedMeeting({ ...selectedMeeting, recipients: updated });
                                                                 }}
                                                                 className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 text-[10px] hover:bg-emerald-500/30"
                                                             >
@@ -1826,27 +1923,15 @@ export default function Calendario() {
                                                             </button>
                                                             <button
                                                                 type="button"
-                                                                onClick={() => {
-                                                                    setMeetings(prev =>
-                                                                        prev.map(m =>
-                                                                            m.id === selectedMeeting.id
-                                                                                ? {
-                                                                                    ...m,
-                                                                                    recipients: m.recipients.map(r =>
-                                                                                        r.id === rec.id
-                                                                                            ? { ...r, status: "declined" }
-                                                                                            : r
-                                                                                    ),
-                                                                                }
-                                                                                : m
-                                                                        )
+                                                                onClick={async () => {
+                                                                    const updated = selectedMeeting.recipients.map(r =>
+                                                                        r.id === rec.id ? { ...r, status: "declined" as const } : r
                                                                     );
-                                                                    setSelectedMeeting({
-                                                                        ...selectedMeeting,
-                                                                        recipients: selectedMeeting.recipients.map(r =>
-                                                                            r.id === rec.id ? { ...r, status: "declined" } : r
-                                                                        ),
-                                                                    });
+                                                                    await supabase.from("calendar_meetings").update({ recipients: updated }).eq("id", selectedMeeting.id);
+                                                                    setMeetings(prev =>
+                                                                        prev.map(m => m.id === selectedMeeting.id ? { ...m, recipients: updated } : m)
+                                                                    );
+                                                                    setSelectedMeeting({ ...selectedMeeting, recipients: updated });
                                                                 }}
                                                                 className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-200 text-[10px] hover:bg-rose-500/30"
                                                             >

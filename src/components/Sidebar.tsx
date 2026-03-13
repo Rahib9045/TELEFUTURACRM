@@ -23,6 +23,7 @@ import {
     ChevronDown,
     UserCog,
     FileText,
+    KeyRound,
     Store as StoreIcon,
     Users as UsersIcon,
 } from "lucide-react";
@@ -61,10 +62,11 @@ const navigation: (NavGroup | NavItem)[] = [
             { name: "Gestione Usati", href: "/usati", icon: Smartphone, roles: ["admin"] },
             { name: "Ordine Merce", href: "/ordine-merce", icon: Package, roles: ["admin", "store_manager", "back_office"] },
             { name: "Chiusura Negozio", href: "/chiusura", icon: Store, roles: ["admin", "agente"] },
+            { name: "Collaboratori", href: "/collaboratori", icon: UsersIcon, roles: ["admin", "store_manager", "back_office", "supervisore", "agente"] },
+            { name: "Password (V2 - Step)", href: "/password-v2", icon: KeyRound, roles: ["admin", "store_manager"] },
         ],
     },
     { type: "link", name: "Calendario", href: "/calendario", icon: CalendarDays, roles: ["admin", "agente"] },
-    { type: "link", name: "Collaboratori", href: "/collaboratori", icon: UsersIcon, roles: ["admin", "store_manager", "back_office", "supervisore", "agente"] },
     { type: "link", name: "Documentazione", href: "/documentazione", icon: FolderOpen, roles: ["admin", "agente"] },
     { type: "link", name: "Comunicazioni", href: "/comunicazioni", icon: MessageSquare, roles: ["admin", "agente"] },
 ];

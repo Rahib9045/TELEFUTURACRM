@@ -1,16 +1,10 @@
-﻿"use client";
+"use client";
 
+import { useState, useEffect, useMemo } from "react";
 import { StatTable } from "@/components/ui/StatTable";
-import { Users, TrendingUp, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { Users, AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-
-// Mock Data representing the stats
-const summaryStats = [
-    { label: "Totale PDA Inviate", value: "1,245", trend: "+12%", icon: Users, color: "text-blue-400" },
-    { label: "In Lavorazione", value: "34", trend: "-5%", icon: Clock, color: "text-amber-400" },
-    { label: "Approvate (OK)", value: "982", trend: "+18%", icon: CheckCircle, color: "text-emerald-400" },
-    { label: "Respinte (KO)", value: "229", trend: "+2%", icon: AlertTriangle, color: "text-rose-400" },
-];
+import { supabase } from "@/lib/supabaseClient";
 
 const dashboardColumns = [
     { header: "Brand", accessor: "brand", className: "font-semibold" },
@@ -22,15 +16,87 @@ const dashboardColumns = [
     { header: "KO", accessor: "ko", className: "text-right text-rose-400 font-medium" },
 ];
 
-const mockDashboardData = [
-    { brand: "Edison", segmento: "Business", ricevute: 45, assegnate: 12, ok: 20, sospesi: 5, ko: 8 },
-    { brand: "Enel", segmento: "Business", ricevute: 30, assegnate: 8, ok: 15, sospesi: 2, ko: 5 },
-    { brand: "Tim", segmento: "Consumer", ricevute: 120, assegnate: 40, ok: 60, sospesi: 10, ko: 10 },
-    { brand: "Vodafone", segmento: "Consumer", ricevute: 85, assegnate: 20, ok: 45, sospesi: 5, ko: 15 },
-];
+function isOk(stato: string) {
+    const s = (stato || "").toLowerCase();
+    return s === "attivo" || s === "attivato";
+}
+function isInLavorazione(stato: string) {
+    return (stato || "").toLowerCase().includes("lavorazione");
+}
+function isSospeso(stato: string) {
+    return (stato || "").toLowerCase() === "sospeso";
+}
+function isKo(stato: string) {
+    const s = (stato || "").toLowerCase();
+    return s === "annullato" || s === "ko";
+}
 
 export default function Dashboard() {
     const { user } = useAuth();
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
+    const [contracts, setContracts] = useState<{ brand: string; categoria: string; stato: string; created_at: string }[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
+
+    const fetchContracts = async (overrideFrom?: string, overrideTo?: string) => {
+        setLoading(true);
+        setLoadError(null);
+        const from = overrideFrom !== undefined ? overrideFrom : dateFrom;
+        const to = overrideTo !== undefined ? overrideTo : dateTo;
+        let q = supabase.from("contracts").select("brand, categoria, stato, created_at");
+        if (from) q = q.gte("created_at", from + "T00:00:00Z");
+        if (to) q = q.lte("created_at", to + "T23:59:59Z");
+        const { data, error } = await q;
+        if (error) {
+            setLoadError(error.message);
+            setContracts([]);
+        } else {
+            setContracts((data ?? []) as typeof contracts);
+        }
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        fetchContracts();
+    }, []);
+
+    const summaryStats = useMemo(() => {
+        const total = contracts.length;
+        const inLav = contracts.filter(c => isInLavorazione(c.stato)).length;
+        const ok = contracts.filter(c => isOk(c.stato)).length;
+        const ko = contracts.filter(c => isKo(c.stato)).length;
+        return [
+            { label: "Totale PDA Inviate", value: total.toLocaleString("it-IT"), trend: "", icon: Users, color: "text-blue-400" },
+            { label: "In Lavorazione", value: String(inLav), trend: "", icon: Clock, color: "text-amber-400" },
+            { label: "Approvate (OK)", value: String(ok), trend: "", icon: CheckCircle, color: "text-emerald-400" },
+            { label: "Respinte (KO)", value: String(ko), trend: "", icon: AlertTriangle, color: "text-rose-400" },
+        ];
+    }, [contracts]);
+
+    const tableData = useMemo(() => {
+        const byKey: Record<string, { ricevute: number; ok: number; sospesi: number; ko: number }> = {};
+        contracts.forEach(c => {
+            const key = `${c.brand}|${c.categoria || "—"}`;
+            if (!byKey[key]) byKey[key] = { ricevute: 0, ok: 0, sospesi: 0, ko: 0 };
+            byKey[key].ricevute++;
+            if (isOk(c.stato)) byKey[key].ok++;
+            else if (isSospeso(c.stato)) byKey[key].sospesi++;
+            else if (isKo(c.stato)) byKey[key].ko++;
+        });
+        return Object.entries(byKey).map(([key, counts]) => {
+            const [brand, segmento] = key.split("|");
+            return {
+                brand,
+                segmento,
+                ricevute: counts.ricevute,
+                assegnate: counts.ricevute,
+                ok: counts.ok,
+                sospesi: counts.sospesi,
+                ko: counts.ko,
+            };
+        }).sort((a, b) => b.ricevute - a.ricevute);
+    }, [contracts]);
 
     return (
         <div className="w-full space-y-8">
@@ -46,22 +112,36 @@ export default function Dashboard() {
                 <div className="flex flex-wrap items-end gap-3 p-4 glass-card mb-0 border-white/5">
                     <div>
                         <label className="block text-xs text-slate-500 mb-1 uppercase tracking-wider">Da Data</label>
-                        <input type="date" className="glass-input text-sm py-1.5" defaultValue="2023-01-01" />
+                        <input type="date" className="glass-input text-sm py-1.5" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
                     </div>
                     <div>
                         <label className="block text-xs text-slate-500 mb-1 uppercase tracking-wider">A Data</label>
-                        <input type="date" className="glass-input text-sm py-1.5" defaultValue="2023-12-31" />
+                        <input type="date" className="glass-input text-sm py-1.5" value={dateTo} onChange={e => setDateTo(e.target.value)} />
                     </div>
-                    <button className="primary-btn py-1.5 px-4 h-9">
-                        Aggiorna Grafici
+                    <button
+                        type="button"
+                        onClick={() => fetchContracts()}
+                        disabled={loading}
+                        className="primary-btn py-1.5 px-4 h-9 disabled:opacity-50"
+                    >
+                        {loading ? "Caricamento..." : "Aggiorna Grafici"}
                     </button>
-                    <button className="h-9 px-4 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 text-slate-300 text-sm font-medium transition-colors">
+                    <button
+                        type="button"
+                        onClick={() => { setDateFrom(""); setDateTo(""); fetchContracts("", ""); }}
+                        className="h-9 px-4 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 text-slate-300 text-sm font-medium transition-colors"
+                    >
                         Pulisci
                     </button>
                 </div>
             </div>
 
-            {/* KPI Cards */}
+            {loadError && (
+                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm">
+                    Errore: {loadError}
+                </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {summaryStats.map((stat, idx) => {
                     const Icon = stat.icon;
@@ -74,21 +154,22 @@ export default function Dashboard() {
                                 <p className="text-sm text-slate-400 font-medium mb-1">{stat.label}</p>
                                 <div className="flex items-baseline gap-2">
                                     <h3 className="text-2xl font-bold text-white">{stat.value}</h3>
-                                    <span className={`text-xs font-semibold ${stat.trend.startsWith('+') ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                        {stat.trend}
-                                    </span>
+                                    {stat.trend && (
+                                        <span className={`text-xs font-semibold ${stat.trend.startsWith("+") ? "text-emerald-400" : "text-rose-400"}`}>
+                                            {stat.trend}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
-                    )
+                    );
                 })}
             </div>
 
-            {/* Main Data Table */}
             <StatTable
                 title="Statistiche per Brand e Segmento"
                 columns={dashboardColumns}
-                data={mockDashboardData}
+                data={tableData}
             />
 
 
