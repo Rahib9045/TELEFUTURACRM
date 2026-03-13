@@ -476,6 +476,7 @@ function FerieSection({ isAdminLike }: { isAdminLike: boolean }) {
     const [dateTo, setDateTo] = useState("");
     const [reason, setReason] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const [showForm, setShowForm] = useState(false);
     const [requests, setRequests] = useState<VacationRequest[]>([]);
     const [filterPerson, setFilterPerson] = useState("");
     const [filterStore, setFilterStore] = useState("");
@@ -545,44 +546,49 @@ function FerieSection({ isAdminLike }: { isAdminLike: boolean }) {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <div className={cn("grid grid-cols-1 gap-6", isAdminLike ? "xl:grid-cols-1" : "xl:grid-cols-12")}>
                 {/* Form Richiesta */}
-                <div className="xl:col-span-4 space-y-6">
-                    <div className="glass-card p-6">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2 bg-indigo-500/10 rounded-lg">
-                                <CalendarDays className="w-5 h-5 text-indigo-400" />
+                {!isAdminLike && showForm && (
+                    <div className="xl:col-span-4 space-y-6 animate-in slide-in-from-left-4 duration-300">
+                        <div className="glass-card p-6 border-indigo-500/30">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-indigo-500/10 rounded-lg">
+                                        <CalendarDays className="w-5 h-5 text-indigo-400" />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-white">Nuova Richiesta</h3>
+                                </div>
+                                <button onClick={() => setShowForm(false)} className="p-1.5 hover:bg-white/5 rounded-lg text-slate-500 transition-colors">
+                                    <X className="w-4 h-4" />
+                                </button>
                             </div>
-                            <h3 className="text-lg font-bold text-white">Nuova Richiesta</h3>
+
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Dal</label>
+                                        <input type="date" required value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="glass-input !h-10 text-xs w-full" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Al</label>
+                                        <input type="date" required value={dateTo} onChange={e => setDateTo(e.target.value)} className="glass-input !h-10 text-xs w-full" />
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Motivazione</label>
+                                    <textarea placeholder="Esempio: Ferie estive..." value={reason} onChange={e => setReason(e.target.value)} className="glass-input min-h-[80px] py-3 text-xs w-full resize-none" />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="w-full h-11 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-sm transition-all shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+                                >
+                                    <CalendarDays className="w-4 h-4" />
+                                    {submitting ? "Invio in corso..." : "Invia Richiesta"}
+                                </button>
+                            </form>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Dal</label>
-                                    <input type="date" required value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="glass-input !h-10 text-xs w-full" />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Al</label>
-                                    <input type="date" required value={dateTo} onChange={e => setDateTo(e.target.value)} className="glass-input !h-10 text-xs w-full" />
-                                </div>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Motivazione</label>
-                                <textarea placeholder="Esempio: Ferie estive..." value={reason} onChange={e => setReason(e.target.value)} className="glass-input min-h-[80px] py-3 text-xs w-full resize-none" />
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                className="w-full h-11 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-sm transition-all shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
-                            >
-                                <CalendarDays className="w-4 h-4" />
-                                {submitting ? "Invio in corso..." : "Invia Richiesta"}
-                            </button>
-                        </form>
-                    </div>
-
-                    {!isAdminLike && (
                         <div className="glass-panel p-5 bg-amber-500/5 border border-amber-500/10">
                             <div className="flex gap-3">
                                 <Shield className="w-5 h-5 text-amber-500 shrink-0" />
@@ -594,11 +600,11 @@ function FerieSection({ isAdminLike }: { isAdminLike: boolean }) {
                                 </div>
                             </div>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
 
                 {/* Tabella Richieste */}
-                <div className="xl:col-span-8 space-y-4">
+                <div className={cn(isAdminLike ? "xl:col-span-1" : showForm ? "xl:col-span-8" : "xl:col-span-12", "space-y-4")}>
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-1">
                         <div className="space-y-0.5">
                             <h3 className="text-lg font-bold text-white uppercase tracking-tight">
@@ -606,6 +612,16 @@ function FerieSection({ isAdminLike }: { isAdminLike: boolean }) {
                             </h3>
                             <p className="text-xs text-slate-500">Monitoraggio e gestione dello stato approvazioni</p>
                         </div>
+
+                        {!isAdminLike && !showForm && (
+                            <button
+                                onClick={() => setShowForm(true)}
+                                className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-indigo-500/25 flex items-center gap-2 active:scale-[0.98]"
+                            >
+                                <CalendarDays className="w-4 h-4" />
+                                Nuova Richiesta
+                            </button>
+                        )}
 
                         {isAdminLike && (
                             <div className="flex gap-2 w-full md:w-auto">
