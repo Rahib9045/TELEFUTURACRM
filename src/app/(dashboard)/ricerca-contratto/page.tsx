@@ -68,82 +68,84 @@ export default function RicercaContratto() {
     const [editStato, setEditStato] = useState("");
     const [saving, setSaving] = useState(false);
 
-    useEffect(() => {
-        (async () => {
-            const { data, error } = await supabase
-                .from("contracts")
-                .select("*, clients(nome, cognome, ragione_sociale, cellulare)")
-                .order("data", { ascending: false });
-            if (error) {
-                setLoadError(error.message);
-                setContractList([]);
-            } else {
-                const rows = (data ?? []).map((row: Record<string, unknown>) => {
-                    const clients = row.clients as Record<string, unknown> | null;
-                    return mapContractToRow(row, clients);
-                });
-                setContractList(rows);
-            }
-            setLoading(false);
-        })();
-    }, []);
+    // Pagination
+    const [page, setPage] = useState(1);
+    const pageSize = 25;
+    const [totalCount, setTotalCount] = useState(0);
 
-    const uniqueVenditori = useMemo(() => Array.from(new Set(contractList.map(r => r.venditore).filter(v => v && v !== "—"))).sort(), [contractList]);
-    const uniqueBrands = useMemo(() => Array.from(new Set(contractList.map(r => r.brand).filter(v => v && v !== "—"))).sort(), [contractList]);
-    const uniqueProdotti = useMemo(() => Array.from(new Set(contractList.map(r => r.prodotto).filter(v => v && v !== "—"))).sort(), [contractList]);
-    const uniqueNegozi = useMemo(() => Array.from(new Set(contractList.map(r => r.negozio).filter(v => v && v !== "—"))).sort(), [contractList]);
+    // Filter Options
+    const [uniqueVenditori, setUniqueVenditori] = useState<string[]>([]);
+    const [uniqueBrands, setUniqueBrands] = useState<string[]>([]);
+    const [uniqueProdotti, setUniqueProdotti] = useState<string[]>([]);
+    const [uniqueNegozi, setUniqueNegozi] = useState<string[]>([]);
 
     // RBAC: Store-Based Visibility Logic
     const isGlobalView = ["admin", "supervisore", "back_office"].includes(user?.role || "");
     const lockedStore = !isGlobalView ? user?.negozio : null;
     const lockedVenditore = !isGlobalView ? user?.name : null;
 
-    const visibleData = useMemo(() => {
-        let list = contractList.filter(row => {
-            if (!isGlobalView && lockedStore && row.negozio !== lockedStore) return false;
-            if (!isGlobalView && lockedVenditore && row.venditore !== lockedVenditore) return false;
-            return true;
-        });
-        if (filterVenditore && filterVenditore !== "Tutti") list = list.filter(r => r.venditore === filterVenditore);
-        if (filterBrand && filterBrand !== "Tutti i brand") list = list.filter(r => r.brand.toLowerCase().includes(filterBrand.toLowerCase()));
-        if (filterProdotto && filterProdotto !== "Tutti i prodotti") list = list.filter(r => r.prodotto.toLowerCase().includes(filterProdotto.toLowerCase()));
-        if (filterNegozio && filterNegozio !== "Tutti") list = list.filter(r => r.negozio === filterNegozio);
-        if (filterCodice) list = list.filter(r => r.id.toLowerCase().includes(filterCodice.toLowerCase()));
-        if (filterCodiceAttivazione && filterCodiceAttivazione !== "Tutti i codici") list = list.filter(r => r.codice_attivazione === filterCodiceAttivazione);
-        if (filterCliente) list = list.filter(r => r.cliente.toLowerCase().includes(filterCliente.toLowerCase()));
-        if (filterCellulare) list = list.filter(r => (r.cellulare || "").includes(filterCellulare));
-        if (filterImei) list = list.filter(r => (r.codice_attivazione || "").includes(filterImei)); // Assuming IMEI might be stored or searched in activation code/notes or we need a specific field, but for now let's use activation code if that's what's intended or just filter by it
-        if (filterTableSearch) {
-            const q = filterTableSearch.toLowerCase();
-            list = list.filter(r =>
-                r.venditore.toLowerCase().includes(q) || r.brand.toLowerCase().includes(q) || r.prodotto.toLowerCase().includes(q) ||
-                r.cliente.toLowerCase().includes(q) || r.negozio.toLowerCase().includes(q) || r.codice_attivazione.toLowerCase().includes(q) || r.stato.toLowerCase().includes(q)
-            );
-        }
-        const parseDate = (s: string): number | null => {
-            if (!s || !s.trim()) return null;
-            const m = s.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-            if (m) return new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10)).getTime();
-            return null;
+    useEffect(() => {
+        const fetchFilters = async () => {
+            const { data } = await supabase.from("contracts").select("venditore, brand, prodotto, negozio");
+            if (data) {
+                setUniqueVenditori(Array.from(new Set(data.map((r: any) => r.venditore).filter(Boolean))).sort() as string[]);
+                setUniqueBrands(Array.from(new Set(data.map((r: any) => r.brand).filter(Boolean))).sort() as string[]);
+                setUniqueProdotti(Array.from(new Set(data.map((r: any) => r.prodotto).filter(Boolean))).sort() as string[]);
+                setUniqueNegozi(Array.from(new Set(data.map((r: any) => r.negozio).filter(Boolean))).sort() as string[]);
+            }
         };
-        if (daDataAttivazione) {
-            const from = parseDate(daDataAttivazione);
-            if (from !== null) list = list.filter(r => parseDate(r.data_attivazione) !== null && parseDate(r.data_attivazione)! >= from);
+        fetchFilters();
+    }, []);
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            let query = supabase
+                .from("contracts")
+                .select("*, clients!inner(nome, cognome, ragione_sociale, cellulare)", { count: "exact" });
+
+            // Apply Server-side filters
+            if (filterVenditore && filterVenditore !== "Tutti") query = query.eq("venditore", filterVenditore);
+            if (filterNegozio && filterNegozio !== "Tutti") query = query.eq("negozio", filterNegozio);
+            if (filterCodice) query = query.ilike("id", `%${filterCodice}%`);
+            if (filterBrand && filterBrand !== "") query = query.ilike("brand", `%${filterBrand}%`);
+            if (filterProdotto && filterProdotto !== "") query = query.ilike("prodotto", `%${filterProdotto}%`);
+            if (filterCodiceAttivazione) query = query.ilike("codice_attivazione", `%${filterCodiceAttivazione}%`);
+            if (filterCellulare) query = query.ilike("clients.cellulare", `%${filterCellulare}%`);
+
+            if (filterCliente) {
+                query = query.or(`nome.ilike.%${filterCliente}%,cognome.ilike.%${filterCliente}%,ragione_sociale.ilike.%${filterCliente}%`, { foreignTable: 'clients' });
+            }
+
+            // RBAC
+            if (!isGlobalView) {
+                if (lockedStore) query = query.eq("negozio", lockedStore);
+                if (lockedVenditore) query = query.eq("venditore", lockedVenditore);
+            }
+
+            const { data, count, error } = await query
+                .order("created_at", { ascending: false })
+                .range((page - 1) * pageSize, page * pageSize - 1);
+
+            if (error) throw error;
+
+            const rows = (data ?? []).map((row: any) => mapContractToRow(row, row.clients));
+            setContractList(rows);
+            setTotalCount(count ?? 0);
+        } catch (err: any) {
+            setLoadError(err.message);
+        } finally {
+            setLoading(false);
         }
-        if (aDataAttivazione) {
-            const to = parseDate(aDataAttivazione);
-            if (to !== null) list = list.filter(r => parseDate(r.data_attivazione) !== null && parseDate(r.data_attivazione)! <= to);
-        }
-        if (daDataRegistrazione) {
-            const from = parseDate(daDataRegistrazione);
-            if (from !== null) list = list.filter(r => parseDate(r.data_registrazione) !== null && parseDate(r.data_registrazione)! >= from);
-        }
-        if (aDataRegistrazione) {
-            const to = parseDate(aDataRegistrazione);
-            if (to !== null) list = list.filter(r => parseDate(r.data_registrazione) !== null && parseDate(r.data_registrazione)! <= to);
-        }
-        return list;
-    }, [contractList, isGlobalView, lockedStore, lockedVenditore, filterVenditore, filterBrand, filterProdotto, filterNegozio, filterCodice, filterCodiceAttivazione, filterCliente, filterCellulare, filterImei, filterTableSearch, daDataAttivazione, aDataAttivazione, daDataRegistrazione, aDataRegistrazione]);
+    };
+
+    // Debounced fetch
+    useEffect(() => {
+        const timer = setTimeout(fetchData, 300);
+        return () => clearTimeout(timer);
+    }, [page, filterVenditore, filterCodice, filterBrand, filterProdotto, filterNegozio, filterCodiceAttivazione, filterCliente, filterCellulare, filterImei, filterTableSearch]);
+
+    const visibleData = contractList;
 
     const handleExportCsv = () => {
         if (visibleData.length === 0) return;
@@ -362,8 +364,24 @@ export default function RicercaContratto() {
                     </div>
                 )}
 
-                <div className="px-6 py-4 border-t border-white/5 flex items-center justify-between text-xs text-slate-400 bg-white/[0.01]">
-                    <span>Visualizzati {visibleData.length} contratti</span>
+                <div className="px-6 py-4 border-t border-white/5 flex items-center justify-between bg-white/[0.01]">
+                    <span className="text-xs text-slate-400">Trovati {totalCount} contratti — Pagina {page} di {Math.ceil(totalCount / pageSize)}</span>
+                    <div className="flex gap-2">
+                        <button
+                            disabled={page === 1 || loading}
+                            onClick={() => setPage(p => p - 1)}
+                            className="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-bold text-slate-400 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        >
+                            Precedente
+                        </button>
+                        <button
+                            disabled={page * pageSize >= totalCount || loading}
+                            onClick={() => setPage(p => p + 1)}
+                            className="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-bold text-slate-400 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        >
+                            Successiva
+                        </button>
+                    </div>
                 </div>
             </div>
 

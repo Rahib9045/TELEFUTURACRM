@@ -77,76 +77,69 @@ export default function TrackingPda() {
     const [aDataAttivazione, setADataAttivazione] = useState("");
     const [showFilters, setShowFilters] = useState(true);
 
-    useEffect(() => {
-        (async () => {
-            const { data, error } = await supabase
+    const [page, setPage] = useState(1);
+    const pageSize = 25;
+    const [totalCount, setTotalCount] = useState(0);
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            let query = supabase
                 .from("contracts")
-                .select("id, brand, categoria, stato, venditore, data_registrazione, data, data_attivazione, created_at, clients(nome, cognome, ragione_sociale, tipo)")
-                .order("created_at", { ascending: false });
-            if (error) {
-                setLoadError(error.message);
-                setRawList([]);
-            } else {
-                setRawList(((data ?? []) as unknown) as RawRow[]);
+                .select("id, brand, categoria, stato, venditore, data_registrazione, data, data_attivazione, created_at, clients!inner(nome, cognome, ragione_sociale, tipo)", { count: "exact" });
+
+            // Server-side filters
+            if (filterStato) query = query.eq("stato", filterStato);
+            if (filterVenditore) query = query.eq("venditore", filterVenditore);
+            if (filterCategoria) query = query.eq("categoria", filterCategoria);
+            if (filterCodiceContratto) query = query.ilike("id", `%${filterCodiceContratto}%`);
+
+            if (filterRagione) {
+                query = query.or(`nome.ilike.%${filterRagione}%,cognome.ilike.%${filterRagione}%,ragione_sociale.ilike.%${filterRagione}%`, { foreignTable: 'clients' });
             }
+
+            // Simple date filter for created_at if possible
+            const fromImp = parseDateSafe(daDataImp);
+            const toImp = parseDateSafe(aDataImp);
+            if (fromImp) query = query.gte("created_at", fromImp.toISOString());
+            if (toImp) query = query.lte("created_at", toImp.toISOString());
+
+            const { data, count, error } = await query
+                .order("created_at", { ascending: false })
+                .range((page - 1) * pageSize, page * pageSize - 1);
+
+            if (error) throw error;
+            setRawList((data as unknown) as RawRow[]);
+            setTotalCount(count ?? 0);
+        } catch (err: any) {
+            setLoadError(err.message);
+        } finally {
             setLoading(false);
-        })();
+        }
+    };
+
+    useEffect(() => {
+        const timer = setTimeout(fetchData, 300);
+        return () => clearTimeout(timer);
+    }, [page, filterStato, filterVenditore, filterCategoria, filterRagione, filterCodiceContratto, filterCodiceOrdine, daDataImp, aDataImp]);
+
+    useEffect(() => {
+        const fetchFilters = async () => {
+            const { data } = await supabase.from("contracts").select("venditore, categoria");
+            if (data) {
+                setUniqueVenditori(Array.from(new Set(data.map((r: any) => r.venditore).filter(Boolean))).sort() as string[]);
+                setUniqueCategorie(Array.from(new Set(data.map((r: any) => r.categoria).filter(Boolean))).sort() as string[]);
+            }
+        };
+        fetchFilters();
     }, []);
 
-    const uniqueVenditori = useMemo(() => Array.from(new Set(rawList.map(r => (r.venditore as string) || "").filter(Boolean))).sort(), [rawList]);
-    const uniqueCategorie = useMemo(() => Array.from(new Set(rawList.map(r => (r.categoria as string) || "").filter(Boolean))).sort(), [rawList]);
+    const [uniqueVenditori, setUniqueVenditori] = useState<string[]>([]);
+    const [uniqueCategorie, setUniqueCategorie] = useState<string[]>([]);
 
     const filtered = useMemo(() => {
-        let out = rawList;
-        const client = (r: RawRow) => r.clients as Record<string, unknown> | null;
-        const nominativo = (r: RawRow) => {
-            const c = client(r);
-            const rag = (c?.ragione_sociale as string) ?? "";
-            const nome = (c?.nome as string) ?? "";
-            const cog = (c?.cognome as string) ?? "";
-            return rag.trim() || [nome, cog].filter(Boolean).join(" ").trim() || "";
-        };
-        if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase();
-            out = out.filter(r => nominativo(r).toLowerCase().includes(q) || (r.brand as string)?.toLowerCase().includes(q) || (r.categoria as string)?.toLowerCase().includes(q));
-        }
-        if (filterRagione.trim()) {
-            const q = filterRagione.toLowerCase();
-            out = out.filter(r => nominativo(r).toLowerCase().includes(q));
-        }
-        if (filterCodiceContratto.trim()) out = out.filter(r => (r.id as string)?.toLowerCase().includes(filterCodiceContratto.toLowerCase()));
-        if (filterCodiceOrdine.trim()) out = out.filter(r => (r.id as string)?.toLowerCase().includes(filterCodiceOrdine.toLowerCase()));
-        if (filterStato) out = out.filter(r => r.stato === filterStato);
-        if (filterVenditore) out = out.filter(r => r.venditore === filterVenditore);
-        if (filterCategoria) out = out.filter(r => r.categoria === filterCategoria);
-        const filterByDate = (arr: RawRow[], getDate: (r: RawRow) => Date | null, da: string, a: string): RawRow[] => {
-            const from = parseDateSafe(da);
-            const to = parseDateSafe(a);
-            if (!from && !to) return arr;
-            return arr.filter(r => {
-                const d = getDate(r);
-                if (!d) return !from && !to;
-                if (from && d < from) return false;
-                if (to) { const t = new Date(to); t.setHours(23, 59, 59, 999); if (d > t) return false; }
-                return true;
-            });
-        };
-        out = filterByDate(out, r => r.created_at ? new Date(r.created_at as string) : null, daDataImp, aDataImp);
-        out = filterByDate(out, r => r.created_at ? new Date(r.created_at as string) : null, daDataCreazione, aDataCreazione);
-        out = filterByDate(out, r => {
-            const s = r.data_registrazione as string;
-            return s ? parseDateSafe(s) || (s.includes("T") ? new Date(s) : null) : null;
-        }, daDataFirma, aDataFirma);
-        out = filterByDate(out, r => {
-            const s = r.data_registrazione as string;
-            return s ? parseDateSafe(s) || (s.includes("T") ? new Date(s) : null) : null;
-        }, daDataGestione, aDataGestione);
-        out = filterByDate(out, r => {
-            const s = r.data_attivazione as string;
-            return s ? parseDateSafe(s) || (s.includes("T") ? new Date(s) : null) : null;
-        }, daDataAttivazione, aDataAttivazione);
-        return out.map(r => mapContractToTracking(r, r.clients as Record<string, unknown> | null));
-    }, [rawList, searchQuery, filterStato, filterVenditore, filterCategoria, filterRagione, filterCodiceContratto, filterCodiceOrdine, daDataImp, aDataImp, daDataCreazione, aDataCreazione, daDataFirma, aDataFirma, daDataGestione, aDataGestione, daDataAttivazione, aDataAttivazione]);
+        return rawList.map(r => mapContractToTracking(r, r.clients as Record<string, unknown> | null));
+    }, [rawList]);
 
     const clearFilters = () => {
         setSearchQuery("");
@@ -223,111 +216,111 @@ export default function TrackingPda() {
 
             {/* Advanced Search / Date Filter Section */}
             {showFilters && (
-            <div className="glass-card mb-6 p-6">
-                <h3 className="text-lg font-medium text-white mb-4 border-b border-white/10 pb-2">Ricerca PDA</h3>
-                {hasAnyFilter && (
-                    <div className="mb-4 pb-4 border-b border-white/5">
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Filtri attivi</p>
-                        <div className="flex flex-wrap gap-2">
-                            {filterRagione && chip(`Nominativo: ${filterRagione}`, () => setFilterRagione(""))}
-                            {filterCodiceContratto && chip(`Codice contratto: ${filterCodiceContratto}`, () => setFilterCodiceContratto(""))}
-                            {filterCodiceOrdine && chip(`Codice ordine: ${filterCodiceOrdine}`, () => setFilterCodiceOrdine(""))}
-                            {filterCategoria && chip(`Tipo: ${filterCategoria}`, () => setFilterCategoria(""))}
-                            {filterVenditore && chip(`Venditore: ${filterVenditore}`, () => setFilterVenditore(""))}
-                            {filterStato && chip(`Stato: ${filterStato}`, () => setFilterStato(""))}
-                            {(daDataImp || aDataImp) && chip("Data importazione", clearDateImp)}
-                            {(daDataCreazione || aDataCreazione) && chip("Data creazione", clearDateCreazione)}
-                            {(daDataFirma || aDataFirma) && chip("Data firma", clearDateFirma)}
-                            {(daDataGestione || aDataGestione) && chip("Data gestione", clearDateGestione)}
-                            {(daDataAttivazione || aDataAttivazione) && chip("Data attivazione", clearDateAttivazione)}
-                            <button type="button" onClick={clearFilters} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs hover:bg-rose-500/25 transition-colors" >
-                                <X className="w-3.5 h-3.5" /> Annulla tutti
-                            </button>
+                <div className="glass-card mb-6 p-6">
+                    <h3 className="text-lg font-medium text-white mb-4 border-b border-white/10 pb-2">Ricerca PDA</h3>
+                    {hasAnyFilter && (
+                        <div className="mb-4 pb-4 border-b border-white/5">
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Filtri attivi</p>
+                            <div className="flex flex-wrap gap-2">
+                                {filterRagione && chip(`Nominativo: ${filterRagione}`, () => setFilterRagione(""))}
+                                {filterCodiceContratto && chip(`Codice contratto: ${filterCodiceContratto}`, () => setFilterCodiceContratto(""))}
+                                {filterCodiceOrdine && chip(`Codice ordine: ${filterCodiceOrdine}`, () => setFilterCodiceOrdine(""))}
+                                {filterCategoria && chip(`Tipo: ${filterCategoria}`, () => setFilterCategoria(""))}
+                                {filterVenditore && chip(`Venditore: ${filterVenditore}`, () => setFilterVenditore(""))}
+                                {filterStato && chip(`Stato: ${filterStato}`, () => setFilterStato(""))}
+                                {(daDataImp || aDataImp) && chip("Data importazione", clearDateImp)}
+                                {(daDataCreazione || aDataCreazione) && chip("Data creazione", clearDateCreazione)}
+                                {(daDataFirma || aDataFirma) && chip("Data firma", clearDateFirma)}
+                                {(daDataGestione || aDataGestione) && chip("Data gestione", clearDateGestione)}
+                                {(daDataAttivazione || aDataAttivazione) && chip("Data attivazione", clearDateAttivazione)}
+                                <button type="button" onClick={clearFilters} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs hover:bg-rose-500/25 transition-colors" >
+                                    <X className="w-3.5 h-3.5" /> Annulla tutti
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Ragione sociale / Nominativo</label>
+                            <input value={filterRagione} onChange={e => setFilterRagione(e.target.value)} className="glass-input w-full" placeholder="Inserire nome o parte di esso" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Codice contratto</label>
+                            <input value={filterCodiceContratto} onChange={e => setFilterCodiceContratto(e.target.value)} className="glass-input w-full" placeholder="Inserire codice o parte di esso" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Codice ordine</label>
+                            <input value={filterCodiceOrdine} onChange={e => setFilterCodiceOrdine(e.target.value)} className="glass-input w-full" placeholder="Inserire codice o parte di esso" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Tipo</label>
+                            <select className="glass-input w-full" value={filterCategoria} onChange={e => setFilterCategoria(e.target.value)}>
+                                <option value="">Tutti</option>
+                                {uniqueCategorie.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Venditore</label>
+                            <select className="glass-input w-full" value={filterVenditore} onChange={e => setFilterVenditore(e.target.value)}>
+                                <option value="">Tutti</option>
+                                {uniqueVenditori.map(v => <option key={v} value={v}>{v}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Stato attivazione</label>
+                            <select className="glass-input w-full" value={filterStato} onChange={e => setFilterStato(e.target.value)}>
+                                <option value="">Tutti</option>
+                                {STATUS_OPTIONS.map(opt => (
+                                    <option key={opt.label} value={opt.label}>{opt.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Da data importazione</label>
+                            <DatePickerInput id="dadataimp" value={daDataImp} onChange={setDaDataImp} placeholder="inserire data inizio" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">A data importazione</label>
+                            <DatePickerInput id="adataimp" value={aDataImp} onChange={setADataImp} placeholder="inserire data fine" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Da data creazione</label>
+                            <DatePickerInput id="dadatacreazione" value={daDataCreazione} onChange={setDaDataCreazione} placeholder="inserire data inizio" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">A data creazione</label>
+                            <DatePickerInput id="adatacreazione" value={aDataCreazione} onChange={setADataCreazione} placeholder="inserire data fine" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Da data firma</label>
+                            <DatePickerInput id="dadatafirma" value={daDataFirma} onChange={setDaDataFirma} placeholder="inserire data inizio" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">A data firma</label>
+                            <DatePickerInput id="adatafirma" value={aDataFirma} onChange={setADataFirma} placeholder="inserire data fine" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Da data gestione</label>
+                            <DatePickerInput id="dadatagestione" value={daDataGestione} onChange={setDaDataGestione} placeholder="inserire data inizio" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">A data gestione</label>
+                            <DatePickerInput id="adatagestione" value={aDataGestione} onChange={setADataGestione} placeholder="inserire data fine" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Da data attivazione</label>
+                            <DatePickerInput id="dadataattivazione" value={daDataAttivazione} onChange={setDaDataAttivazione} placeholder="inserire data inizio" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">A data attivazione</label>
+                            <DatePickerInput id="adataattivazione" value={aDataAttivazione} onChange={setADataAttivazione} placeholder="inserire data fine" />
                         </div>
                     </div>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Ragione sociale / Nominativo</label>
-                        <input value={filterRagione} onChange={e => setFilterRagione(e.target.value)} className="glass-input w-full" placeholder="Inserire nome o parte di esso" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Codice contratto</label>
-                        <input value={filterCodiceContratto} onChange={e => setFilterCodiceContratto(e.target.value)} className="glass-input w-full" placeholder="Inserire codice o parte di esso" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Codice ordine</label>
-                        <input value={filterCodiceOrdine} onChange={e => setFilterCodiceOrdine(e.target.value)} className="glass-input w-full" placeholder="Inserire codice o parte di esso" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Tipo</label>
-                        <select className="glass-input w-full" value={filterCategoria} onChange={e => setFilterCategoria(e.target.value)}>
-                            <option value="">Tutti</option>
-                            {uniqueCategorie.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Venditore</label>
-                        <select className="glass-input w-full" value={filterVenditore} onChange={e => setFilterVenditore(e.target.value)}>
-                            <option value="">Tutti</option>
-                            {uniqueVenditori.map(v => <option key={v} value={v}>{v}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Stato attivazione</label>
-                        <select className="glass-input w-full" value={filterStato} onChange={e => setFilterStato(e.target.value)}>
-                            <option value="">Tutti</option>
-                            {STATUS_OPTIONS.map(opt => (
-                                <option key={opt.label} value={opt.label}>{opt.label}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Da data importazione</label>
-                        <DatePickerInput id="dadataimp" value={daDataImp} onChange={setDaDataImp} placeholder="inserire data inizio" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">A data importazione</label>
-                        <DatePickerInput id="adataimp" value={aDataImp} onChange={setADataImp} placeholder="inserire data fine" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Da data creazione</label>
-                        <DatePickerInput id="dadatacreazione" value={daDataCreazione} onChange={setDaDataCreazione} placeholder="inserire data inizio" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">A data creazione</label>
-                        <DatePickerInput id="adatacreazione" value={aDataCreazione} onChange={setADataCreazione} placeholder="inserire data fine" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Da data firma</label>
-                        <DatePickerInput id="dadatafirma" value={daDataFirma} onChange={setDaDataFirma} placeholder="inserire data inizio" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">A data firma</label>
-                        <DatePickerInput id="adatafirma" value={aDataFirma} onChange={setADataFirma} placeholder="inserire data fine" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Da data gestione</label>
-                        <DatePickerInput id="dadatagestione" value={daDataGestione} onChange={setDaDataGestione} placeholder="inserire data inizio" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">A data gestione</label>
-                        <DatePickerInput id="adatagestione" value={aDataGestione} onChange={setADataGestione} placeholder="inserire data fine" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Da data attivazione</label>
-                        <DatePickerInput id="dadataattivazione" value={daDataAttivazione} onChange={setDaDataAttivazione} placeholder="inserire data inizio" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">A data attivazione</label>
-                        <DatePickerInput id="adataattivazione" value={aDataAttivazione} onChange={setADataAttivazione} placeholder="inserire data fine" />
+                    <div className="mt-6 flex gap-3">
+                        <button type="button" onClick={() => setShowFilters(false)} className="primary-btn h-10 px-6">Ricerca pda</button>
+                        <button type="button" onClick={clearFilters} className="h-10 px-6 rounded-lg font-medium bg-white/5 text-slate-300 hover:bg-white/10 transition-colors">Annulla</button>
                     </div>
                 </div>
-                <div className="mt-6 flex gap-3">
-                    <button type="button" onClick={() => setShowFilters(false)} className="primary-btn h-10 px-6">Ricerca pda</button>
-                    <button type="button" onClick={clearFilters} className="h-10 px-6 rounded-lg font-medium bg-white/5 text-slate-300 hover:bg-white/10 transition-colors">Annulla</button>
-                </div>
-            </div>
             )}
 
             {loadError && (
@@ -359,45 +352,61 @@ export default function TrackingPda() {
                 {loading ? (
                     <div className="p-8 text-center text-slate-400">Caricamento...</div>
                 ) : (
-                <div className="overflow-x-auto w-full max-w-[100vw]">
-                    <table className="w-full text-left text-sm text-slate-300">
-                        <thead className="bg-white/[0.03] text-xs uppercase text-slate-400">
-                            <tr>
-                                {trackingColumns.map((col, idx) => (
-                                    <th key={idx} className={`px-6 py-4 font-semibold tracking-wider border-b border-white/5 ${col.className || ""}`}>
-                                        {col.header}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filtered.length === 0 ? (
-                                <tr><td colSpan={7} className="px-6 py-8 text-center text-slate-500">Nessuna PDA trovata.</td></tr>
-                            ) : (
-                                filtered.map((row) => (
-                                    <tr key={row.id} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">{row.avatar}</div>
-                                        </td>
-                                        <td className="px-6 py-4">{row.categoria}</td>
-                                        <td className="px-6 py-4 font-medium text-white">{row.brand}</td>
-                                        <td className="px-6 py-4">{row.venditore}</td>
-                                        <td className="px-6 py-4 text-slate-400">{row.inviato_il}</td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border", getStatusColor(row.stato))}>
-                                                {row.stato}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">{row.nominativo}</td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                    <div className="overflow-x-auto w-full max-w-[100vw]">
+                        <table className="w-full text-left text-sm text-slate-300">
+                            <thead className="bg-white/[0.03] text-xs uppercase text-slate-400">
+                                <tr>
+                                    {trackingColumns.map((col, idx) => (
+                                        <th key={idx} className={`px-6 py-4 font-semibold tracking-wider border-b border-white/5 ${col.className || ""}`}>
+                                            {col.header}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.length === 0 ? (
+                                    <tr><td colSpan={7} className="px-6 py-8 text-center text-slate-500">Nessuna PDA trovata.</td></tr>
+                                ) : (
+                                    filtered.map((row) => (
+                                        <tr key={row.id} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
+                                            <td className="px-6 py-4">
+                                                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">{row.avatar}</div>
+                                            </td>
+                                            <td className="px-6 py-4">{row.categoria}</td>
+                                            <td className="px-6 py-4 font-medium text-white">{row.brand}</td>
+                                            <td className="px-6 py-4">{row.venditore}</td>
+                                            <td className="px-6 py-4 text-slate-400">{row.inviato_il}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border", getStatusColor(row.stato))}>
+                                                    {row.stato}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">{row.nominativo}</td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
-                <div className="px-6 py-4 border-t border-white/5 flex items-center justify-between text-xs text-slate-400 bg-white/[0.01]">
-                    <span>Visualizzate {filtered.length} PDA</span>
+                <div className="px-6 py-4 border-t border-white/5 flex items-center justify-between bg-white/[0.01]">
+                    <span className="text-xs text-slate-400">Trovate {totalCount} PDA — Pagina {page} di {Math.ceil(totalCount / pageSize)}</span>
+                    <div className="flex gap-2">
+                        <button
+                            disabled={page === 1 || loading}
+                            onClick={() => setPage(p => p - 1)}
+                            className="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold text-slate-400 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all uppercase tracking-widest"
+                        >
+                            Precedente
+                        </button>
+                        <button
+                            disabled={page * pageSize >= totalCount || loading}
+                            onClick={() => setPage(p => p + 1)}
+                            className="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold text-slate-400 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all uppercase tracking-widest"
+                        >
+                            Successiva
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

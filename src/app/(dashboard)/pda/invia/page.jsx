@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import { useState, useCallback, useRef, useEffect } from "react";
@@ -6,6 +6,8 @@ import { createPortal } from "react-dom";
 import { Search, ShoppingBag, User, Check, ChevronLeft, ChevronRight, Plus, Trash2, Archive, HelpCircle, Info, LayoutGrid, Clock, Calendar, ExternalLink, MoreVertical, ChevronUp, ChevronDown } from "lucide-react";
 import { calculateCF, _CNA, _PNA } from "@/lib/cf";
 import { getDraft, saveDraft, clearDraft } from "@/lib/draft";
+import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/context/AuthContext";
 
 // ── COSTANTI ──────────────────────────────────────────────────────────────────
 
@@ -254,9 +256,10 @@ export default function InviaPda() {
   if (draftRef.current === undefined) draftRef.current = getDraft(DRAFT_KEY_PDA);
   const draft = draftRef.current;
 
+  const { user } = useAuth();
   const [step, setStep] = useState(draft?.step ?? 1);
-  const [venditore, setVenditore] = useState(draft?.venditore ?? "");
-  const [negozio, setNegozio] = useState(draft?.negozio ?? "");
+  const [venditore, setVenditore] = useState(draft?.venditore ?? user?.name ?? "");
+  const [negozio, setNegozio] = useState(draft?.negozio ?? user?.negozio ?? "");
   const [confirmReset, setConfirmReset] = useState(false);
 
   const [tipoCliente, setTipoCliente] = useState(draft?.tipoCliente ?? null);
@@ -270,6 +273,8 @@ export default function InviaPda() {
 
   const [showCF, setShowCF] = useState(false);
   const [cfD, setCfD] = useState({ nome: "", cognome: "", sesso: "M", giorno: "", mese: "", anno: "", comune: "", estero: false, paese: "", ...draft?.cfD });
+  const [attachments, setAttachments] = useState([]); // { file: File, name: string, type: string }
+  const [uploading, setUploading] = useState(false);
 
 
   // Carrello multi-brand
@@ -300,6 +305,55 @@ export default function InviaPda() {
 
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  const doLookup = async () => {
+    if (!lookupValue) return;
+    try {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("cf_piva", lookupValue.toUpperCase())
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setClienteFound(true);
+        setLookupDone(true);
+        if (data.tipo === "consumer") {
+          setAnConsumer(p => ({
+            ...p,
+            nome: data.nome || "",
+            cognome: data.cognome || "",
+            cf: data.cf_piva || "",
+            email: data.email || "",
+            cellulare: data.cellulare || "",
+            domicilio: data.indirizzo || "",
+          }));
+          setTipoCliente("privato");
+        } else {
+          setAnBusiness(p => ({
+            ...p,
+            ragioneSociale: data.ragione_sociale || "",
+            piva: data.cf_piva || "",
+            referente: data.nome || "",
+            email: data.email || "",
+            mobile: data.cellulare || "",
+            sedeLegale: data.indirizzo || "",
+          }));
+          setTipoCliente("business");
+        }
+        showToast("✅ Cliente trovato nel database");
+      } else {
+        setClienteFound(false);
+        setLookupDone(true);
+        showToast("ℹ️ Cliente non trovato, inserimento manuale");
+      }
+    } catch (err) {
+      console.error("Lookup error:", err);
+      showToast("❌ Errore ricerca cliente");
+    }
+  };
 
   const doCF = () => {
     const cf = calculateCF(cfD);
@@ -380,23 +434,128 @@ export default function InviaPda() {
     setAnBusiness({ ragioneSociale: "", piva: "", referente: "", numeroFisso: "", mobile: "", email: "", pec: "", codiceUnivoco: "", iban: "", sedeLegale: "", note: "" });
     setBrand(null); setAllSales({});
     setCart([]); setShowCart(false); setExpI({}); setConfirmReset(false);
+    setAttachments([]); setUploading(false);
+  };
+
+  const handleFileChange = (e, type) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const newFiles = Array.from(files).map(f => ({ file: f, name: f.name, type }));
+    setAttachments(p => [...p, ...newFiles]);
+    showToast(`📎 ${newFiles.length} allegati aggiunti: ${type}`);
   };
 
   useEffect(() => {
-    const payload = { step, venditore, negozio, tipoCliente, lookupValue, clienteFound, lookupDone, anConsumer, anBusiness, brand, cfD, cart, allSales };
+    const payload = { step, venditore, negozio, tipoCliente, lookupValue, clienteFound, lookupDone, anConsumer, anBusiness, brand, cfD, cart, allSales, attachments_count: attachments.length };
     const t = setTimeout(() => saveDraft(DRAFT_KEY_PDA, payload), 800);
     return () => clearTimeout(t);
-  }, [step, venditore, negozio, tipoCliente, lookupValue, clienteFound, lookupDone, anConsumer, anBusiness, brand, cfD, cart, allSales]);
+  }, [step, venditore, negozio, tipoCliente, lookupValue, clienteFound, lookupDone, anConsumer, anBusiness, brand, cfD, cart, allSales, attachments.length]);
 
-  const finalSubmit = () => {
+  const finalSubmit = async () => {
     const cur = colItems();
     const bObj = ALL_BRANDS.find(b => b.id === brand);
     const fc = [...cart];
     if (cur.length > 0 && bObj)
       fc.push({ brandId: brand, brandLabel: bObj.label, brandColor: bObj.color, items: cur });
-    const totProd = fc.reduce((s, g) => s + g.items.length, 0);
-    showToast("🎉 Inviato! " + fc.length + " brand · " + totProd + " prodotti");
-    setTimeout(fullReset, 2500);
+
+    if (fc.length === 0) {
+      showToast("⚠️ Nessun prodotto nel carrello");
+      return;
+    }
+
+    try {
+      // 1. Client Upsert
+      const isBus = tipoCliente === "business";
+      const ana = isBus ? anBusiness : anConsumer;
+      const cId = lookupValue || (isBus ? ana.piva : (ana.cf || ana.nome));
+      const clientId = String(cId).toUpperCase() || `CL-PDA-${Date.now()}`;
+
+      const clientData = {
+        id: clientId,
+        tipo: isBus ? "business" : "consumer",
+        nome: isBus ? (ana.referente || "Ragione Sociale") : (ana.nome || ""),
+        cognome: isBus ? "" : (ana.cognome || ""),
+        ragione_sociale: isBus ? (ana.ragioneSociale || "") : "",
+        cellulare: isBus ? (ana.mobile || "") : (ana.cellulare || ""),
+        email: ana.email || "",
+        cf_piva: lookupValue || (isBus ? ana.piva : ana.cf) || "",
+        indirizzo: isBus ? (ana.sedeLegale || "") : (ana.domicilio || ""),
+        citta: "",
+        is_demo: false
+      };
+
+      const { error: clientErr } = await supabase.from("clients").upsert(clientData, { onConflict: "id" });
+      if (clientErr) throw clientErr;
+
+      // 1.5 Upload Attachments
+      setUploading(true);
+      const uploadedFiles = [];
+      for (const att of attachments) {
+        const fileExt = att.name.split(".").pop();
+        const fileName = `pda_${clientId}_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `contracts/${fileName}`;
+
+        const { error: uploadErr } = await supabase.storage
+          .from("contracts")
+          .upload(filePath, att.file);
+
+        if (!uploadErr) {
+          const { data: { publicUrl } } = supabase.storage.from("contracts").getPublicUrl(filePath);
+          uploadedFiles.push({ url: publicUrl, name: att.name, type: att.type });
+        }
+      }
+
+      // 2. Prepare Contract Rows
+      const contractRows = [];
+      const dateStr = new Date().toLocaleDateString("it-IT");
+
+      fc.forEach(group => {
+        group.items.forEach(item => {
+          const actCode = item.details["Codice Contratto"] || item.details["Codice Proposta"] || item.details["Codice Ordine"] || "PDA-INVIATA";
+          contractRows.push({
+            id: `PDA-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+            client_id: clientId,
+            data: dateStr,
+            brand: group.brandLabel,
+            categoria: item.macro,
+            prodotto: item.sub,
+            stato: "PDA Inviata",
+            venditore: venditore || "Sistema",
+            negozio: negozio || "Sede",
+            codice_attivazione: String(actCode),
+            data_registrazione: dateStr,
+            data_attivazione: dateStr,
+            dettagli: item.details || {},
+            note: ana.note || null,
+            is_demo: false
+          });
+        });
+      });
+
+      if (contractRows.length > 0) {
+        const { data: createdContracts, error: contractErr } = await supabase.from("contracts").insert(contractRows).select();
+        if (contractErr) throw contractErr;
+
+        // 4. Save Attachments Meta
+        if (uploadedFiles.length > 0 && createdContracts && createdContracts.length > 0) {
+          const firstId = createdContracts[0].id;
+          const attRows = uploadedFiles.map(f => ({
+            contract_id: firstId,
+            file_url: f.url,
+            file_name: f.name,
+            file_type: f.type
+          }));
+          const { error: attErr } = await supabase.from("contract_attachments").insert(attRows);
+          if (attErr) console.error("Attachment Meta Error:", attErr);
+        }
+      }
+
+      showToast("🎉 PDA Inviata con successo!");
+      setTimeout(fullReset, 2500);
+    } catch (err) {
+      console.error("Submit Error:", err);
+      showToast("❌ Errore invio: " + (err.message || "Controlla connessione"));
+    }
   };
 
   const reset = fullReset;
@@ -520,27 +679,27 @@ export default function InviaPda() {
               if (f.key === "tensione" && tipoCliente !== "business") opts = baseOpts.filter(o => o !== "MT");
               else if (f.key === "destinazL" && tipoCliente === "business") opts = ["", "Altri usi"];
               return (
-              <div key={f.key} className={f.span2 ? 'md:col-span-2' : ''}>
-                <Label text={f.label} required={f.required} />
-                {f.type === "select" ? (
-                  <select
-                    value={sale.fields?.[f.key] || ""}
-                    onChange={e => setField(catKey, si, f.key, e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-sm text-slate-300 outline-none focus:border-violet-500/50"
-                  >
-                    {opts.map(o => <option key={o} value={o}>{o || "— Seleziona —"}</option>)}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    value={sale.fields?.[f.key] || ""}
-                    onChange={e => setField(catKey, si, f.key, e.target.value)}
-                    placeholder={f.ph}
-                    className="w-full glass-input rounded-xl py-2.5 px-4 text-sm"
-                  />
-                )}
-              </div>
-            );
+                <div key={f.key} className={f.span2 ? 'md:col-span-2' : ''}>
+                  <Label text={f.label} required={f.required} />
+                  {f.type === "select" ? (
+                    <select
+                      value={sale.fields?.[f.key] || ""}
+                      onChange={e => setField(catKey, si, f.key, e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-sm text-slate-300 outline-none focus:border-violet-500/50"
+                    >
+                      {opts.map(o => <option key={o} value={o}>{o || "— Seleziona —"}</option>)}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={sale.fields?.[f.key] || ""}
+                      onChange={e => setField(catKey, si, f.key, e.target.value)}
+                      placeholder={f.ph}
+                      className="w-full glass-input rounded-xl py-2.5 px-4 text-sm"
+                    />
+                  )}
+                </div>
+              );
             })}
           </div>
         </div>
@@ -1695,14 +1854,21 @@ export default function InviaPda() {
 
                   <NoteStep mini />
 
-                  <div className="mt-6">
+                  <div className="mt-6 relative">
+                    {uploading && <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-xl"><div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div></div>}
                     <Label text="Allegati (Trascina o clicca)" />
                     <div className="grid grid-cols-3 gap-2 mt-2">
-                      {[{ l: "Identità", i: "🪪" }, { l: "Contratti", i: "📄" }, { l: "Altro", i: "📁" }].map(a => (
-                        <div key={a.l} className="border border-dashed border-white/10 rounded-xl p-3 text-center bg-white/[0.02] hover:bg-white/[0.05] cursor-pointer group">
+                      {[{ l: "Identità", i: "🪪", t: "identity" }, { l: "Contratti", i: "📄", t: "contract" }, { l: "Altro", i: "📁", t: "other" }].map(a => (
+                        <label key={a.l} className="border border-dashed border-white/10 rounded-xl p-3 text-center bg-white/[0.02] hover:bg-white/[0.05] cursor-pointer group flex flex-col items-center">
+                          <input type="file" multiple className="hidden" onChange={(e) => handleFileChange(e, a.t)} />
                           <div className="text-xl mb-1 group-hover:scale-110 transition-transform">{a.i}</div>
                           <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter line-clamp-1">{a.l}</div>
-                        </div>
+                          <div className="flex flex-wrap justify-center gap-0.5 mt-1">
+                            {attachments.filter(at => at.type === a.t).map((at, ii) => (
+                              <div key={ii} className="w-1.5 h-1.5 rounded-full bg-cyan-500" title={at.name}></div>
+                            ))}
+                          </div>
+                        </label>
                       ))}
                     </div>
                   </div>
@@ -1801,7 +1967,7 @@ export default function InviaPda() {
                     <div className="flex gap-3 mt-3">
                       <input type="text" className="flex-1 glass-input font-mono tracking-widest uppercase" placeholder={tipoCliente === "privato" ? "RSSMRA80A..." : "1234567..."}
                         value={lookupValue} onChange={e => setLookupValue(e.target.value)} />
-                      <button onClick={() => { setClienteFound(true); setLookupDone(true); }}
+                      <button onClick={doLookup}
                         className="px-6 py-2 bg-violet-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-violet-600/25 hover:bg-violet-500 transition-all flex items-center gap-2">
                         <Search className="w-4 h-4" /> Cerca
                       </button>
