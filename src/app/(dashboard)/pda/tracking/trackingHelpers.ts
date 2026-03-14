@@ -135,11 +135,9 @@ export function isAttenzioneRow(row: TrackingRow): boolean {
     if (row.statoNegozio === "nuovo" && gg >= 4) return true;
     if (ggAgg >= 10) return true;
   } else {
-    // Unknown / missing categoria: use MNP-like thresholds so KPIs show a distribution
+    // Unknown categoria (DevSpec/JSX): only statiCritici → Warning; no ggAgg/gg thresholds
     const statiCritici = ["contattare_cliente", "contattare_supporto", "doc_mancante", "ricaduta", "ko_reinserito"];
     if (statiCritici.includes(row.statoNegozio)) return true;
-    if (ggAgg >= 5) return true;
-    if (gg >= 5 && row.statoNegozio !== "attivato" && row.statoNegozio !== "re_inserita") return true;
   }
   return false;
 }
@@ -168,10 +166,8 @@ export function isDaLavorareRow(row: TrackingRow): boolean {
     if (row.statoNegozio === "wm_sospetta") return true;
     if (row.statoNegozio === "attesa_matricola" && ggAgg >= 5) return true;
     if (row.statoNegozio === "aperto_sparks" && ggAgg >= 3) return true;
-  } else {
-    // Unknown / missing categoria: MNP-like — ggAgg >= 2 → Da Lavorare
-    if (ggAgg >= 2) return true;
   }
+  // Unknown categoria (JSX): no branch → never Da Lavorare
   return false;
 }
 
@@ -195,8 +191,8 @@ export function isMalusRow(row: TrackingRow): boolean {
     const skyWarn = (row.statoNegozio === "nuovo" && gg >= 4) || ggAgg >= 10;
     return skyWarn && ggAgg >= 2;
   }
-  // Unknown / missing categoria: MNP-like — ggAgg >= 6 → Malus
-  return ggAgg >= 6;
+  // Unknown categoria (JSX): no branch → never Malus
+  return false;
 }
 
 export function calcolaMalus(row: TrackingRow): number {
@@ -212,8 +208,7 @@ export function calcolaMalus(row: TrackingRow): number {
     return totale;
   }
 
-  // Unknown categoria: use MNP-like soglia/importo so Malus amount is shown
-  const soglia = MALUS_SOGLIE[row.categoria] ?? 6;
-  const importo = MALUS_IMPORTO[row.categoria] ?? 5;
+  const soglia = MALUS_SOGLIE[row.categoria] ?? 0;
+  const importo = MALUS_IMPORTO[row.categoria] ?? 0;
   return Math.max(0, ggAgg - soglia + 1) * importo;
 }
