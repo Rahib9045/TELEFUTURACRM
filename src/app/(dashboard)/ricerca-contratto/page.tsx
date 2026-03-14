@@ -114,7 +114,11 @@ export default function RicercaContratto() {
             if (filterCellulare) query = query.ilike("clients.cellulare", `%${filterCellulare}%`);
 
             if (filterCliente) {
-                query = query.or(`nome.ilike.%${filterCliente}%,cognome.ilike.%${filterCliente}%,ragione_sociale.ilike.%${filterCliente}%`, { foreignTable: 'clients' });
+                const safe = filterCliente.trim().replace(/[",]/g, "");
+                if (safe) {
+                    const term = `%${safe}%`;
+                    query = query.or(`clients.nome.ilike.${term},clients.cognome.ilike.${term},clients.ragione_sociale.ilike.${term}`);
+                }
             }
 
             // RBAC

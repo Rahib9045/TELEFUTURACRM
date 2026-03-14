@@ -1,5 +1,5 @@
 -- Create merchandise_orders table
-CREATE TABLE IF NOT EXISTS merchandise_orders (
+CREATE TABLE IF NOT EXISTS public.merchandise_orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_number TEXT UNIQUE NOT NULL,
     store TEXT NOT NULL,
@@ -11,9 +11,9 @@ CREATE TABLE IF NOT EXISTS merchandise_orders (
 );
 
 -- Create merchandise_order_items table
-CREATE TABLE IF NOT EXISTS merchandise_order_items (
+CREATE TABLE IF NOT EXISTS public.merchandise_order_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    order_id UUID REFERENCES merchandise_orders(id) ON DELETE CASCADE,
+    order_id UUID REFERENCES public.merchandise_orders(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     qty INTEGER NOT NULL DEFAULT 1,
     item_status TEXT NOT NULL DEFAULT 'pending',
@@ -32,15 +32,16 @@ CREATE TABLE IF NOT EXISTS merchandise_order_items (
 );
 
 -- Enable RLS
-ALTER TABLE merchandise_orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE merchandise_order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.merchandise_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.merchandise_order_items ENABLE ROW LEVEL SECURITY;
 
--- Policies for merchandise_orders
-CREATE POLICY "Enable all for authenticated users" ON merchandise_orders
+-- Policies (use 020_merchandise_anon_policies.sql for anon access; these require authenticated)
+DROP POLICY IF EXISTS "Enable all for authenticated users" ON public.merchandise_orders;
+CREATE POLICY "Enable all for authenticated users" ON public.merchandise_orders
     FOR ALL USING (auth.role() = 'authenticated');
 
--- Policies for merchandise_order_items
-CREATE POLICY "Enable all for authenticated users" ON merchandise_order_items
+DROP POLICY IF EXISTS "Enable all for authenticated users" ON public.merchandise_order_items;
+CREATE POLICY "Enable all for authenticated users" ON public.merchandise_order_items
     FOR ALL USING (auth.role() = 'authenticated');
 
 -- Trigger for updated_at
@@ -53,6 +54,6 @@ END;
 $$ language 'plpgsql';
 
 CREATE TRIGGER update_merchandise_orders_updated_at
-    BEFORE UPDATE ON merchandise_orders
+    BEFORE UPDATE ON public.merchandise_orders
     FOR EACH ROW
     EXECUTE PROCEDURE update_updated_at_column();

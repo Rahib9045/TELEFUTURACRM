@@ -267,8 +267,8 @@ const SCd = ({ session, codici, val, onCh }: { session: string, codici: string[]
         <option value="" style={{ background: "#0f172a" }}>— Seleziona —</option>
         {codici.map(c => <option key={c} value={c} style={{ background: "#0f172a" }}>{c}</option>)}
       </select>
-      {actual && !isOv && <div style={{ fontSize: 10, color: "#22c55e", marginTop: 2 }}>? Da codice inserimento</div>}
-      {isOv && <div style={{ fontSize: 10, color: "#f97316", marginTop: 2 }}>? Modificato</div>}
+      {actual && !isOv && <div style={{ fontSize: 10, color: "#22c55e", marginTop: 2 }}>✓ Da codice inserimento</div>}
+      {isOv && <div style={{ fontSize: 10, color: "#f97316", marginTop: 2 }}>✏️ Modificato</div>}
     </div>
   );
   return content;
@@ -331,7 +331,7 @@ const MiniC = ({ label, val, onCh, opts, locked, lockVal }: { label: string, val
         <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0" }}>
           <span style={{ fontSize: 10, fontWeight: 600, color: "#64748b" }}>{label}:</span>
           <span style={{ fontSize: 11, fontWeight: 700, color: (actual === o1 || actual === true) ? "#818cf8" : "#94a3b8", background: (actual === o1 || actual === true) ? "rgba(99, 102, 241, 0.1)" : "rgba(255, 255, 255, 0.05)", padding: "2px 10px", borderRadius: 4, border: "1px solid rgba(255, 255, 255, 0.05)" }}>{actual === true ? o1 : actual === false ? o2 : String(actual)}</span>
-          {!locked && <button onClick={() => onCh(null)} style={{ background: "none", border: "none", fontSize: 10, color: "#64748b", cursor: "pointer", padding: 0 }}>?</button>}
+          {!locked && <button onClick={() => onCh(null)} style={{ background: "none", border: "none", fontSize: 10, color: "#64748b", cursor: "pointer", padding: 0 }}>✕</button>}
           {locked && <span style={{ fontSize: 9, color: "#64748b", fontStyle: "italic" }}>fisso</span>}
         </div>
       ) : (
@@ -404,7 +404,7 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
               <div className="flex gap-2">
                 {["Security", "Security PRO"].map(s =>
                   <button key={s} onClick={() => uP(group.id, si, sub.id, "securitySel", sd.securitySel[s] ? {} : { [s]: true })} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${sd.securitySel[s] ? "border-2 border-orange-500 bg-orange-500/15 text-orange-400" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>
-                    <span>{sd.securitySel[s] ? "?" : "?"}</span>{s}
+                    <span>{sd.securitySel[s] ? "✓" : "○"}</span>{s}
                   </button>
                 )}
               </div>
@@ -475,7 +475,7 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
                         <div className="flex flex-wrap gap-2 mt-2">
                           {["Reload", "Reload Plus", "Reload Exchange"].map(rl =>
                             <button key={rl} onClick={() => uP(group.id, si, sub.id, "tnpGaReloadSel", sd.tnpGaReloadSel[rl] ? {} : { [rl]: true })} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${sd.tnpGaReloadSel[rl] ? "border-2 border-emerald-500 bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>
-                              <span>{sd.tnpGaReloadSel[rl] ? "?" : "?"}</span>{rl}
+                              <span>{sd.tnpGaReloadSel[rl] ? "✓" : "○"}</span>{rl}
                             </button>
                           )}
                         </div>
@@ -491,7 +491,7 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
                   <div className="flex gap-2">
                     {["Security", "Security PRO"].map(s =>
                       <button key={s} onClick={() => uP(group.id, si, sub.id, "securitySel", sd.securitySel[s] ? {} : { [s]: true })} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${sd.securitySel[s] ? "border-2 border-orange-500 bg-orange-500/15 text-orange-400" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>
-                        <span>{sd.securitySel[s] ? "?" : "?"}</span>{s}
+                        <span>{sd.securitySel[s] ? "✓" : "○"}</span>{s}
                       </button>
                     )}
                   </div>
@@ -509,7 +509,7 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
                 <div className="flex gap-2">
                   {["Security", "Security PRO"].map(s =>
                     <button key={s} onClick={() => uP(group.id, si, sub.id, "securitySel", sd.securitySel[s] ? {} : { [s]: true })} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${sd.securitySel[s] ? "border-2 border-orange-500 bg-orange-500/15 text-orange-400" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>
-                      <span>{sd.securitySel[s] ? "?" : "?"}</span>{s}
+                      <span>{sd.securitySel[s] ? "✓" : "○"}</span>{s}
                     </button>
                   )}
                 </div>
@@ -542,11 +542,11 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 6 }}>Security / Reload</div>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       <button onClick={() => uP(group.id, si, sub.id, "securitySel", sd.securitySel["Security"] ? {} : { "Security": true })} style={{ padding: "5px 14px", borderRadius: 6, border: sd.securitySel["Security"] ? "2px solid #fd7e14" : "1px solid rgba(255,255,255,0.1)", background: sd.securitySel["Security"] ? "rgba(253, 126, 20, 0.1)" : "rgba(255,255,255,0.03)", color: sd.securitySel["Security"] ? "#fd7e14" : "#94a3b8", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-                        <span>{sd.securitySel["Security"] ? "?" : "?"}</span>Security
+                        <span>{sd.securitySel["Security"] ? "✓" : "○"}</span>Security
                       </button>
                       {["Reload", "Reload EU"].map(rl =>
                         <button key={rl} onClick={() => uP(group.id, si, sub.id, "tnpGaReloadSel", sd.tnpGaReloadSel[rl] ? {} : { [rl]: true })} style={{ padding: "5px 14px", borderRadius: 6, border: sd.tnpGaReloadSel[rl] ? "2px solid #28a745" : "1px solid rgba(255,255,255,0.1)", background: sd.tnpGaReloadSel[rl] ? "rgba(40, 167, 69, 0.1)" : "rgba(255,255,255,0.03)", color: sd.tnpGaReloadSel[rl] ? "#28a745" : "#94a3b8", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-                          <span>{sd.tnpGaReloadSel[rl] ? "?" : "?"}</span>{rl}
+                          <span>{sd.tnpGaReloadSel[rl] ? "✓" : "○"}</span>{rl}
                         </button>
                       )}
                     </div>
@@ -558,10 +558,10 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
                   <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 6 }}>Security / Reload</div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     <button onClick={() => uP(group.id, si, sub.id, "securitySel", sd.securitySel["Security"] ? {} : { "Security": true })} style={{ padding: "5px 14px", borderRadius: 6, border: sd.securitySel["Security"] ? "2px solid #fd7e14" : "1px solid rgba(255,255,255,0.1)", background: sd.securitySel["Security"] ? "rgba(253, 126, 20, 0.1)" : "rgba(255,255,255,0.03)", color: sd.securitySel["Security"] ? "#fd7e14" : "#94a3b8", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-                      <span>{sd.securitySel["Security"] ? "?" : "?"}</span>Security
+                      <span>{sd.securitySel["Security"] ? "✓" : "○"}</span>Security
                     </button>
                     <button onClick={() => uP(group.id, si, sub.id, "tnpGaReloadSel", sd.tnpGaReloadSel["Reload Open"] ? {} : { "Reload Open": true })} style={{ padding: "5px 14px", borderRadius: 6, border: sd.tnpGaReloadSel["Reload Open"] ? "2px solid #28a745" : "1px solid rgba(255,255,255,0.1)", background: sd.tnpGaReloadSel["Reload Open"] ? "rgba(40, 167, 69, 0.1)" : "rgba(255,255,255,0.03)", color: sd.tnpGaReloadSel["Reload Open"] ? "#28a745" : "#94a3b8", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-                      <span>{sd.tnpGaReloadSel["Reload Open"] ? "?" : "?"}</span>Reload Open
+                      <span>{sd.tnpGaReloadSel["Reload Open"] ? "✓" : "○"}</span>Reload Open
                     </button>
                   </div>
                 </div>
@@ -590,7 +590,7 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {["Protezione PRO Negozi - Affittuario", "Protezione PRO Negozi - Proprietario"].map(opt =>
             <button key={opt} onClick={() => uF(group.id, si, sub.id, "assicBizSel", f.assicBizSel === opt ? "" : opt)} style={{ padding: "8px 16px", borderRadius: 8, border: f.assicBizSel === opt ? "2px solid #6f42c1" : "1px solid rgba(255,255,255,0.1)", background: f.assicBizSel === opt ? "rgba(111, 66, 193, 0.2)" : "rgba(255,255,255,0.03)", color: f.assicBizSel === opt ? "#a855f7" : "#94a3b8", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "all 0.2s" }}>
-              <span style={{ fontSize: 14 }}>{f.assicBizSel === opt ? "?" : "?"}</span>{opt}
+              <span style={{ fontSize: 14 }}>{f.assicBizSel === opt ? "✓" : "○"}</span>{opt}
             </button>
           )}
         </div>
@@ -679,7 +679,7 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
                     {(sub.isCBBiz ? ["Reload", "Reload EU"] : ["Reload", "Reload Plus", "Reload Exchange"]).map(rl =>
                       <button key={rl} onClick={() => uP(group.id, si, sub.id, "cbTnpReloadSel", sd.cbTnpReloadSel[rl] ? {} : { [rl]: true })} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${sd.cbTnpReloadSel[rl] ? "border-2 border-emerald-500 bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>
-                        <span>{sd.cbTnpReloadSel[rl] ? "?" : "?"}</span>{rl}
+                        <span>{sd.cbTnpReloadSel[rl] ? "✓" : "○"}</span>{rl}
                       </button>
                     )}
                   </div>
@@ -721,12 +721,12 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {sub.cbAddonVals.map((opt: string) =>
                   <button key={opt} onClick={() => { const cur = sd.cbAddonSel[opt]; uP(group.id, si, sub.id, "cbAddonSel", { ...sd.cbAddonSel, [opt]: !cur }) }} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${sd.cbAddonSel[opt] ? "border-2 border-emerald-500 bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>
-                    <span>{sd.cbAddonSel[opt] ? "?" : "?"}</span>{opt}
+                    <span>{sd.cbAddonSel[opt] ? "✓" : "○"}</span>{opt}
                   </button>
                 )}
                 {sub.isCBBiz && (!sd.cbTnp || (sd.cbTnp && sd.cbCambio && (sd.cbTnpReload === false || sd.cbTnpReload === null))) && (
                   <button onClick={() => { const cur = sd.cbAddonSel["Reload Open"]; uP(group.id, si, sub.id, "cbAddonSel", { ...sd.cbAddonSel, "Reload Open": !cur }) }} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${sd.cbAddonSel["Reload Open"] ? "border-2 border-emerald-500 bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>
-                    <span>{sd.cbAddonSel["Reload Open"] ? "?" : "?"}</span>Reload Open
+                    <span>{sd.cbAddonSel["Reload Open"] ? "✓" : "○"}</span>Reload Open
                   </button>
                 )}
               </div>
@@ -805,7 +805,7 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {sub.addonList.map((ad: string) =>
               <button key={ad} onClick={() => toggleAddon(ad)} style={{ padding: "6px 14px", borderRadius: 6, border: sd.addons[ad] ? "2px solid #28a745" : "1px solid rgba(255,255,255,0.1)", background: sd.addons[ad] ? "rgba(40, 167, 69, 0.1)" : "rgba(255,255,255,0.03)", color: sd.addons[ad] ? "#28a745" : "#94a3b8", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, transition: "all 0.2s" }}>
-                <span style={{ fontSize: 14 }}>{sd.addons[ad] ? "?" : "?"}</span>{ad}
+                <span style={{ fontSize: 14 }}>{sd.addons[ad] ? "✓" : "○"}</span>{ad}
               </button>
             )}
           </div>
@@ -842,7 +842,7 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
             {sub.isMobileBiz && (sd.tnpGa === "Sì" || sd.tnpGa === true) && sd.tnpTipo && <TF l="IMEI" r v={c.imei || ""} o={v => uC(group.id, si, sub.id, "imei", v)} p="15 cifre" nt="Scansione barcode" />}
           </div>}
           {sub.ct === "tnp_ga" && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 14px" }}>
-            <TF l="Codice Contratto" r v={gaOn ? (gaC.codice_contratto || "") : (c.codice_contratto || "")} o={v => uC(group.id, si, sub.id, "codice_contratto", v)} p={gaOn ? "? da Mobile GA" : "es. 167942"} dis={gaOn} nt={gaOn ? "Auto da Mobile GA" : ""} />
+            <TF l="Codice Contratto" r v={gaOn ? (gaC.codice_contratto || "") : (c.codice_contratto || "")} o={v => uC(group.id, si, sub.id, "codice_contratto", v)} p={gaOn ? "Auto da Mobile GA" : "es. 167942"} dis={gaOn} nt={gaOn ? "Auto da Mobile GA" : ""} />
             <TF l="Modello Terminale" v={c.modello || ""} o={v => uC(group.id, si, sub.id, "modello", v)} p="Samsung S25" />
             <TF l="IMEI" v={c.imei || ""} o={v => uC(group.id, si, sub.id, "imei", v)} p="15 cifre" nt="Scansione barcode" />
           </div>}
@@ -1097,7 +1097,7 @@ export default function CRM() {
   const rmSl = (catId: string, idx: number) => setSales(p => { const c = [...(p[catId] || [{}])]; c.splice(idx, 1); return { ...p, [catId]: c.length ? c : [{}] } });
   const togSky = (si: number, pr: string) => { setSkyS(p => { const n = [...p]; const c = [...(n[si].selected || [])]; const i = c.indexOf(pr); if (i >= 0) c.splice(i, 1); else c.push(pr); n[si] = { ...n[si], selected: c }; return n }) };
 
-  const addMargItem = (item: any) => { setMargItems(p => [...p, item]); setShowMargPOS(false); sT("? Prodotto aggiunto: " + item.product) };
+  const addMargItem = (item: any) => { setMargItems(p => [...p, item]); setShowMargPOS(false); sT("✓ Prodotto aggiunto: " + item.product) };
   const rmMargItem = (idx: number) => setMargItems(p => p.filter((_, i) => i !== idx));
 
   const colItems = useCallback(() => {
@@ -1110,7 +1110,7 @@ export default function CRM() {
 
   const addCart = () => {
     const items = colItems();
-    if (items.length > 0 && bObj) { const snap = { sales: JSON.parse(JSON.stringify(sales)), sesCode, skyS: JSON.parse(JSON.stringify(skyS)) }; setCart(p => [...p, { brandId: brand, brandLabel: bObj.label, brandIcon: bObj.icon, brandColor: bObj.color, items, sv: snap }]); sT("? " + items.length + " prodotti " + bObj.label) }
+    if (items.length > 0 && bObj) { const snap = { sales: JSON.parse(JSON.stringify(sales)), sesCode, skyS: JSON.parse(JSON.stringify(skyS)) }; setCart(p => [...p, { brandId: brand, brandLabel: bObj.label, brandIcon: bObj.icon, brandColor: bObj.color, items, sv: snap }]); sT("✓ " + items.length + " prodotti " + bObj.label) }
     setSales({}); setSesCode(""); setSkyS([{ selected: [] }]); setBrand(null);
   };
   const editCG = (idx: number) => { const g: any = cart[idx]; if (!g) return; setBrand(g.brandId); if (g.sv) { setSales(g.sv.sales || {}); setSesCode(g.sv.sesCode || ""); setSkyS(g.sv.skyS || [{ selected: [] }]) } setCart(p => p.filter((_, i) => i !== idx)); setShowCart(false); sT("✏️ Modifica " + g.brandLabel) };
@@ -1134,7 +1134,7 @@ export default function CRM() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        sT("? PDF generato e scaricato");
+        sT("✓ PDF generato e scaricato");
       };
       reader.readAsDataURL(blob);
     } catch (err) {
@@ -1313,7 +1313,7 @@ export default function CRM() {
           cognomeRef: (data as any).cognome_ref || "",
           recapito: data.cellulare || ""
         });
-        sT("? Cliente trovato nel database");
+        sT("✓ Cliente trovato nel database");
       } else {
         setClienteFound(false);
         setShowAna(true);
@@ -1322,7 +1322,7 @@ export default function CRM() {
       }
     } catch (err) {
       console.error("Lookup error:", err);
-      sT("? Errore ricerca cliente");
+      sT("❌ Errore ricerca cliente");
     }
   };
   const doCF = () => { const { nome, cognome, sesso, giorno, mese, anno, comune, estero, paese } = cfD; if (!nome || !cognome || !giorno || !mese || !anno) return; if (estero && !paese) return; if (!estero && !comune) return; const luogo = (estero ? paese : comune).toUpperCase(); const cc = estero ? (CO_EE[luogo] || "Z999") : (CO[luogo] || "Z999"); const cn = xC(cognome), vn = xV(cognome), sur = [...cn, ...vn, "X", "X", "X"].slice(0, 3).join(""); const cna = xC(nome); const nam = cna.length >= 4 ? [cna[0], cna[2], cna[3]].join("") : [...cna, ...xV(nome), "X", "X", "X"].slice(0, 3).join(""); const an = anno.slice(-2), me = MCF[mese] || "A"; let gi = parseInt(giorno); if (sesso === "F") gi += 40; const bd = an + me + (gi < 10 ? "0" + gi : String(gi)); const partial = sur + nam + bd + cc; let sm = 0; for (let i = 0; i < 15; i++) { const ch = partial[i]; sm += (i % 2 === 0) ? (DI[ch] || 0) : (PA[ch] || 0) } setLookupValue(partial + _R[sm % 26]); setShowCF(false); setShowAna(true); uA("nome", nome.charAt(0).toUpperCase() + nome.slice(1).toLowerCase()); uA("cognome", cognome.charAt(0).toUpperCase() + cognome.slice(1).toLowerCase()) };
@@ -1533,18 +1533,18 @@ export default function CRM() {
                   <button onClick={() => setShowCF(!showCF)} className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${showCF ? "border-2 border-orange-500 bg-orange-500/15 text-orange-400" : "border border-white/10 bg-white/5 text-slate-400 hover:bg-white/10"}`}>🧮 Calcola</button>
                 )}
               </div>
-              {clienteFound && <div className="mt-3 py-2.5 px-4 rounded-lg bg-emerald-500/15 text-emerald-400 text-sm border border-emerald-500/20">? Cliente identificato nel sistema</div>}
+              {clienteFound && <div className="mt-3 py-2.5 px-4 rounded-lg bg-emerald-500/15 text-emerald-400 text-sm border border-emerald-500/20">✓ Cliente identificato nel sistema</div>}
               {showCF && tipoCliente === "privato" && (
                 <div className="fixed inset-0 sm:absolute sm:bottom-[110%] sm:left-0 sm:right-0 z-50 flex items-center justify-center p-4 sm:p-0 sm:items-stretch sm:block bg-black/50 sm:bg-transparent backdrop-blur-sm sm:backdrop-blur-none">
                   <div className="w-full max-h-[90vh] sm:max-h-[75vh] overflow-y-auto rounded-2xl sm:rounded-xl bg-[#0f172a] border-2 border-orange-500 shadow-2xl p-4 sm:p-6 flex flex-col sm:static">
                     <div className="flex justify-between items-center mb-4 shrink-0">
                       <span className="text-sm sm:text-base font-extrabold text-orange-400 tracking-wide">🧮 CALCOLO CODICE FISCALE</span>
-                      <button type="button" onClick={() => setShowCF(false)} className="p-2 -m-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 touch-manipulation" aria-label="Chiudi">?</button>
+                      <button type="button" onClick={() => setShowCF(false)} className="p-2 -m-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 touch-manipulation" aria-label="Chiudi">✕</button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3 min-h-0">
                       <TF l="Cognome" r v={cfD.cognome} o={v => setCfD(p => ({ ...p, cognome: v }))} p="Rossi" />
                       <TF l="Nome" r v={cfD.nome} o={v => setCfD(p => ({ ...p, nome: v }))} p="Mario" />
-                      <div className="sm:col-span-1"><div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", marginBottom: 4 }}>Sesso</div><div className="flex gap-2">{(["M", "F"] as Array<"M" | "F">).map(sx => <button key={sx} type="button" onClick={() => setCfD(p => ({ ...p, sesso: sx }))} className={`flex-1 py-2.5 sm:py-2 rounded-lg text-sm font-bold border-2 transition-all min-h-[44px] touch-manipulation ${cfD.sesso === sx ? "border-orange-500 bg-orange-500/20 text-orange-400" : "border-white/10 bg-white/5 text-slate-400"}`}>{sx === "M" ? "? Uomo" : "? Donna"}</button>)}</div></div>
+                      <div className="sm:col-span-1"><div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", marginBottom: 4 }}>Sesso</div><div className="flex gap-2">{(["M", "F"] as Array<"M" | "F">).map(sx => <button key={sx} type="button" onClick={() => setCfD(p => ({ ...p, sesso: sx }))} className={`flex-1 py-2.5 sm:py-2 rounded-lg text-sm font-bold border-2 transition-all min-h-[44px] touch-manipulation ${cfD.sesso === sx ? "border-orange-500 bg-orange-500/20 text-orange-400" : "border-white/10 bg-white/5 text-slate-400"}`}>{sx === "M" ? "👤 Uomo" : "👩 Donna"}</button>)}</div></div>
                       <div className="sm:col-span-1">
                         <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", marginBottom: 4 }}>Luogo di nascita <span className="text-rose-400">*</span></div>
                         <div className="flex gap-2 mb-2">
@@ -1603,9 +1603,9 @@ export default function CRM() {
           )}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24, paddingTop: 20, borderTop: "1px solid rgba(255, 255, 255, 0.05)" }}>
             <button onClick={() => { setAna({ nome: "", cognome: "", cellulare: "", email: "", via: "", cap: "", citta: "", ragioneSociale: "", nomeRef: "", cognomeRef: "", recapito: "" }); setLookupValue(""); setClienteFound(false); setShowStep4(false) }}
-              style={{ padding: "10px 24px", borderRadius: 10, border: "1px solid rgba(244, 63, 94, 0.3)", background: "rgba(244, 63, 94, 0.1)", color: "#fb7185", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, transition: "all 0.2s" }}>? Reset</button>
+              style={{ padding: "10px 24px", borderRadius: 10, border: "1px solid rgba(244, 63, 94, 0.3)", background: "rgba(244, 63, 94, 0.1)", color: "#fb7185", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, transition: "all 0.2s" }}>🔄 Reset</button>
             <button onClick={() => setShowStep4(true)}
-              style={{ padding: "12px 32px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #0ea5e9, #0284c7)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 4px 15px rgba(14, 165, 233, 0.3)", transition: "all 0.2s" }}>Procedi alla scelta prodotti ?</button>
+              style={{ padding: "12px 32px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #0ea5e9, #0284c7)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 4px 15px rgba(14, 165, 233, 0.3)", transition: "all 0.2s" }}>Procedi alla scelta prodotti →</button>
           </div>
         </div>
       )}

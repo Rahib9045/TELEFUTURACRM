@@ -202,7 +202,7 @@ function ClienteFormModal({ cliente, onClose, onSave }: { cliente?: Cliente | nu
         setLoading(true);
         setError(null);
 
-        const payload = {
+        const basePayload = {
             tipo,
             nome,
             cognome: tipo === "consumer" ? cognome : (cognome || null),
@@ -216,10 +216,11 @@ function ClienteFormModal({ cliente, onClose, onSave }: { cliente?: Cliente | nu
 
         try {
             if (cliente) {
-                const { error: err } = await supabase.from("clients").update(payload).eq("id", cliente.id);
+                const { error: err } = await supabase.from("clients").update(basePayload).eq("id", cliente.id);
                 if (err) throw err;
             } else {
-                const { error: err } = await supabase.from("clients").insert([payload]);
+                const insertPayload = { id: `CL-${cfPiva.replace(/\s/g, "")}-${Date.now()}`, ...basePayload };
+                const { error: err } = await supabase.from("clients").insert([insertPayload]);
                 if (err) throw err;
             }
             onSave();

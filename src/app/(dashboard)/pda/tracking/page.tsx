@@ -95,7 +95,11 @@ export default function TrackingPda() {
             if (filterCodiceContratto) query = query.ilike("id", `%${filterCodiceContratto}%`);
 
             if (filterRagione) {
-                query = query.or(`nome.ilike.%${filterRagione}%,cognome.ilike.%${filterRagione}%,ragione_sociale.ilike.%${filterRagione}%`, { foreignTable: 'clients' });
+                const safe = filterRagione.trim().replace(/[",]/g, "");
+                if (safe) {
+                    const term = `%${safe}%`;
+                    query = query.or(`clients.nome.ilike.${term},clients.cognome.ilike.${term},clients.ragione_sociale.ilike.${term}`);
+                }
             }
 
             // Simple date filter for created_at if possible
