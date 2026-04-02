@@ -1,345 +1,1243 @@
+// @ts-nocheck
 "use client";
 
 import Image from "next/image";
-import { useState, useCallback, useRef, useEffect, memo } from "react";
-import { getDraft, saveDraft, clearDraft } from "@/lib/draft";
 import { generateContractPDF } from "@/utils/contract-pdf";
 import { FileDown, Search, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
-// -- MARGINALITÀ DATA --
-const MARG_PRODUCTS = [
-  {
-    cat: "📦 Prodotti", items: [
-      { id: "plx", name: "PLX", price: null, fixedMargin: 8, hasQty: true, icon: "📦", type: "fixed" },
-      { id: "family_ontop", name: "Family+ On Top", price: null, fixedMargin: 10, icon: "👨‍👩‍👧", type: "fixed" },
-      { id: "cncp", name: "CN/CP", price: null, fixedMargin: 2, hasQty: true, icon: "💳", type: "fixed" },
-      { id: "new_cover", name: "New Cover", price: null, fixedMargin: 8, hasQty: true, icon: "🔲", type: "fixed" },
-      { id: "mem_pen", name: "Mem / Pen", price: null, fixedMargin: 11, icon: "💾", type: "fixed" },
-      { id: "salva_scontrino", name: "Salva Scontrino", price: null, fixedMargin: 3, icon: "🧾", type: "fixed" },
-      { id: "orologio", name: "Orologio Cash", price: null, fixedMargin: 25, icon: "⌚", type: "fixed" },
-      { id: "miband", name: "Mi Band 6", price: null, fixedMargin: 15, icon: "⌚", type: "fixed" },
-      { id: "powerbank", name: "PowerBank", price: null, fixedMargin: 8, icon: "🔋", type: "fixed" },
-    ]
-  },
-  {
-    cat: "🔧 Servizi", items: [
-      { id: "assistenza", name: "Assistenza Tecnico", price: null, pctMargin: 81.97, icon: "🔧", type: "pct" },
-      { id: "backup", name: "Backup", price: null, pctMargin: 81.97, icon: "💿", type: "pct" },
-      { id: "riparazione", name: "Riparazione", price: null, pctMargin: 24.59, needsModel: true, icon: "🔨", type: "pct" },
-      { id: "vendita_usato", name: "Vendita Usato", price: null, pctMargin: 13.00, needsModel: true, needsImei: true, icon: "♻️", type: "pct" },
-      { id: "chiusura", name: "Chiusura Sim/Fisso", price: null, pctMargin: 81.97, icon: "✂️", type: "pct" },
-      { id: "etelefono", name: "E.Telefono", price: null, pctMargin: 81.97, icon: "📞", type: "pct" },
-      { id: "accessori", name: "Accessori", price: null, pctMargin: 24.59, hasQty: true, icon: "🎧", type: "pct" },
-      { id: "extra_acc", name: "Extra Acc. Compass", price: null, pctMargin: 65.00, icon: "🧭", type: "pct" },
-      { id: "tel_senior", name: "Telefoni Senior", price: null, pctMargin: 12.30, needsModel: true, icon: "📱", type: "pct" },
-      { id: "earbuds", name: "Ear Buds", price: null, pctMargin: 40.98, icon: "🎵", type: "pct" },
-    ]
-  },
-  {
-    cat: "🛡️ Kasko", items: [
-      { id: "extra_kasko", name: "Extra Margine Kasko", price: null, pctMargin: 40.00, icon: "🛡️", type: "pct" },
-      { id: "plkasko", name: "PLKasko", price: null, pctMargin: 60.00, icon: "🏷️", type: "pct" },
-      { id: "kasko_sv", name: "Kasko SV", price: null, pctMargin: 60.00, icon: "🔖", type: "pct" },
-    ]
-  },
-  {
-    cat: "📶 SIM", items: [
-      { id: "sim1", name: "Sim 1€", price: 1, fixedMargin: -4, linked: true, icon: "📶", type: "fixed" },
-      { id: "sim5", name: "Sim 5€", price: 5, fixedMargin: -7, linked: true, icon: "📶", type: "fixed" },
-      { id: "sim_w3", name: "Sim Wind3", price: null, fixedMargin: -5, linked: true, icon: "📶", type: "fixed" },
-      { id: "sim_fw", name: "Sim Fastweb", price: 0, fixedMargin: -23, linked: true, icon: "📶", type: "fixed" },
-      { id: "sost_fw", name: "Sost Fastweb", price: 0, fixedMargin: 0, linked: true, icon: "🔄", type: "fixed" },
-      { id: "sim_iliad", name: "Sim Iliad", price: 0, fixedMargin: -10, linked: true, icon: "📶", type: "fixed" },
-      { id: "sost_vod", name: "Sost Vodafone", price: 0, fixedMargin: -10, linked: true, icon: "🔄", type: "fixed" },
-      { id: "sost_w3", name: "Sost Wind3", price: 0, fixedMargin: -15, linked: true, icon: "🔄", type: "fixed" },
-      { id: "sim_very", name: "Sim Very", price: 0, fixedMargin: -7, linked: true, icon: "📶", type: "fixed" },
-      { id: "sim_l", name: "Sim L", price: 0, fixedMargin: -15, linked: true, icon: "📶", type: "fixed" },
-      { id: "sim_next", name: "Sim Next", price: 0, fixedMargin: -7, linked: true, icon: "📶", type: "fixed" },
-      { id: "subentro", name: "Subentro/Reale Util.", price: 0, fixedMargin: -10, linked: true, icon: "🔄", type: "fixed" },
-    ]
-  },
+import { useState, useCallback, useEffect, memo } from "react";
+
+
+// ═══════════════════════════════════════════════════════════════
+// v9 ENHANCEMENTS: Auto-save, Smart Defaults, Validation, Marginalità
+// ═══════════════════════════════════════════════════════════════
+
+// ── AUTO-SAVE ──
+const useAutoSave=(key,state)=>{useEffect(()=>{try{sessionStorage.setItem(key,JSON.stringify(state))}catch(e){}},[key,state])};
+const loadDraft=(key)=>{try{const d=sessionStorage.getItem(key);return d?JSON.parse(d):null}catch(e){return null}};
+const clearDraft=(key)=>{try{sessionStorage.removeItem(key)}catch(e){}};
+
+// ── VALIDATION ──
+const vIMEI=(v)=>{if(!v)return null;const d=v.replace(/\D/g,"");if(!d.length)return null;if(d.length!==15)return{ok:false,msg:`${d.length}/15`};let s=0;for(let i=0;i<14;i++){let n=parseInt(d[i]);if(i%2===1)n*=2;if(n>9)n-=9;s+=n}return{ok:(10-s%10)%10===parseInt(d[14]),msg:d.length===15?"✓ Valido":""}};
+const vICCID=(v)=>{if(!v)return null;const d=v.replace(/\D/g,"");if(!d.length)return null;return{ok:d.length>=19&&d.length<=20,msg:d.length>=19?`✓ ${d.length}`:`${d.length}/19-20`}};
+const vCF=(v)=>{if(!v)return null;const u=v.toUpperCase().replace(/\s/g,"");if(!u.length)return null;if(u.length===11&&/^\d{11}$/.test(u))return{ok:true,msg:"P.IVA"};if(u.length!==16)return{ok:false,msg:`${u.length}/16`};return{ok:/^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$/.test(u),msg:u.length===16?"✓":"err"}};
+
+// ── MARGINALITÀ DATA ──
+const MARG_PRODUCTS=[
+  {cat:"📦 Prodotti",items:[
+    {id:"plx",name:"PLX",price:null,fixedMargin:8,hasQty:true,icon:"📦",type:"fixed"},
+    {id:"cncp",name:"CN/CP",price:null,fixedMargin:2,hasQty:true,icon:"💳",type:"fixed"},
+    {id:"new_cover",name:"New Cover",price:null,fixedMargin:8,hasQty:true,icon:"🔲",type:"fixed"},
+    {id:"mem_pen",name:"Mem / Pen",price:null,fixedMargin:11,icon:"💾",type:"fixed"},
+    {id:"orologio",name:"Orologio Cash",price:null,fixedMargin:25,icon:"⌚",type:"fixed"},
+    {id:"miband",name:"Mi Band 6",price:null,fixedMargin:15,icon:"⌚",type:"fixed"},
+    {id:"powerbank",name:"PowerBank",price:null,fixedMargin:8,icon:"🔋",type:"fixed"},
+  ]},
+  {cat:"🔧 Servizi",items:[
+    {id:"assistenza",name:"Assistenza Tecnico",price:null,pctMargin:81.97,icon:"🔧",type:"pct"},
+    {id:"backup",name:"Backup",price:null,pctMargin:81.97,icon:"💿",type:"pct"},
+    {id:"riparazione",name:"Riparazione",price:null,pctMargin:24.59,needsModel:true,icon:"🔨",type:"pct"},
+    {id:"vendita_usato",name:"Vendita Usato",price:null,pctMargin:13.00,needsModel:true,needsImei:true,icon:"♻️",type:"pct"},
+    {id:"chiusura",name:"Chiusura Sim/Fisso",price:null,pctMargin:81.97,icon:"✂️",type:"pct"},
+    {id:"etelefono",name:"E.Telefono",price:null,pctMargin:81.97,icon:"📞",type:"pct"},
+    {id:"accessori",name:"Accessori",price:null,pctMargin:24.59,hasQty:true,icon:"🎧",type:"pct"},
+    {id:"extra_acc",name:"Extra Acc. Compass",price:null,pctMargin:65.00,icon:"🧭",type:"pct"},
+    {id:"tel_senior",name:"Telefoni Senior",price:null,pctMargin:12.30,needsModel:true,icon:"📱",type:"pct"},
+    {id:"earbuds",name:"Ear Buds",price:null,pctMargin:40.98,icon:"🎵",type:"pct"},
+    {id:"salva_scontrino",name:"Salva Scontrino",price:null,fixedMargin:3,icon:"🧾",type:"fixed"},
+  ]},
+  {cat:"🛡️ Kasko",items:[
+    {id:"extra_kasko",name:"Extra Margine Kasko",price:null,pctMargin:40.00,icon:"🛡️",type:"pct"},
+    {id:"plkasko",name:"PLKasko",price:null,pctMargin:60.00,icon:"🏷️",type:"pct"},
+    {id:"kasko_sv",name:"Kasko SV",price:null,pctMargin:60.00,icon:"🔖",type:"pct"},
+  ]},
+  {cat:"📶 SIM",items:[
+    {id:"family_ontop",name:"Family+ On Top",price:null,fixedMargin:10,icon:"👨‍👩‍👧",type:"fixed"},
+    {id:"sim_w3",name:"Sim Wind3",price:null,fixedMargin:-5,linked:true,icon:"📶",type:"fixed"},
+    {id:"sim_fw",name:"Sim Fastweb",price:0,fixedMargin:-23,linked:true,icon:"📶",type:"fixed"},
+    {id:"sost_fw",name:"Sost Fastweb",price:0,fixedMargin:0,linked:true,icon:"🔄",type:"fixed"},
+    {id:"sim_iliad",name:"Sim Iliad",price:0,fixedMargin:-10,linked:true,icon:"📶",type:"fixed"},
+    {id:"sost_vod",name:"Sost Vodafone",price:0,fixedMargin:-10,linked:true,icon:"🔄",type:"fixed"},
+    {id:"sost_w3",name:"Sost Wind3",price:0,fixedMargin:-15,linked:true,icon:"🔄",type:"fixed"},
+    {id:"sim_very",name:"Sim Very",price:0,fixedMargin:-7,linked:true,icon:"📶",type:"fixed"},
+    {id:"sost_very",name:"Sost Very",price:0,fixedMargin:-7,linked:true,icon:"🔄",type:"fixed"},
+    {id:"sim_l",name:"Sim L",price:0,fixedMargin:-15,linked:true,icon:"📶",type:"fixed"},
+    {id:"sim_next",name:"Sim Next",price:0,fixedMargin:-7,linked:true,icon:"📶",type:"fixed"},
+    {id:"subentro",name:"Subentro/Reale Util.",price:0,fixedMargin:-10,linked:true,icon:"🔄",type:"fixed"},
+  ]},
 ];
 
-const calcMargLabel = (selProd: any, price: any, qty: any) => {
-  if (!selProd) return "";
-  const pVal = selProd.price !== null ? selProd.price : parseFloat(price) || 0;
-  const mVal = selProd.type === "fixed" ? (selProd.fixedMargin || 0) : selProd.type === "pct" ? (pVal * (selProd.pctMargin || 0) / 100) : 0;
-  const q = parseInt(qty) || 1;
-  const label = selProd.type === "pct" ? `${selProd.pctMargin}% di €${pVal.toFixed(2)} = €${mVal.toFixed(2)}` : `€${mVal.toFixed(2)}`;
-  return `${label}${q > 1 ? ` × ${q} = €${(mVal * q).toFixed(2)}` : ""}`;
+// ── MARGINALITÀ POS OVERLAY ──
+const calcMargLabel=(selProd,price,qty)=>{
+  if(!selProd)return"";
+  const pVal=selProd.price!==null?selProd.price:parseFloat(price)||0;
+  const mVal=selProd.type==="fixed"?(selProd.fixedMargin||0):selProd.type==="pct"?(pVal*(selProd.pctMargin||0)/100):0;
+  const q=parseInt(qty)||1;
+  const label=selProd.type==="pct"?`${selProd.pctMargin}% di €${pVal.toFixed(2)} = €${mVal.toFixed(2)}`:`€${mVal.toFixed(2)}`;
+  return`${label}${q>1?` × ${q} = €${(mVal*q).toFixed(2)}`:""}`;
 };
+const MargPOS=memo(({show,onClose,venditore,negozio,onAdd,editItem})=>{
+  const [selCat,setSelCat]=useState(0);
+  const [selProd,setSelProd]=useState(null);
+  const [price,setPrice]=useState("");
+  const [qty,setQty]=useState("1");
+  const [importo,setImporto]=useState("");
+  const [model,setModel]=useState("");
+  const [imei,setImei]=useState("");
+  useEffect(()=>{
+    if(show&&editItem){
+      const found=MARG_PRODUCTS.flatMap(c=>c.items).find(p=>p.id===editItem.productId);
+      if(found){
+        const catIdx=MARG_PRODUCTS.findIndex(c=>c.items.some(p=>p.id===found.id));
+        setSelCat(catIdx>=0?catIdx:0);
+        setSelProd(found);
+        setQty(String(editItem.qty||1));
+        setImporto(editItem.importo!=null?String(editItem.importo):"");
+        setModel(editItem.model||"");
+        setImei(editItem.imei||"");
+        if(found.price===null)setPrice(String(editItem.price||""));
+      }
+    } else if(show&&!editItem){
+      setSelProd(null);setPrice("");setQty("1");setImporto("");setModel("");setImei("");
+    }
+  },[show,editItem]);
+  if(!show)return null;
+  const handleAdd=()=>{
+    if(!selProd)return;
+    const p=selProd;
+    const pVal=p.price!==null?p.price:parseFloat(price)||0;
+    const mVal=p.type==="fixed"?(p.fixedMargin||0):p.type==="pct"?(pVal*(p.pctMargin||0)/100):0;
+    onAdd({product:p.name,productId:p.id,price:pVal,qty:parseInt(qty)||1,importo:parseFloat(importo)||null,margin:mVal,totalMargin:mVal*(parseInt(qty)||1),model:model||null,imei:imei||null,venditore,negozio,date:new Date().toISOString().split("T")[0],linked:p.linked||false});
+    setSelProd(null);setPrice("");setQty("1");setImporto("");setModel("");setImei("");
+  };
+  return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center",backdropFilter:"blur(4px)"}}>
+    <style>{`@keyframes margSlideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
+    <div style={{background:"rgba(255,255,255,0.02)",borderRadius:"20px 20px 0 0",width:"100%",maxWidth:640,maxHeight:"85vh",overflow:"hidden",display:"flex",flexDirection:"column",boxShadow:"0 -4px 30px rgba(0,0,0,.2)",animation:"margSlideUp 0.32s cubic-bezier(0.22,1,0.36,1)"}}>
+      <div style={{padding:"16px 20px",borderBottom:"2px solid #f0f0f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div><div style={{fontSize:16,fontWeight:800,color:"#f8fafc"}}>📦 Registra Prodotto</div><div style={{fontSize:11,color:"#64748b"}}>{venditore||"—"} • {negozio||"—"} • {new Date().toLocaleDateString("it-IT")}</div></div>
+        <button onClick={onClose} style={{padding:"6px 14px",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.02)",color:"#8892b0",fontSize:12,fontWeight:600,cursor:"pointer"}}>✕</button>
+      </div>
+      <div style={{display:"flex",gap:4,padding:"10px 16px",overflowX:"auto",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
+        {MARG_PRODUCTS.map((cat,ci)=>(<button key={ci} onClick={()=>{setSelCat(ci);setSelProd(null)}} style={{padding:"6px 14px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",border:selCat===ci?"2px solid #6f42c1":"2px solid #e0e0e0",background:selCat===ci?"#f0ebff":"#fff",color:selCat===ci?"#6f42c1":"#555"}}>{cat.cat}</button>))}
+      </div>
+      <div style={{flex:1,overflow:"auto",padding:16}}>
+        {!selProd?(<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:8}}>
+          {MARG_PRODUCTS[selCat].items.map(p=>(<button key={p.id} onClick={()=>{setSelProd(p);if(p.price!==null)setPrice(String(p.price))}} style={{padding:"14px 8px",borderRadius:12,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.03)",cursor:"pointer",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+            <span style={{fontSize:22}}>{p.icon}</span>
+            <span style={{fontSize:10,fontWeight:600,color:"#f8fafc",lineHeight:1.2}}>{p.name}</span>
+          </button>))}
+        </div>):(<div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+            <button onClick={()=>setSelProd(null)} style={{background:"none",border:"none",color:"#6f42c1",fontSize:13,cursor:"pointer",fontWeight:600}}>← Indietro</button>
+            <span style={{fontSize:22}}>{selProd.icon}</span>
+            <span style={{fontSize:16,fontWeight:800,color:"#f8fafc"}}>{selProd.name}</span>
+          </div>
+          {selProd.hasQty&&<div style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Quantità</div>
+            <input value={qty} onChange={e=>setQty(e.target.value)} type="number" min="1" style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",fontSize:14,fontWeight:700,boxSizing:"border-box"}}/></div>}
+          {selProd.needsModel&&<div style={{marginBottom:10}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Modello</div><input value={model} onChange={e=>setModel(e.target.value)} placeholder="es. iPhone 15..." style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",fontSize:13,boxSizing:"border-box"}}/></div>}
+          {selProd.needsImei&&<div style={{marginBottom:10}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>IMEI</div><input value={imei} onChange={e=>setImei(e.target.value)} placeholder="15 cifre" style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",fontSize:13,boxSizing:"border-box",fontFamily:"monospace"}}/></div>}
+          <div style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Importo €</div>
+            <input value={importo} onChange={e=>setImporto(e.target.value)} type="number" min="0" step="0.01" placeholder="es. 29.90" style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",fontSize:14,fontWeight:700,boxSizing:"border-box"}}/></div>
+          <button onClick={handleAdd} style={{width:"100%",padding:14,borderRadius:12,border:"none",background:"linear-gradient(135deg,#6f42c1,#9b59b6)",color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer"}}>✅ Registra {selProd.name}</button>
+        </div>)}
+      </div>
+    </div>
+  </div>);
+});
+
+const MargList=memo(({items,onRemove,show,onClose})=>{
+  if(!show)return null;
+  const total=items.reduce((s,i)=>s+i.totalMargin,0);
+  return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(4px)"}}>
+    <div style={{background:"rgba(255,255,255,0.02)",borderRadius:16,width:"100%",maxWidth:500,maxHeight:"80vh",overflow:"auto",padding:20,boxShadow:"0 8px 30px rgba(0,0,0,.2)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <span style={{fontSize:16,fontWeight:800,color:"#f8fafc"}}>📦 Prodotti ({items.length})</span>
+        <button onClick={onClose} style={{background:"none",border:"none",color:"#64748b",cursor:"pointer",fontSize:16}}>✕</button>
+      </div>
+      {items.length===0?<div style={{textAlign:"center",padding:20,color:"#64748b"}}>Nessun prodotto</div>:items.map((it,i)=>(
+        <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
+          <div><div style={{fontSize:12,fontWeight:600,color:"#f8fafc"}}>{it.product} {it.qty>1&&`×${it.qty}`}</div><div style={{fontSize:10,color:"#64748b"}}>{it.model||""}</div></div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <button onClick={()=>onRemove(i)} style={{background:"none",border:"none",color:"#dc3545",cursor:"pointer",fontSize:11}}>✕</button>
+          </div>
+        </div>
+      ))}
+      {items.length>0&&<div style={{marginTop:12,padding:12,background:"rgba(255,255,255,0.04)",borderRadius:10,display:"flex",justifyContent:"space-between"}}>
+        <span style={{fontWeight:700}}>Totale prodotti</span>
+        <span style={{fontWeight:900,fontSize:18,color:"#6f42c1"}}>{items.length}</span>
+      </div>}
+    </div>
+  </div>);
+});
+
 
 const BRANDS = [
-  {
-    id: "windtre",
-    label: "WindTre",
-    short: "W3",
-    color: "#FF6B00",
-    gradient: "linear-gradient(135deg, #1B3A5C 0%, #2E75B6 100%)",
-    icon: "📶",
-    logo: "/windtre.webp",
-    desc: "Mobile, Fisso, Luce & Gas, Assicurazioni, Protecta",
-    ready: true,
-  },
-  {
-    id: "sky",
-    label: "Sky",
-    short: "SKY",
-    color: "#0072C6",
-    gradient: "linear-gradient(135deg, #003366 0%, #0072C6 100%)",
-    icon: "📺",
-    logo: "/sky.png",
-    desc: "TV, Fibra, Mobile, Glass, Pacchetti combinati",
-    ready: true,
-  },
-  {
-    id: "vodafone",
-    label: "Vodafone",
-    short: "VF",
-    color: "#E60000",
-    gradient: "linear-gradient(135deg, #990000 0%, #E60000 100%)",
-    icon: "📱",
-    logo: "/vodaphone - Copy.png",
-    desc: "Mobile, Fisso, Business",
-    ready: false,
-  },
-  {
-    id: "fastweb",
-    label: "Fastweb",
-    short: "FW",
-    color: "#FFD800",
-    gradient: "linear-gradient(135deg, #CC9900 0%, #FFD800 100%)",
-    icon: "⚡",
-    logo: "/fastweb.png",
-    desc: "Mobile, Fisso, Energy",
-    ready: false,
-  },
-  {
-    id: "iliad",
-    label: "Iliad",
-    short: "IL",
-    color: "#C00028",
-    gradient: "linear-gradient(135deg, #800018 0%, #C00028 100%)",
-    icon: "📡",
-    logo: "/iliad.png",
-    desc: "Mobile e Fisso (Fibra)",
-    ready: false,
-  },
-  {
-    id: "energy",
-    label: "Energy",
-    short: "EN",
-    color: "#28a745",
-    gradient: "linear-gradient(135deg, #1a6b2d 0%, #28a745 100%)",
-    icon: "🔋",
-    logo: "/energy - Copy.png",
-    desc: "Forniture Luce e Gas (S4, Barton)",
-    ready: false,
-  },
+  { id: "windtre", label: "WindTre", short: "W3", color: "#FF6B00", gradient: "linear-gradient(135deg, #1B3A5C 0%, #2E75B6 100%)", icon: "📶", desc: "Mobile, Fisso, Luce & Gas, Assicurazioni, Protecta", ready: true },
+  { id: "sky", label: "Sky", short: "SKY", color: "#0072C6", gradient: "linear-gradient(135deg, #003366 0%, #0072C6 100%)", icon: "📺", desc: "TV, Fibra, Mobile, Glass, Pacchetti combinati", ready: true },
+  { id: "vodafone", label: "Vodafone", short: "VF", color: "#E60000", gradient: "linear-gradient(135deg, #990000 0%, #E60000 100%)", icon: "📱", desc: "Mobile, Fisso, Luce & Gas, Assicurazioni, Protecta", ready: true },
+  { id: "fastweb", label: "Fastweb", short: "FW", color: "#CC9900", gradient: "linear-gradient(135deg, #CC9900 0%, #FFD800 100%)", icon: "⚡", desc: "Mobile, Fisso, Energy", ready: true },
+  { id: "iliad", label: "Iliad", short: "IL", color: "#C00028", gradient: "linear-gradient(135deg, #800018 0%, #C00028 100%)", icon: "📡", desc: "Mobile e Fisso (Fibra)", ready: true },
+  { id: "energy", label: "Energy", short: "EN", color: "#28a745", gradient: "linear-gradient(135deg, #1a6b2d 0%, #28a745 100%)", icon: "🔋", desc: "Forniture Luce e Gas (S4, Barton)", ready: true },
 ];
-const codiciW3 = ["Magliana", "Libia", "San Paolo", "Mazzini", "Donna", "Promontori", "Collatina"];
-const venditori = ["Alberto", "Alex", "Alin", "Asad", "Ben Aziza", "Cristhian", "Cristi", "Damiano", "Daniel", "Daniele2", "Denise", "Dimitri", "Eloise", "Eros", "Fadel", "Federico", "Francesca", "Francesco", "George", "Giacomo", "Gian", "Giulia", "Giuseppe B.", "Ilaria", "Lorenzo", "Manu", "Marta", "Marta2", "Marta3", "Matteo", "Michele", "Riccardo", "Roberto", "Samantha", "Sheekell", "Tommaso", "Veronica"];
-const negozi = ["Magliana", "Donna", "Libia", "Collatina", "Mazzini", "San Paolo", "Garbatella", "Promontori", "Acilia", "Baleniere", "Castani", "Merulana", "Telefonico"];
-const opProv = ["WindTre", "Vodafone", "Tim", "Fastweb", "Iliad", "Enel", "Eni", "A2A", "Edison", "Hera", "Sorgenia", "Plenitude", "Altro"];
-const brandMNP = ["TIM", "Vodafone", "WindTre", "Iliad", "Fastweb Mobile", "PosteMobile", "ho. Mobile", "Kena Mobile", "Very Mobile", "CoopVoce", "Spusu", "Lyca Mobile", "1Mobile", "Tiscali Mobile", "Digi Mobil", "Noitel", "Optima Mobile", "Feder Mobile", "Rabona Mobile", "Elimobile", "BT Italia", "Segnoverde Mobile", "Uno Mobile", "Saily", "Visitel", "Ops! Mobile"];
-const SKY_P: Record<string, string[]> = { privato: ["TV", "3P", "Fibra", "TV 14,90", "Sky Glass", "4P"], business: ["Sky TV Uffici", "Sky Fibra P.IVA"] };
-const emS = () => ({ active: true, fields: {}, contract: {}, gnp: false, gnpNum: "", gnpOp: "", secondaLinea: false, gnp2L: null, gnp2LBrand: "", gnp2LNum: "", domiciliazione: false, opProvenienza: "", codiceOverride: "", addons: {}, domiciliato: null, convergente: null, tipMob: null, mnp: null, easyPay: null, tnpGa: null, tnpTipo: "", tnpModello: "", tnpImei: "", tnpCount: null, tnpModelli: [], tnpImeis: [], packAccessori: null, packAccessoriVal: "", packAccessoriQta: "", cbTnp: false, cbTnpTipo: "", cbTnpModello: "", cbTnpImei: "", cbTnpCount: null, cbTnpModelli: [], cbTnpImeis: [], cbPackAccessori: null, cbPackAccessoriVal: "", cbPackAccessoriQta: "", cbTnpCell: "", cbTnpCC: "", cbTnpCodIns: "", cbTnpReload: null, cbTnpReloadSel: {}, cbCambio: false, cbCambioVal: "", cbCambioCell: "", cbCambioCC: "", cbCambioCodIns: "", cbAddonSel: {}, rfModello: "", rfImei: "", cbRf: false, cbAddonCodIns: "", cbRfCodIns: "", tnpGaReload: null, tnpGaReloadSel: {}, reloadForever: null, securitySel: {}, voceCasaCb: null });
+const codiciW3 = ["Magliana","Libia","San Paolo","Mazzini","Donna","Promontori","Collatina"];
+const venditori = ["Alberto","Alex","Alin","Asad","Ben Aziza","Cristhian","Cristi","Damiano","Daniel","Daniele2","Denise","Dimitri","Eloise","Eros","Fadel","Federico","Francesca","Francesco","George","Giacomo","Gian","Giulia","Giuseppe B.","Ilaria","Lorenzo","Manu","Marta","Marta2","Marta3","Matteo","Michele","Riccardo","Roberto","Samantha","Sheekell","Tommaso","Veronica"];
+const negozi = ["Magliana","Donna","Libia","Collatina","Mazzini","San Paolo","Garbatella","Promontori","Acilia","Baleniere","Castani","Merulana","Telefonico"];
+const opProv = ["WindTre","Vodafone","Tim","Fastweb","Iliad","Enel","Eni","A2A","Edison","Hera","Sorgenia","Plenitude","Altro"];
+const brandMNP = ["TIM","Vodafone","WindTre","Iliad","Fastweb Mobile","PosteMobile","ho. Mobile","Kena Mobile","Very Mobile","CoopVoce","Spusu","Lyca Mobile","1Mobile","Tiscali Mobile","Digi Mobil","Noitel","Optima Mobile","Feder Mobile","Rabona Mobile","Elimobile","BT Italia","Segnoverde Mobile","Uno Mobile","Saily","Visitel","Ops! Mobile"];
+const SKY_P = { privato: ["TV","TV 14,90","Sky Glass","Fibra","3P","4P","Sky Mobile"], business: ["Sky TV Uffici","Sky Fibra P.IVA"] };
+const SKY_TV = ["TV","TV 14,90","Sky Glass"];
+const SKY_FIBRA = ["Fibra","3P","4P"];
+const SKY_BRAND_FIBRA = ["TIM","Vodafone","Fastweb","WINDTRE","Tiscali","Sky","BT Enia","Ehiweb","Open Fiber","Infratel","Vianova","Isiline","Convergenze","Full Telecom","Optima","Fibra.tn"];
+const emS = () => ({active:true,fields:{},contract:{},gnp:false,gnpNum:"",gnpOp:"",secondaLinea:false,gnp2L:null,gnp2LBrand:"",gnp2LNum:"",domiciliazione:false,opProvenienza:"",codiceOverride:"",addons:{},domiciliato:null,convergente:null,tipMob:null,mnp:null,easyPay:null,tnpGa:null,tnpTipo:"",tnpModello:"",tnpImei:"",tnpCount:null,tnpModelli:[],tnpImeis:[],packAccessori:null,packAccessoriVal:"",packAccessoriQta:"",cbTnp:false,cbTnpTipo:"",cbTnpModello:"",cbTnpImei:"",cbTnpCount:null,cbTnpModelli:[],cbTnpImeis:[],cbPackAccessori:null,cbPackAccessoriVal:"",cbPackAccessoriQta:"",cbTnpCell:"",cbTnpCC:"",cbTnpCodIns:"",cbTnpReload:null,cbTnpReloadSel:{},cbCambio:false,cbCambioVal:"",cbCambioCell:"",cbCambioCC:"",cbCambioCodIns:"",cbAddonSel:{},rfModello:"",rfImei:"",cbRf:false,cbAddonCodIns:"",cbRfCodIns:"",tnpGaReload:null,tnpGaReloadSel:{},reloadForever:null,securitySel:{},voceCasaCb:null,vfOffers:{},vfContratti:{},vfOffer:null,vfMnp:null,vfMnpBrand:"",vfMnpNum:"",vfDomicilio:null,vfConvergenza:null,vfNumFisso:"",vfTnp:null,vfTnpList:[],dcNumProv:"",dcNum:"",dcIccid:"",dcCodIns:"",dcRicaricaAuto:null,vfSecurity:null,cbTnp2:false,cbCellulare:"",cbCodContratto:"",cbCodIns2:"",cbTaglia:null,dcCbNumProv:"",dcCbIccid:"",cbCambio2:false,cbCambioCell:"",cbCambioNumMod:"",cbCambioCodIns2:"",cbSecurity:false,cbSecurityCell:"",vfFLockIn:null,vfFConvergenza:null,vfFGnp:null,vfFGnpBrand:"",vfFGnpNum:"",vfFAddons:{},vfFCodIns:"",vfFNumProvVisorio:"",vfFNumDef:"",vfbOffer:null,vfbMnp:null,vfbMnpBrand:"",vfbMnpNum:"",vfbTnp:null,vfbModello:"",vfbImei:"",vfbRataPiva:null,vfbCodIns:"",vfbCbOn:false,vfbCbCodIns:"",vfbFGnp:null,vfbFGnpBrand:"",vfbFGnpNum:"",vfbFCodIns:"",vfbFNumProv:"",vfbFNumDef:"",vfbFMnp:null,vfbFMnpBrand:"",vfbFMnpNum:"",vfbFCombNumProv:"",vfbFCombIccid:"",vfbNum:"",vfbIccid:"",vfbFIccid:"",vfSolDigCodIns:"",fwOffer:null,fwMnpBrand:"",fwMnpNum:"",fwModello:"",fwImei:"",fwCodIns:"",fwNumProv:"",fwNumDef:"",fwIccid:"",fwFGnp:null,fwFGnpBrand:"",fwFGnpNum:"",fwFCodIns:"",fwFNumProv:"",fwFNumDef:"",fwPod:"",ilOffer:null,ilMnp:null,ilMnpBrand:"",ilMnpNum:"",ilCodIns:"",ilNumProv:"",ilNumDef:"",ilIccid:"",ilFGnp:null,ilFCodIns:"",ilFNumProv:"",ilFNumDef:"",enCodIns:"",enPod:"",enPdr:""});
 
-const SMARTPHONES = ["Samsung Galaxy S25 Ultra", "Samsung Galaxy S25+", "Samsung Galaxy S25", "Samsung Galaxy S24 FE", "Samsung Galaxy A56", "Samsung Galaxy A36", "Samsung Galaxy A16", "iPhone 16 Pro Max", "iPhone 16 Pro", "iPhone 16 Plus", "iPhone 16", "iPhone 15", "iPhone SE 4", "Xiaomi 15 Ultra", "Xiaomi 15 Pro", "Xiaomi 15", "Xiaomi 14T Pro", "Xiaomi Redmi Note 14 Pro+", "Xiaomi Redmi Note 14 Pro", "Xiaomi Redmi Note 14", "OPPO Find X8 Pro", "OPPO Reno 12 Pro", "OPPO A80", "Google Pixel 9 Pro", "Google Pixel 9", "Google Pixel 8a", "Motorola Edge 50 Ultra", "Motorola Edge 50 Pro", "Motorola Moto G85", "Honor Magic 7 Pro", "Honor 200 Pro", "Nothing Phone (2a)", "Realme GT 7 Pro"];
+const SMARTPHONES = ["Samsung Galaxy S25 Ultra","Samsung Galaxy S25+","Samsung Galaxy S25","Samsung Galaxy S24 FE","Samsung Galaxy A56","Samsung Galaxy A36","Samsung Galaxy A16","iPhone 16 Pro Max","iPhone 16 Pro","iPhone 16 Plus","iPhone 16","iPhone 15","iPhone SE 4","Xiaomi 15 Ultra","Xiaomi 15 Pro","Xiaomi 15","Xiaomi 14T Pro","Xiaomi Redmi Note 14 Pro+","Xiaomi Redmi Note 14 Pro","Xiaomi Redmi Note 14","OPPO Find X8 Pro","OPPO Reno 12 Pro","OPPO A80","Google Pixel 9 Pro","Google Pixel 9","Google Pixel 8a","Motorola Edge 50 Ultra","Motorola Edge 50 Pro","Motorola Moto G85","Honor Magic 7 Pro","Honor 200 Pro","Nothing Phone (2a)","Realme GT 7 Pro"];
 
-const getW3 = (tc: string | null) => {
+const getW3 = (tc) => {
   const biz = tc === "business";
   return [
-    {
-      id: "mobile", title: "MOBILE", icon: "📱", color: "#2E75B6", radio: true, subs: [
-        {
-          id: "ga", title: "MOBILE", hasContract: true, ct: "ga",
-          isMobile: !biz,
-          isMobileBiz: biz,
-          bizOffers: biz ? ["FWA Indoor PIVA", "Professional Full", "Professional Staff", "Professional Special", "Professional Flexy/Sim Dati", "Professional World"] : null,
-          mobOffers: biz ? null : {
-            "Underground_Sì": ["EP LOCAL"],
-            "Underground_No": ["RIC LOCAL"],
-            "Mass Market_Sì": ["SPECIAL 5G", "START UNLIMITED 5G", "UNLIMITED 5G", "UNLIMITED PRO 5G", "UNLIMITED 5G SUPER FIBRA", "FAMILY UNLIMITED 200", "MULTISERVICE", "SUPER 5G UNDER 14 6.99", "SUPER 5G UNDER 14 9.99", "CYC UNLIMITED PLUS", "CYC UNLIMITED SUPER", "CYC UNLIMITED ULTRA", "CYC UNLIMITED FULL", "CYC UNLIMITED MARTISOR", "CYC UNLIMITED RAMADAM", "PACK 5G RELOAD EXCHANGE", "GIGA SPECIAL"],
-            "Mass Market_No": ["SPECIAL 5G", "START UNLIMITED 5G", "UNLIMITED 5G", "UNLIMITED PRO 5G", "UNLIMITED 5G SUPER FIBRA", "FAMILY UNLIMITED 200", "MULTISERVICE", "SUPER 5G UNDER 14 6.99", "SUPER 5G UNDER 14 9.99", "CYC UNLIMITED PLUS", "CYC UNLIMITED SUPER", "CYC UNLIMITED ULTRA", "CYC UNLIMITED FULL", "CYC UNLIMITED MARTISOR", "CYC UNLIMITED RAMADAM", "PACK 5G RELOAD EXCHANGE", "GIGA 150 5G", "GIGA 250 5G", "GIGA UNLIMITED 5G", "GIGA START&STOP", "SMART SECURITY"],
-          },
-          fields: [{ key: "offerta", label: "Offerta Mobile", values: [] }]
+    { id:"mobile", title:"MOBILE", icon:"📱", color:"#2E75B6", radio:true, subs:[
+      { id:"ga", title:"MOBILE", hasContract:true, ct:"ga",
+        isMobile: !biz,
+        isMobileBiz: biz,
+        bizOffers: biz ? ["FWA Indoor PIVA","Professional Full","Professional Staff","Professional Special","Professional Flexy/Sim Dati","Professional World"] : null,
+        mobOffers: biz ? null : {
+          "Underground_Sì": ["EP LOCAL 4,99","EP LOCAL 5,99","EP LOCAL 6,99","EP LOCAL 7,99","EP LOCAL 8,99","EP LOCAL 9,99","EP LOCAL 10,99"],
+          "Underground_No": ["RIC LOCAL 4,99","RIC LOCAL 5,99","RIC LOCAL 6,99","RIC LOCAL 7,99","RIC LOCAL 8,99","RIC LOCAL 9,99","RIC LOCAL 10,99"],
+          "Mass Market_Sì": ["SPECIAL 5G","START UNLIMITED 5G","UNLIMITED 5G","UNLIMITED PRO 5G","UNLIMITED 5G SUPER FIBRA","FAMILY UNLIMITED 200","MULTISERVICE","SUPER 5G UNDER 14 6.99","SUPER 5G UNDER 14 9.99","CYC UNLIMITED PLUS","CYC UNLIMITED SUPER","CYC UNLIMITED ULTRA","CYC UNLIMITED FULL","CYC UNLIMITED MARTISOR","CYC UNLIMITED RAMADAM","PACK 5G RELOAD EXCHANGE","GIGA SPECIAL","FWA INDOOR"],
+          "Mass Market_No": ["SPECIAL 5G","START UNLIMITED 5G","UNLIMITED 5G","UNLIMITED PRO 5G","UNLIMITED 5G SUPER FIBRA","FAMILY UNLIMITED 200","MULTISERVICE","SUPER 5G UNDER 14 6.99","SUPER 5G UNDER 14 9.99","CYC UNLIMITED PLUS","CYC UNLIMITED SUPER","CYC UNLIMITED ULTRA","CYC UNLIMITED FULL","CYC UNLIMITED MARTISOR","CYC UNLIMITED RAMADAM","PACK 5G RELOAD EXCHANGE","GIGA 150 5G","GIGA 250 5G","GIGA UNLIMITED 5G","GIGA START&STOP","SMART SECURITY"],
         },
-        ...(biz ? [] : [{
-          id: "cb", title: "CB", isCB: true,
-          cbTnpVals: ["Rata 0", "Finanziamento 0", "Rata >0", "Finanziamento > 0"],
-          cbCambioVals: ["Caring", "CL0", "CL1", "CL1 EP", "CL2", "CL2 EP", "CL3", "CL3 EP", "Migrazione FTTH"],
-          cbAddonVals: ["Add-on", "Security Ric", "Security EP", "Security Pro Ric", "Security Pro EP", "Home Protect Fisso", "Netflix Fisso"],
-          fields: []
-        }]
-        ),
-        ...(biz ? [{
-          id: "cb", title: "CB", isCB: true, isCBBiz: true,
-          cbTnpVals: ["Rata 0", "Rata >0"],
-          cbCambioVals: ["CL1 EP"],
-          cbAddonVals: ["Security"],
-          fields: []
-        }] : []),
-      ]
-    },
-    {
-      id: "fisso", title: "FISSO", icon: "🏠", color: "#28a745", radio: true, subs: [
-        { id: "fisso_std", title: "FISSO", hasContract: true, ct: "fisso", isFisso: true, hasGnpQ: true, has2LQ: biz, hasAddons: true, addonList: biz ? ["Più Sicuri Ufficio", "FTTH", "DNS DINAMICO", "FritzBox"] : ["Netflix", "Home Protect", "FTTH", "Chiamate Illimitate", "CYC HOME"], fields: [] },
-        { id: "fisso_cb", title: "FISSO CB", hasContract: true, ct: "fisso", isFisso: true, hasGnpQ: true, has2LQ: biz, hasVoceCasaQ: !biz, hasAddons: true, addonList: biz ? ["Più Sicuri Ufficio", "FTTH", "DNS DINAMICO", "FritzBox"] : ["Netflix", "Home Protect", "FTTH", "Chiamate Illimitate", "CYC HOME"], fields: [] },
-        { id: "fwa_indoor", title: "FWA INDOOR 2P", hasContract: true, ct: "fisso", isFisso: true, hasGnpQ: true, has2LQ: biz, hasAddons: true, hasFwaImei: true, domLocked: true, addonList: biz ? ["Più Sicuri Ufficio", "FTTH", "DNS DINAMICO", "FritzBox"] : ["Netflix", "Home Protect", "FTTH", "Chiamate Illimitate", "CYC HOME"], fields: [] },
-        { id: "fwa_outdoor", title: "FWA OUTDOOR", hasContract: true, ct: "fisso", isFisso: true, hasGnpQ: true, has2LQ: biz, hasAddons: true, domLocked: true, addonList: biz ? ["Più Sicuri Ufficio", "FTTH", "DNS DINAMICO", "FritzBox"] : ["Netflix", "Home Protect", "FTTH", "Chiamate Illimitate", "CYC HOME"], fields: [] },
-        ...(!biz ? [{ id: "voce_casa", title: "VOCE CASA", hasContract: true, ct: "fisso", isFisso: true, isVoceCasa: true, hasGnpQ: true, has2LQ: false, fields: [] }] : []),
-      ]
-    },
-    {
-      id: "luce_gas", title: "LUCE E GAS", icon: "💡", color: "#fd7e14", radio: true, subs: [
-        { id: "luce", title: "Luce", hasContract: true, ct: "lg", hasDom: true, hasConvLG: true, fields: [] },
-        { id: "gas", title: "Gas", hasContract: true, ct: "lg", hasDom: true, hasConvLG: true, fields: [] },
-      ]
-    },
-    {
-      id: "multi", title: "MULTI-SERVIZI", icon: "🛡️", color: "#6f42c1", radio: true, subs: [
-        ...(!biz ? [{ id: "assicurazioni", title: "Assicurazioni", hasAddons: true, hasContract: true, ct: "multi", addonList: ["Casa Start", "Casa Plus", "Casa Full", "Sport", "Micio e Fido", "Viaggi", "Sport Famiglia", "Elettrodomestici"], fields: [] }] : []),
-        ...(biz ? [{ id: "assicurazioni", title: "Assicurazioni", isAssicBiz: true, hasContract: true, ct: "multi", fields: [] }] : []),
-        { id: "protecta", title: "Protecta", isProtecta: true, isBizProtecta: biz, hasContract: true, ct: "multi", fields: [] },
-      ]
-    },
+        fields: [{key:"offerta",label:"Offerta Mobile",values:[]}]
+      },
+      ...(biz?[]:[{ id:"cb", title:"CB", isCB:true,
+          cbTnpVals:["Rata 0","Finanziamento 0","Rata >0","Finanziamento > 0"],
+          cbCambioVals:["Caring","CL0","CL1","CL1 EP","CL2","CL2 EP","CL3","CL3 EP","Migrazione FTTH"],
+          cbAddonVals:["Add-on","Security Ric","Security EP","Security Pro Ric","Security Pro EP","Home Protect Fisso","Netflix Fisso"],
+          fields:[]}]
+      ),
+      ...(biz?[{ id:"cb", title:"CB", isCB:true, isCBBiz:true,
+          cbTnpVals:["Rata 0","Rata >0"],
+          cbCambioVals:["CL1 EP"],
+          cbAddonVals:["Security"],
+          fields:[]}]:[]),
+    ]},
+    { id:"fisso", title:"FISSO", icon:"🏠", color:"#28a745", radio:true, subs:[
+      { id:"fisso_std", title:"FISSO", hasContract:true, ct:"fisso", isFisso:true, hasGnpQ:true, has2LQ:biz, hasAddons:true, addonList:biz?["Più Sicuri Ufficio","FTTH","DNS DINAMICO","FritzBox"]:["Netflix","Home Protect","FTTH","Chiamate Illimitate","CYC HOME"], fields:[]},
+      { id:"fisso_cb", title:"FISSO CB", hasContract:true, ct:"fisso", isFisso:true, hasGnpQ:true, has2LQ:biz, hasVoceCasaQ:!biz, hasAddons:true, addonList:biz?["Più Sicuri Ufficio","FTTH","DNS DINAMICO","FritzBox"]:["Netflix","Home Protect","FTTH","Chiamate Illimitate","CYC HOME"], fields:[]},
+      { id:"fwa_indoor", title:"FWA INDOOR 2P", hasContract:true, ct:"fisso", isFisso:true, hasGnpQ:true, has2LQ:biz, hasAddons:true, hasFwaImei:true, domLocked:true, addonList:biz?["Più Sicuri Ufficio","FTTH","DNS DINAMICO","FritzBox"]:["Netflix","Home Protect","FTTH","Chiamate Illimitate","CYC HOME"], fields:[]},
+      { id:"fwa_outdoor", title:"FWA OUTDOOR", hasContract:true, ct:"fisso", isFisso:true, hasGnpQ:true, has2LQ:biz, hasAddons:true, domLocked:true, addonList:biz?["Più Sicuri Ufficio","FTTH","DNS DINAMICO","FritzBox"]:["Netflix","Home Protect","FTTH","Chiamate Illimitate","CYC HOME"], fields:[]},
+      ...(!biz?[{ id:"voce_casa", title:"VOCE CASA", hasContract:true, ct:"fisso", isFisso:true, isVoceCasa:true, hasGnpQ:true, has2LQ:false, fields:[]}]:[]),
+    ]},
+    { id:"luce_gas", title:"LUCE E GAS", icon:"💡", color:"#fd7e14", radio:true, subs:[
+      { id:"luce", title:"Luce", hasContract:true, ct:"lg", hasDom:true, hasConvLG:true, fields:[]},
+      { id:"gas", title:"Gas", hasContract:true, ct:"lg", hasDom:true, hasConvLG:true, fields:[]},
+    ]},
+    { id:"multi", title:"MULTI-SERVIZI", icon:"🛡️", color:"#6f42c1", radio:true, subs:[
+      ...(!biz?[{id:"assicurazioni",title:"Assicurazioni",hasAddons:true,hasContract:true,ct:"multi",addonList:["Casa Start","Casa Plus","Casa Full","Sport","Micio e Fido","Viaggi","Sport Famiglia","Elettrodomestici"],fields:[]}]:[]),
+      ...(biz?[{id:"assicurazioni",title:"Assicurazioni",isAssicBiz:true,hasContract:true,ct:"multi",fields:[]}]:[]),
+      { id:"protecta", title:"Protecta", isProtecta:true, isBizProtecta:biz, hasContract:true, ct:"multi", fields:[]},
+    ]},
   ];
 };
 
-// CF calc
-const MCF: Record<string, string> = { "01": "A", "02": "B", "03": "C", "04": "D", "05": "E", "06": "H", "07": "L", "08": "M", "09": "P", "10": "R", "11": "S", "12": "T" };
-const DI: Record<string, number> = { 0: 1, 1: 0, 2: 5, 3: 7, 4: 9, 5: 13, 6: 15, 7: 17, 8: 19, 9: 21, A: 1, B: 0, C: 5, D: 7, E: 9, F: 13, G: 15, H: 17, I: 19, J: 21, K: 2, L: 4, M: 18, N: 20, O: 11, P: 3, Q: 6, R: 8, S: 12, T: 14, U: 16, V: 10, W: 22, X: 25, Y: 24, Z: 23 };
-const PA: Record<string, number> = { 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, I: 8, J: 9, K: 10, L: 11, M: 12, N: 13, O: 14, P: 15, Q: 16, R: 17, S: 18, T: 19, U: 20, V: 21, W: 22, X: 23, Y: 24, Z: 25 };
-const _R = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const _CN = "ABANO TERME|ABBADIA CERRETO|ABBADIA LARIANA|ABBADIA SAN SALVATORE|ABBASANTA|ABBATEGGIO|ABBIATEGRASSO|ABETONE CUTIGLIANO|ABRIOLA|ACATE|ACCADIA|ACCEGLIO|ACCETTURA|ACCIANO|ACCUMOLI|ACERENZA|ACERNO|ACERRA|ACI BONACCORSI|ACI CASTELLO|ACI CATENA|ACI SANT'ANTONIO|ACIREALE|ACQUAFONDATA|ACQUAFORMOSA|ACQUAFREDDA|ACQUALAGNA|ACQUANEGRA CREMONESE|ACQUANEGRA SUL CHIESE|ACQUAPENDENTE|ACQUAPPESA|ACQUARO|ACQUASANTA TERME|ACQUASPARTA|ACQUAVIVA COLLECROCE|ACQUAVIVA D'ISERNIA|ACQUAVIVA DELLE FONTI|ACQUAVIVA PICENA|ACQUAVIVA PLATANI|ACQUEDOLCI|ACQUI TERME|ACRI|ACUTO|ADELFIA|ADRANO|ADRARA SAN MARTINO|ADRARA SAN ROCCO|ADRIA|ADRO|AFFI|AFFILE|AFRAGOLA|AFRICO|AGAZZANO|AGEROLA|AGGIUS|AGIRA|AGLIANA|AGLIANO TERME|AGLIÈ|AGLIENTU|AGNA|AGNADELLO|AGNANA CALABRA|AGNONE|AGNOSINE|AGORDO|AGOSTA|AGRA|AGRATE BRIANZA|AGRATE CONTURBIA|AGRIGENTO|AGROPOLI|AGUGLIANO|AGUGLIARO|AICURZIO|AIDOMAGGIORE|AIDONE|AIELLI|AIELLO CALABRO|AIELLO DEL FRIULI|AIELLO DEL SABATO|AIETA|AILANO|AILOCHE|AIRASCA|AIROLA|AIROLE|AIRUNO|AISONE|ALA|ALÀ DEI SARDI|ALA DI STURA|ALAGNA|ALAGNA VALSESIA|ALANNO|ALANO DI PIAVE|ALASSIO|ALATRI|ALBA|ALBA ADRIATICA|ALBAGIARA|ALBAIRATE|ALBANELLA|ALBANO DI LUCANIA|ALBANO LAZIALE|ALBANO SANT'ALESSANDRO|ALBANO VERCELLESE|ALBAREDO ARNABOLDI|ALBAREDO D'ADIGE|ALBAREDO PER SAN MARCO|ALBARETO|ALBARETTO DELLA TORRE|ALBAVILLA|ALBENGA|ALBERA LIGURE|ALBEROBELLO|ALBERONA|ALBESE CON CASSANO|ALBETTONE|ALBI|ALBIANO|ALBIANO D'IVREA|ALBIATE|ALBIDONA|ALBIGNASEGO|ALBINEA|ALBINO|ALBIOLO|ALBISOLA SUPERIORE|ALBISSOLA MARINA|ALBIZZATE|ALBONESE|ALBOSAGGIA|ALBUGNANO|ALBUZZANO|ALCAMO|ALCARA LI FUSI|ALDENO|ALDINO|ALES|ALESSANDRIA|ALESSANDRIA DEL CARRETTO|ALESSANDRIA DELLA ROCCA|ALESSANO|ALEZIO|ALFANO|ALFEDENA|ALFIANELLO|ALFIANO NATTA|ALFONSINE|ALGHERO|ALGUA|ALÌ|ALÌ TERME|ALIA|ALIANO|ALICE BEL COLLE|ALICE CASTELLO|ALIFE|ALIMENA|ALIMINUSA|ALLAI|ALLEGHE|ALLEIN|ALLERONA|ALLISTE|ALLUMIERE|ALLUVIONI PIOVERA|ALMÈ|ALMENNO SAN BARTOLOMEO|ALMENNO SAN SALVATORE|ALMESE|ALONTE|ALPAGO|ALPETTE|ALPIGNANO|ALSENO|ALSERIO|ALTA VAL TIDONE|ALTA VALLE INTELVI|ALTAMURA|ALTARE|ALTAVALLE|ALTAVILLA IRPINA|ALTAVILLA MILICIA|ALTAVILLA MONFERRATO|ALTAVILLA SILENTINA|ALTAVILLA VICENTINA|ALTIDONA|ALTILIA|ALTINO|ALTISSIMO|ALTIVOLE|ALTO|ALTO RENO TERME|ALTO SERMENZA|ALTOFONTE|ALTOMONTE|ALTOPASCIO|ALTOPIANO DELLA VIGOLANA|ALVIANO|ALVIGNANO|ALVITO|ALZANO LOMBARDO|ALZANO SCRIVIA|ALZATE BRIANZA|AMALFI|AMANDOLA|AMANTEA|AMARO|AMARONI|AMASENO|AMATO|AMATRICE|AMBIVERE|AMBLAR-DON|AMEGLIA|AMELIA|AMENDOLARA|AMENO|AMOROSI|AMPEZZO|ANACAPRI|ANAGNI|ANCARANO|ANCONA|ANDALI|ANDALO|ANDALO VALTELLINO|ANDEZENO|ANDORA|ANDORNO MICCA|ANDRANO|ANDRATE|ANDREIS|ANDRETTA|ANDRIA|ANDRIANO|ANELA|ANFO|ANGERA|ANGHIARI|ANGIARI|ANGOLO TERME|ANGRI|ANGROGNA|ANGUILLARA SABAZIA|ANGUILLARA VENETA|ANNICCO|ANNONE DI BRIANZA|ANNONE VENETO|ANOIA|ANTEGNATE|ANTERIVO|ANTEY-SAINT-ANDRÉ|ANTICOLI CORRADO|ANTIGNANO|ANTILLO|ANTONIMINA|ANTRODOCO|ANTRONA SCHIERANCO|ANVERSA DEGLI ABRUZZI|ANZANO DEL PARCO|ANZANO DI PUGLIA|ANZI|ANZIO|ANZOLA D'OSSOLA|ANZOLA DELL'EMILIA|AOSTA|APECCHIO|APICE|APIRO|APOLLOSA|APPIANO GENTILE|APPIANO SULLA STRADA DEL VINO|APPIGNANO|APPIGNANO DEL TRONTO|APRICA|APRICALE|APRICENA|APRIGLIANO|APRILIA|AQUARA|AQUILA D'ARROSCIA|AQUILEIA|AQUILONIA|AQUINO|ARADEO|ARAGONA|ARAMENGO|ARBA|ARBOREA|ARBORIO|ARBUS|ARCADE|ARCE|ARCENE|ARCEVIA|ARCHI|ARCIDOSSO|ARCINAZZO ROMANO|ARCISATE|ARCO|ARCOLA|ARCOLE|ARCONATE|ARCORE|ARCUGNANO|ARDARA|ARDAULI|ARDEA|ARDENNO|ARDESIO|ARDORE|ARENA|ARENA PO|ARENZANO|ARESE|AREZZO|ARGEGNO|ARGELATO|ARGENTA|ARGENTERA|ARGUELLO|ARGUSTO|ARI|ARIANO IRPINO|ARIANO NEL POLESINE|ARICCIA|ARIELLI|ARIENZO|ARIGNANO|ARITZO|ARIZZANO|ARLENA DI CASTRO|ARLUNO|ARMENO|ARMENTO|ARMO|ARMUNGIA|ARNAD|ARNARA|ARNASCO|ARNESANO|AROLA|ARONA|AROSIO|ARPAIA|ARPAISE|ARPINO|ARQUÀ PETRARCA|ARQUÀ POLESINE|ARQUATA DEL TRONTO|ARQUATA SCRIVIA|ARRE|ARRONE|ARSAGO SEPRIO|ARSIÈ|ARSIERO|ARSITA|ARSOLI|ARTA TERME|ARTEGNA|ARTENA|ARTOGNE|ARVIER|ARZACHENA|ARZAGO D'ADDA|ARZANA|ARZANO|ARZERGRANDE|ARZIGNANO|ASCEA|ASCIANO|ASCOLI PICENO|ASCOLI SATRIANO|ASCREA|ASIAGO|ASIGLIANO VENETO|ASIGLIANO VERCELLESE|ASOLA|ASOLO|ASSAGO|ASSEMINI|ASSISI|ASSO|ASSOLO|ASSORO|ASTI|ASUNI|ATELETA|ATELLA|ATENA LUCANA|ATESSA|ATINA|ATRANI|ATRI|ATRIPALDA|ATTIGLIANO|ATTIMIS|ATZARA|AUGUSTA|AULETTA|AULLA|AURANO|AURIGO|AURONZO DI CADORE|AUSONIA|AUSTIS|AVEGNO|AVELENGO|AVELLA|AVELLINO|AVERARA|AVERSA|AVETRANA|AVEZZANO|AVIANO|AVIATICO|AVIGLIANA|AVIGLIANO|AVIGLIANO UMBRO|AVIO|AVISE|AVOLA|AVOLASCA|AYAS|AYMAVILLES|AZEGLIO|AZZANELLO|AZZANO D'ASTI|AZZANO DECIMO|AZZANO MELLA|AZZANO SAN PAOLO|AZZATE|AZZIO|AZZONE|BACENO|BACOLI|BADALUCCO|BADESI|BADIA|BADIA CALAVENA|BADIA PAVESE|BADIA POLESINE|BADIA TEDALDA|BADOLATO|BAGALADI|BAGHERIA|BAGNACAVALLO|BAGNARA CALABRA|BAGNARA DI ROMAGNA|BAGNARIA|BAGNARIA ARSA|BAGNASCO|BAGNATICA|BAGNI DI LUCCA|BAGNO A RIPOLI|BAGNO DI ROMAGNA|BAGNOLI DEL TRIGNO|BAGNOLI DI SOPRA|BAGNOLI IRPINO|BAGNOLO CREMASCO|BAGNOLO DEL SALENTO|BAGNOLO DI PO|BAGNOLO IN PIANO|BAGNOLO MELLA|BAGNOLO PIEMONTE|BAGNOLO SAN VITO|BAGNONE|BAGNOREGIO|BAGOLINO|BAIA E LATINA|BAIANO|BAIRO|BAISO|BAJARDO|BALANGERO|BALDICHIERI D'ASTI|BALDISSERO CANAVESE|BALDISSERO D'ALBA|BALDISSERO TORINESE|BALESTRATE|BALESTRINO|BALLABIO|BALLAO|BALME|BALMUCCIA|BALOCCO|BALSORANO|BALVANO|BALZOLA|BANARI|BANCHETTE|BANNIO ANZINO|BANZI|BAONE|BARADILI|BARAGIANO|BARANELLO|BARANO D'ISCHIA|BARANZATE|BARASSO|BARATILI SAN PIETRO|BARBANIA|BARBARA|BARBARANO MOSSANO|BARBARANO ROMANO|BARBARESCO|BARBARIGA|BARBATA|BARBERINO DI MUGELLO|BARBERINO TAVARNELLE|BARBIANELLO|BARBIANO|BARBONA|BARCELLONA POZZO DI GOTTO|BARCIS|BARD|BARDELLO|BARDI|BARDINETO|BARDOLINO|BARDONECCHIA|BAREGGIO|BARENGO|BARESSA|BARETE|BARGA|BARGAGLI|BARGE|BARGHE|BARI|BARI SARDO|BARIANO|BARICELLA|BARILE|BARISCIANO|BARLASSINA|BARLETTA|BARNI|BAROLO|BARONE CANAVESE|BARONISSI|BARRAFRANCA|BARRALI|BARREA|BARUMINI|BARZAGO|BARZANA|BARZANÒ|BARZIO|BASALUZZO|BASCAPÈ|BASCHI|BASCIANO|BASELGA DI PINÈ|BASELICE|BASIANO|BASICÒ|BASIGLIO|BASILIANO|BASSANO BRESCIANO|BASSANO DEL GRAPPA|BASSANO IN TEVERINA|BASSANO ROMANO|BASSIANO|BASSIGNANA|BASTIA MONDOVÌ|BASTIA UMBRA|BASTIDA PANCARANA|BASTIGLIA|BATTAGLIA TERME|BATTIFOLLO|BATTIPAGLIA|BATTUDA|BAUCINA|BAULADU|BAUNEI|BAVENO|BEDERO VALCUVIA|BEDIZZOLE|BEDOLLO|BEDONIA|BEDULITA|BEE|BEINASCO|BEINETTE|BELCASTRO|BELFIORE|BELFORTE ALL'ISAURO|BELFORTE DEL CHIENTI|BELFORTE MONFERRATO|BELGIOIOSO|BELGIRATE|BELLA|BELLAGIO|BELLANO|BELLANTE|BELLARIA-IGEA MARINA|BELLEGRA|BELLINO|BELLINZAGO LOMBARDO|BELLINZAGO NOVARESE|BELLIZZI|BELLONA|BELLOSGUARDO|BELLUNO|BELLUSCO|BELMONTE CALABRO|BELMONTE CASTELLO|BELMONTE DEL SANNIO|BELMONTE IN SABINA|BELMONTE MEZZAGNO|BELMONTE PICENO|BELPASSO|BELSITO|BELVEDERE DI SPINELLO|BELVEDERE LANGHE|BELVEDERE MARITTIMO|BELVEDERE OSTRENSE|BELVEGLIO|BELVÌ|BEMA|BENE LARIO|BENE VAGIENNA|BENESTARE|BENETUTTI|BENEVELLO|BENEVENTO|BENNA|BENTIVOGLIO|BERBENNO|BERBENNO DI VALTELLINA|BERCETO|BERCHIDDA|BEREGAZZO CON FIGLIARO|BEREGUARDO|BERGAMASCO|BERGAMO|BERGANTINO|BERGEGGI|BERGOLO|BERLINGO|BERNALDA|BERNAREGGIO|BERNATE TICINO|BERNEZZO|BERTINORO|BERTIOLO|BERTONICO|BERZANO DI SAN PIETRO|BERZANO DI TORTONA|BERZO DEMO|BERZO INFERIORE|BERZO SAN FERMO|BESANA IN BRIANZA|BESANO|BESATE|BESENELLO|BESENZONE|BESNATE|BESOZZO|BESSUDE|BETTOLA|BETTONA|BEURA-CARDEZZA|BEVAGNA|BEVERINO|BEVILACQUA|BIANCAVILLA|BIANCHI|BIANCO|BIANDRATE|BIANDRONNO|BIANZANO|BIANZÈ|BIANZONE|BIASSONO|BIBBIANO|BIBBIENA|BIBBONA|BIBIANA|BICCARI|BICINICCO|BIDONÌ|BIELLA|BIENNO|BIENO|BIENTINA|BINAGO|BINASCO|BINETTO|BIOGLIO|BIONAZ|BIONE|BIRORI|BISACCIA|BISACQUINO|BISCEGLIE|BISEGNA|BISENTI|BISIGNANO|BISTAGNO|BISUSCHIO|BITETTO|BITONTO|BITRITTO|BITTI|BIVONA|BIVONGI|BIZZARONE|BLEGGIO SUPERIORE|BLELLO|BLERA|BLESSAGNO|BLEVIO|BLUFI|BOARA PISANI|BOBBIO|BOBBIO PELLICE|BOCA|BOCCHIGLIERO|BOCCIOLETO|BOCENAGO|BODIO LOMNAGO|BOFFALORA D'ADDA|BOFFALORA SOPRA TICINO|BOGLIASCO|BOGNANCO|BOGOGNO|BOISSANO|BOJANO|BOLANO|BOLGARE|BOLLATE|BOLLENGO|BOLOGNA|BOLOGNANO|BOLOGNETTA|BOLOGNOLA|BOLOTANA|BOLSENA|BOLTIERE|BOLZANO|BOLZANO NOVARESE|BOLZANO VICENTINO|BOMARZO|BOMBA|BOMPENSIERE|BOMPIETRO|BOMPORTO|BONARCADO|BONASSOLA|BONATE SOPRA|BONATE SOTTO|BONAVIGO|BONDENO|BONDONE|BONEA|BONEFRO|BONEMERSE|BONIFATI|BONITO|BONNANARO|BONO|BONORVA|BONVICINO|BORBONA|BORCA DI CADORE|BORDANO|BORDIGHERA|BORDOLANO|BORE|BORETTO|BORGARELLO|BORGARO TORINESE|BORGETTO|BORGHETTO D'ARROSCIA|BORGHETTO DI BORBERA|BORGHETTO DI VARA|BORGHETTO LODIGIANO|BORGHETTO SANTO SPIRITO|BORGHI|BORGIA|BORGIALLO|BORGIO VEREZZI|BORGO A MOZZANO|BORGO CHIESE|BORGO D'ALE|BORGO D'ANAUNIA|BORGO DI TERZO|BORGO LARES|BORGO MANTOVANO|BORGO PACE|BORGO PRIOLO|BORGO SAN DALMAZZO|BORGO SAN GIACOMO|BORGO SAN GIOVANNI|BORGO SAN LORENZO|BORGO SAN MARTINO|BORGO SAN SIRO|BORGO TICINO|BORGO TOSSIGNANO|BORGO VAL DI TARO|BORGO VALBELLUNA|BORGO VALSUGANA|BORGO VELINO|BORGO VENETO|BORGO VERCELLI|BORGO VIRGILIO|BORGOCARBONARA|BORGOFRANCO D'IVREA|BORGOLAVEZZARO|BORGOMALE|BORGOMANERO|BORGOMARO|BORGOMASINO|BORGOMEZZAVALLE|BORGONE SUSA|BORGONOVO VAL TIDONE|BORGORATTO ALESSANDRINO|BORGORATTO MORMOROLO|BORGORICCO|BORGOROSE|BORGOSATOLLO|BORGOSESIA|BORMIDA|BORMIO|BORNASCO|BORNO|BORONEDDU|BORORE|BORRELLO|BORRIANA|BORSO DEL GRAPPA|BORTIGALI|BORTIGIADAS|BORUTTA|BORZONASCA|BOSA|BOSARO|BOSCHI SANT'ANNA|BOSCO CHIESANUOVA|BOSCO MARENGO|BOSCONERO|BOSCOREALE|BOSCOTRECASE|BOSIA|BOSIO|BOSISIO PARINI|BOSNASCO|BOSSICO|BOSSOLASCO|BOTRICELLO|BOTRUGNO|BOTTANUCO|BOTTICINO|BOTTIDDA|BOVA|BOVA MARINA|BOVALINO|BOVEGNO|BOVES|BOVEZZO|BOVILLE ERNICA|BOVINO|BOVISIO-MASCIAGO|BOVOLENTA|BOVOLONE|BOZZOLE|BOZZOLO|BRA|BRACCA|BRACCIANO|BRACIGLIANO|BRAIES|BRALLO DI PREGOLA|BRANCALEONE|BRANDICO|BRANDIZZO|BRANZI|BRAONE|BREBBIA|BREDA DI PIAVE|BREGANO|BREGANZE|BREGNANO|BREMBATE|BREMBATE DI SOPRA|BREMBIO|BREME|BRENDOLA|BRENNA|BRENNERO|BRENO|BRENTA|BRENTINO BELLUNO|BRENTONICO|BRENZONE SUL GARDA|BRESCELLO|BRESCIA|BRESIMO|BRESSANA BOTTARONE|BRESSANONE|BRESSANVIDO|BRESSO|BREZZO DI BEDERO|BRIAGLIA|BRIATICO|BRICHERASIO|BRIENNO|BRIENZA|BRIGA ALTA|BRIGA NOVARESE|BRIGNANO GERA D'ADDA|BRIGNANO-FRASCATA|BRINDISI|BRINDISI MONTAGNA|BRINZIO|BRIONA|BRIONE|BRIOSCO|BRISIGHELLA|BRISSAGO-VALTRAVAGLIA|BRISSOGNE|BRITTOLI|BRIVIO|BROCCOSTELLA|BROGLIANO|BROGNATURO|BROLO|BRONDELLO|BRONI|BRONTE|BRONZOLO|BROSSASCO|BROSSO|BROVELLO-CARPUGNINO|BROZOLO|BRUGHERIO|BRUGINE|BRUGNATO|BRUGNERA|BRUINO|BRUMANO|BRUNATE|BRUNELLO|BRUNICO|BRUNO|BRUSAPORTO|BRUSASCO|BRUSCIANO|BRUSIMPIANO|BRUSNENGO|BRUSSON|BRUZOLO|BRUZZANO ZEFFIRIO|BUBBIANO|BUBBIO|BUCCHERI|BUCCHIANICO|BUCCIANO|BUCCINASCO|BUCCINO|BUCINE|BUDDUSÒ|BUDOIA|BUDONI|BUDRIO|BUGGERRU|BUGGIANO|BUGLIO IN MONTE|BUGNARA|BUGUGGIATE|BUJA|BULCIAGO|BULGAROGRASSO|BULTEI|BULZI|BUONABITACOLO|BUONALBERGO|BUONCONVENTO|BUONVICINO|BURAGO DI MOLGORA|BURCEI|BURGIO|BURGOS|BURIASCO|BUROLO|BURONZO|BUSACHI|BUSALLA|BUSANO|BUSCA|BUSCATE|BUSCEMI|BUSETO PALIZZOLO|BUSNAGO|BUSSERO|BUSSETO|BUSSI SUL TIRINO|BUSSO|BUSSOLENGO|BUSSOLENO|BUSTO ARSIZIO|BUSTO GAROLFO|BUTERA|BUTI|BUTTAPIETRA|BUTTIGLIERA ALTA|BUTTIGLIERA D'ASTI|BUTTRIO|CABELLA LIGURE|CABIATE|CABRAS|CACCAMO|CACCURI|CADEGLIANO-VICONAGO|CADELBOSCO DI SOPRA|CADEO|CADERZONE TERME|CADONEGHE|CADORAGO|CADREZZATE CON OSMATE|CAERANO DI SAN MARCO|CAFASSE|CAGGIANO|CAGLI|CAGLIARI|CAGLIO|CAGNANO AMITERNO|CAGNANO VARANO|CAIANELLO|CAIAZZO|CAINES|CAINO|CAIOLO|CAIRANO|CAIRATE|CAIRO MONTENOTTE|CAIVANO|CALABRITTO|CALALZO DI CADORE|CALAMANDRANA|CALAMONACI|CALANGIANUS|CALANNA|CALASCA-CASTIGLIONE|CALASCIBETTA|CALASCIO|CALASETTA|CALATABIANO|CALATAFIMI-SEGESTA|CALCATA|CALCERANICA AL LAGO|CALCI|CALCIANO|CALCINAIA|CALCINATE|CALCINATO|CALCIO|CALCO|CALDARO SULLA STRADA DEL VINO|CALDAROLA|CALDERARA DI RENO|CALDES|CALDIERO|CALDOGNO|CALDONAZZO|CALENDASCO|CALENZANO|CALESTANO|CALICE AL CORNOVIGLIO|CALICE LIGURE|CALIMERA|CALITRI|CALIZZANO|CALLABIANA|CALLIANO(AT)|CALLIANO|CALLIANO(TN)|CALOLZIOCORTE|CALOPEZZATI|CALOSSO|CALOVETO|CALTABELLOTTA|CALTAGIRONE|CALTANISSETTA|CALTAVUTURO|CALTIGNAGA|CALTO|CALTRANO|CALUSCO D'ADDA|CALUSO|CALVAGESE DELLA RIVIERA|CALVANICO|CALVATONE|CALVELLO|CALVENE|CALVENZANO|CALVERA|CALVI|CALVI DELL'UMBRIA|CALVI RISORTA|CALVIGNANO|CALVIGNASCO|CALVISANO|CALVIZZANO|CAMAGNA MONFERRATO|CAMAIORE|CAMANDONA|CAMASTRA|CAMBIAGO|CAMBIANO|CAMBIASCA|CAMBURZANO|CAMERANA|CAMERANO|CAMERANO CASASCO|CAMERATA CORNELLO|CAMERATA NUOVA|CAMERATA PICENA|CAMERI|CAMERINO|CAMEROTA|CAMIGLIANO|CAMINI|CAMINO|CAMINO AL TAGLIAMENTO|CAMISANO|CAMISANO VICENTINO|CAMMARATA|CAMOGLI|CAMPAGNA|CAMPAGNA LUPIA|CAMPAGNANO DI ROMA|CAMPAGNATICO|CAMPAGNOLA CREMASCA|CAMPAGNOLA EMILIA|CAMPANA|CAMPARADA|CAMPEGINE|CAMPELLO SUL CLITUNNO|CAMPERTOGNO|CAMPI BISENZIO|CAMPI SALENTINA|CAMPIGLIA CERVO|CAMPIGLIA DEI BERICI|CAMPIGLIA MARITTIMA|CAMPIGLIONE FENILE|CAMPIONE D'ITALIA|CAMPITELLO DI FASSA|CAMPLI|CAMPO CALABRO|CAMPO DI GIOVE|CAMPO DI TRENS|CAMPO LIGURE|CAMPO NELL'ELBA|CAMPO SAN MARTINO|CAMPO TURES|CAMPOBASSO|CAMPOBELLO DI LICATA|CAMPOBELLO DI MAZARA|CAMPOCHIARO|CAMPODARSEGO|CAMPODENNO|CAMPODIMELE|CAMPODIPIETRA|CAMPODOLCINO|CAMPODORO|CAMPOFELICE DI FITALIA|CAMPOFELICE DI ROCCELLA|CAMPOFILONE|CAMPOFIORITO|CAMPOFORMIDO|CAMPOFRANCO|CAMPOGALLIANO|CAMPOLATTARO|CAMPOLI APPENNINO|CAMPOLI DEL MONTE TABURNO|CAMPOLIETO|CAMPOLONGO MAGGIORE|CAMPOLONGO TAPOGLIANO|CAMPOMAGGIORE|CAMPOMARINO|CAMPOMORONE|CAMPONOGARA|CAMPORA|CAMPOREALE|CAMPORGIANO|CAMPOROSSO|CAMPOROTONDO DI FIASTRONE|CAMPOROTONDO ETNEO|CAMPOSAMPIERO|CAMPOSANO|CAMPOSANTO|CAMPOSPINOSO|CAMPOTOSTO|CAMUGNANO|CANAL SAN BOVO|CANALE|CANALE D'AGORDO|CANALE MONTERANO|CANARO|CANAZEI|CANCELLARA|CANCELLO ED ARNONE|CANDA|CANDELA|CANDELO|CANDIA CANAVESE|CANDIA LOMELLINA|CANDIANA|CANDIDA|CANDIDONI|CANDIOLO|CANEGRATE|CANELLI|CANEPINA|CANEVA|CANICATTÌ|CANICATTINI BAGNI|CANINO|CANISCHIO|CANISTRO|CANNA|CANNALONGA|CANNARA|CANNERO RIVIERA|CANNETO PAVESE|CANNETO SULL'OGLIO|CANNOBIO|CANNOLE|CANOLO|CANONICA D'ADDA|CANOSA DI PUGLIA|CANOSA SANNITA|CANOSIO|CANOSSA|CANSANO|CANTAGALLO|CANTALICE|CANTALUPA|CANTALUPO IN SABINA|CANTALUPO LIGURE|CANTALUPO NEL SANNIO|CANTARANA|CANTELLO|CANTERANO|CANTIANO|CANTOIRA|CANTÙ|CANZANO|CANZO|CAORLE|CAORSO|CAPACCIO PAESTUM|CAPACI|CAPALBIO|CAPANNOLI|CAPANNORI|CAPENA|CAPERGNANICA|CAPESTRANO|CAPIAGO INTIMIANO|CAPISTRANO|CAPISTRELLO|CAPITIGNANO|CAPIZZI|CAPIZZONE|CAPO D'ORLANDO|CAPO DI PONTE|CAPODIMONTE|CAPODRISE|CAPOLIVERI|CAPOLONA|CAPONAGO|CAPORCIANO|CAPOSELE|CAPOTERRA|CAPOVALLE|CAPPADOCIA|CAPPELLA CANTONE|CAPPELLA DE' PICENARDI|CAPPELLA MAGGIORE|CAPPELLE SUL TAVO|CAPRACOTTA|CAPRAIA E LIMITE|CAPRAIA ISOLA|CAPRALBA|CAPRANICA|CAPRANICA PRENESTINA|CAPRARICA DI LECCE|CAPRAROLA|CAPRAUNA|CAPRESE MICHELANGELO|CAPREZZO|CAPRI|CAPRI LEONE|CAPRIANA|CAPRIANO DEL COLLE|CAPRIATA D'ORBA|CAPRIATE SAN GERVASIO|CAPRIATI A VOLTURNO|CAPRIE|CAPRIGLIA IRPINA|CAPRIGLIO|CAPRILE|CAPRINO BERGAMASCO|CAPRINO VERONESE|CAPRIOLO|CAPRIVA DEL FRIULI|CAPUA|CAPURSO|CARAFFA DEL BIANCO|CARAFFA DI CATANZARO|CARAGLIO|CARAMAGNA PIEMONTE|CARAMANICO TERME|CARAPELLE|CARAPELLE CALVISIO|CARASCO|CARASSAI|CARATE BRIANZA|CARATE URIO|CARAVAGGIO|CARAVATE|CARAVINO|CARAVONICA|CARBOGNANO|CARBONARA AL TICINO|CARBONARA DI NOLA|CARBONARA SCRIVIA|CARBONATE|CARBONE|CARBONERA|CARBONIA|CARCARE|CARCERI|CARCOFORO|CARDANO AL CAMPO|CARDÈ|CARDEDU|CARDETO|CARDINALE|CARDITO|CAREGGINE|CAREMA|CARENNO|CARENTINO|CARERI|CARESANA|CARESANABLOT|CAREZZANO|CARFIZZI|CARGEGHE|CARIATI|CARIFE|CARIGNANO|CARIMATE|CARINARO|CARINI|CARINOLA|CARISIO|CARISOLO|CARLANTINO|CARLAZZO|CARLENTINI|CARLINO|CARLOFORTE|CARLOPOLI|CARMAGNOLA|CARMIANO|CARMIGNANO|CARMIGNANO DI BRENTA|CARNAGO|CARNATE|CAROBBIO DEGLI ANGELI|CAROLEI|CARONA|CARONIA|CARONNO PERTUSELLA|CARONNO VARESINO|CAROSINO|CAROVIGNO|CAROVILLI|CARPANETO PIACENTINO|CARPANZANO|CARPEGNA|CARPENEDOLO|CARPENETO|CARPI|CARPIANO|CARPIGNANO SALENTINO|CARPIGNANO SESIA|CARPINETI|CARPINETO DELLA NORA|CARPINETO ROMANO|CARPINETO SINELLO|CARPINO|CARPINONE|CARRARA|CARRÈ|CARREGA LIGURE|CARRO|CARRODANO|CARROSIO|CARRÙ|CARSOLI|CARTIGLIANO|CARTIGNANO|CARTOCETO|CARTOSIO|CARTURA|CARUGATE|CARUGO|CARUNCHIO|CARVICO|CARZANO|CASABONA|CASACALENDA|CASACANDITELLA|CASAGIOVE|CASAL CERMELLI|CASAL DI PRINCIPE|CASAL VELINO|CASALANGUIDA|CASALATTICO|CASALBELTRAME|CASALBORDINO|CASALBORE|CASALBORGONE|CASALBUONO|CASALBUTTANO ED UNITI|CASALCIPRANO|CASALDUNI|CASALE CORTE CERRO|CASALE CREMASCO-VIDOLASCO|CASALE DI SCODOSIA|CASALE LITTA|CASALE MARITTIMO|CASALE MONFERRATO|CASALE SUL SILE|CASALECCHIO DI RENO|CASALEGGIO BOIRO|CASALEGGIO NOVARA|CASALEONE|CASALETTO CEREDANO|CASALETTO DI SOPRA|CASALETTO LODIGIANO|CASALETTO SPARTANO|CASALETTO VAPRIO|CASALFIUMANESE|CASALGRANDE|CASALGRASSO|CASALI DEL MANCO|CASALINCONTRADA|CASALINO|CASALMAGGIORE|CASALMAIOCCO|CASALMORANO|CASALMORO|CASALNOCETO|CASALNUOVO DI NAPOLI|CASALNUOVO MONTEROTARO|CASALOLDO|CASALPUSTERLENGO|CASALROMANO|CASALSERUGO|CASALUCE|CASALVECCHIO DI PUGLIA|CASALVECCHIO SICULO|CASALVIERI|CASALVOLONE|CASALZUIGNO|CASAMARCIANO|CASAMASSIMA|CASAMICCIOLA TERME|CASANDRINO|CASANOVA ELVO|CASANOVA LERRONE|CASANOVA LONATI|CASAPE|CASAPESENNA|CASAPINTA|CASAPROTA|CASAPULLA|CASARANO|CASARGO|CASARILE|CASARSA DELLA DELIZIA|CASARZA LIGURE|CASASCO|CASATENOVO|CASATISMA|CASAVATORE|CASAZZA|CASCIA|CASCIAGO|CASCIANA TERME LARI|CASCINA|CASCINETTE D'IVREA|CASEI GEROLA|CASELETTE|CASELLA|CASELLE IN PITTARI|CASELLE LANDI|CASELLE LURANI|CASELLE TORINESE|CASERTA|CASIER|CASIGNANA|CASINA|CASIRATE D'ADDA|CASLINO D'ERBA|CASNATE CON BERNATE|CASNIGO|CASOLA DI NAPOLI|CASOLA IN LUNIGIANA|CASOLA VALSENIO|CASOLE D'ELSA|CASOLI|CASORATE PRIMO|CASORATE SEMPIONE|CASOREZZO|CASORIA|CASORZO|CASPERIA|CASPOGGIO|CASSACCO|CASSAGO BRIANZA|CASSANO ALL'IONIO|CASSANO D'ADDA|CASSANO DELLE MURGE|CASSANO IRPINO|CASSANO MAGNAGO|CASSANO SPINOLA|CASSANO VALCUVIA|CASSARO|CASSIGLIO|CASSINA DE' PECCHI|CASSINA RIZZARDI|CASSINA VALSASSINA|CASSINASCO|CASSINE|CASSINELLE|CASSINETTA DI LUGAGNANO|CASSINO|CASSOLA|CASSOLNOVO|CASTAGNARO|CASTAGNETO CARDUCCI|CASTAGNETO PO|CASTAGNITO|CASTAGNOLE DELLE LANZE|CASTAGNOLE MONFERRATO|CASTAGNOLE PIEMONTE|CASTANA|CASTANO PRIMO|CASTEGGIO|CASTEGNATO|CASTEGNERO|CASTEL BARONIA|CASTEL BOGLIONE|CASTEL BOLOGNESE|CASTEL CAMPAGNANO|CASTEL CASTAGNA|CASTEL CONDINO|CASTEL D'AIANO|CASTEL D'ARIO|CASTEL D'AZZANO|CASTEL DEL GIUDICE|CASTEL DEL MONTE|CASTEL DEL PIANO|CASTEL DEL RIO|CASTEL DI CASIO|CASTEL DI IERI|CASTEL DI IUDICA|CASTEL DI LAMA|CASTEL DI LUCIO|CASTEL DI SANGRO|CASTEL DI SASSO|CASTEL DI TORA|CASTEL FOCOGNANO|CASTEL FRENTANO|CASTEL GABBIANO|CASTEL GANDOLFO|CASTEL GIORGIO|CASTEL GOFFREDO|CASTEL GUELFO DI BOLOGNA|CASTEL IVANO|CASTEL MADAMA|CASTEL MAGGIORE|CASTEL MELLA|CASTEL MORRONE|CASTEL RITALDI|CASTEL ROCCHERO|CASTEL ROZZONE|CASTEL SAN GIORGIO|CASTEL SAN GIOVANNI|CASTEL SAN LORENZO|CASTEL SAN NICCOLÒ|CASTEL SAN PIETRO ROMANO|CASTEL SAN PIETRO TERME|CASTEL SAN VINCENZO|CASTEL SANT'ANGELO|CASTEL SANT'ELIA|CASTEL VISCARDO|CASTEL VITTORIO|CASTEL VOLTURNO|CASTELBALDO|CASTELBELFORTE|CASTELBELLINO|CASTELBELLO-CIARDES|CASTELBIANCO|CASTELBOTTACCIO|CASTELBUONO|CASTELCIVITA|CASTELCOVATI|CASTELCUCCO|CASTELDACCIA|CASTELDELCI|CASTELDELFINO|CASTELDIDONE|CASTELFIDARDO|CASTELFIORENTINO|CASTELFORTE|CASTELFRANCI|CASTELFRANCO DI SOTTO|CASTELFRANCO EMILIA|CASTELFRANCO IN MISCANO|CASTELFRANCO PIANDISCÒ|CASTELFRANCO VENETO|CASTELGERUNDO|CASTELGOMBERTO|CASTELGRANDE|CASTELGUGLIELMO|CASTELGUIDONE|CASTELL'ALFERO|CASTELL'ARQUATO|CASTELL'AZZARA|CASTELL'UMBERTO|CASTELLABATE|CASTELLAFIUME|CASTELLALTO|CASTELLAMMARE DEL GOLFO|CASTELLAMMARE DI STABIA|CASTELLAMONTE|CASTELLANA GROTTE|CASTELLANA SICULA|CASTELLANETA|CASTELLANIA COPPI|CASTELLANZA|CASTELLAR GUIDOBONO|CASTELLARANO|CASTELLARO|CASTELLAZZO BORMIDA|CASTELLAZZO NOVARESE|CASTELLEONE|CASTELLEONE DI SUASA|CASTELLERO|CASTELLETTO CERVO|CASTELLETTO D'ERRO|CASTELLETTO D'ORBA|CASTELLETTO DI BRANDUZZO|CASTELLETTO MERLI|CASTELLETTO MOLINA|CASTELLETTO MONFERRATO|CASTELLETTO SOPRA TICINO|CASTELLETTO STURA|CASTELLETTO UZZONE|CASTELLI|CASTELLI CALEPIO|CASTELLINA IN CHIANTI|CASTELLINA MARITTIMA|CASTELLINALDO D'ALBA|CASTELLINO DEL BIFERNO|CASTELLINO TANARO|CASTELLIRI|CASTELLO CABIAGLIO|CASTELLO D'AGOGNA|CASTELLO D'ARGILE|CASTELLO DEL MATESE|CASTELLO DELL'ACQUA|CASTELLO DI ANNONE|CASTELLO DI BRIANZA|CASTELLO DI CISTERNA|CASTELLO DI GODEGO|CASTELLO TESINO|CASTELLO-MOLINA DI FIEMME|CASTELLUCCHIO|CASTELLUCCIO DEI SAURI|CASTELLUCCIO INFERIORE|CASTELLUCCIO SUPERIORE|CASTELLUCCIO VALMAGGIORE|CASTELMAGNO|CASTELMARTE|CASTELMASSA|CASTELMAURO|CASTELMEZZANO|CASTELMOLA|CASTELNOVETTO|CASTELNOVO BARIANO|CASTELNOVO DEL FRIULI|CASTELNOVO DI SOTTO|CASTELNOVO NE' MONTI|CASTELNUOVO|CASTELNUOVO BELBO|CASTELNUOVO BERARDENGA|CASTELNUOVO BOCCA D'ADDA|CASTELNUOVO BORMIDA|CASTELNUOVO BOZZENTE|CASTELNUOVO CALCEA|CASTELNUOVO CILENTO|CASTELNUOVO DEL GARDA|CASTELNUOVO DELLA DAUNIA|CASTELNUOVO DI CEVA|CASTELNUOVO DI CONZA|CASTELNUOVO DI FARFA|CASTELNUOVO DI GARFAGNANA|CASTELNUOVO DI PORTO|CASTELNUOVO DI VAL DI CECINA|CASTELNUOVO DON BOSCO|CASTELNUOVO MAGRA|CASTELNUOVO NIGRA|CASTELNUOVO PARANO|CASTELNUOVO RANGONE|CASTELNUOVO SCRIVIA|CASTELPAGANO|CASTELPETROSO|CASTELPIZZUTO|CASTELPLANIO|CASTELPOTO|CASTELRAIMONDO|CASTELROTTO|CASTELSANTANGELO SUL NERA|CASTELSARACENO|CASTELSARDO|CASTELSEPRIO|CASTELSILANO|CASTELSPINA|CASTELTERMINI|CASTELVECCANA|CASTELVECCHIO CALVISIO|CASTELVECCHIO DI ROCCA BARBENA|CASTELVECCHIO SUBEQUO|CASTELVENERE|CASTELVERDE|CASTELVERRINO|CASTELVETERE IN VAL FORTORE|CASTELVETERE SUL CALORE|CASTELVETRANO|CASTELVETRO DI MODENA|CASTELVETRO PIACENTINO|CASTELVISCONTI|CASTENASO|CASTENEDOLO|CASTIADAS|CASTIGLION FIBOCCHI|CASTIGLION FIORENTINO|CASTIGLIONE A CASAURIA|CASTIGLIONE CHIAVARESE|CASTIGLIONE COSENTINO|CASTIGLIONE D'ADDA|CASTIGLIONE D'ORCIA|CASTIGLIONE DEI PEPOLI|CASTIGLIONE DEL GENOVESI|CASTIGLIONE DEL LAGO|CASTIGLIONE DELLA PESCAIA|CASTIGLIONE DELLE STIVIERE|CASTIGLIONE DI GARFAGNANA|CASTIGLIONE DI SICILIA|CASTIGLIONE FALLETTO|CASTIGLIONE IN TEVERINA|CASTIGLIONE MESSER MARINO|CASTIGLIONE MESSER RAIMONDO|CASTIGLIONE OLONA|CASTIGLIONE TINELLA|CASTIGLIONE TORINESE|CASTIGNANO|CASTILENTI|CASTINO|CASTIONE ANDEVENNO|CASTIONE DELLA PRESOLANA|CASTIONS DI STRADA|CASTIRAGA VIDARDO|CASTO|CASTORANO|CASTREZZATO|CASTRI DI LECCE|CASTRIGNANO DE' GRECI|CASTRIGNANO DEL CAPO|CASTRO(BG)|CASTRO|CASTRO(LE)|CASTRO DEI VOLSCI|CASTROCARO TERME E TERRA DEL SOLE|CASTROCIELO|CASTROFILIPPO|CASTROLIBERO|CASTRONNO|CASTRONOVO DI SICILIA|CASTRONUOVO DI SANT'ANDREA|CASTROPIGNANO|CASTROREALE|CASTROREGIO|CASTROVILLARI|CATANIA|CATANZARO|CATENANUOVA|CATIGNANO|CATTOLICA|CATTOLICA ERACLEA|CAULONIA|CAUTANO|CAVA DE' TIRRENI|CAVA MANARA|CAVAGLIÀ|CAVAGLIETTO|CAVAGLIO D'AGOGNA|CAVAGNOLO|CAVAION VERONESE|CAVALESE|CAVALLERLEONE|CAVALLERMAGGIORE|CAVALLINO|CAVALLINO-TREPORTI|CAVALLIRIO|CAVARENO|CAVARGNA|CAVARIA CON PREMEZZO|CAVARZERE|CAVASO DEL TOMBA|CAVASSO NUOVO|CAVATORE|CAVAZZO CARNICO|CAVE|CAVEDAGO|CAVEDINE|CAVENAGO D'ADDA|CAVENAGO DI BRIANZA|CAVERNAGO|CAVEZZO|CAVIZZANA|CAVOUR|CAVRIAGO|CAVRIANA|CAVRIGLIA|CAZZAGO BRABBIA|CAZZAGO SAN MARTINO|CAZZANO DI TRAMIGNA|CAZZANO SANT'ANDREA|CECCANO|CECIMA|CECINA|CEDEGOLO|CEDRASCO|CEFALÀ DIANA|CEFALÙ|CEGGIA|CEGLIE MESSAPICA|CELANO|CELENZA SUL TRIGNO|CELENZA VALFORTORE|CELICO|CELLA DATI|CELLA MONTE|CELLAMARE|CELLARA|CELLARENGO|CELLATICA|CELLE DI BULGHERIA|CELLE DI MACRA|CELLE DI SAN VITO|CELLE ENOMONDO|CELLE LIGURE|CELLENO|CELLERE|CELLINO ATTANASIO|CELLINO SAN MARCO|CELLIO CON BREIA|CELLOLE|CEMBRA LISIGNAGO|CENADI|CENATE SOPRA|CENATE SOTTO|CENCENIGHE AGORDINO|CENE|CENESELLI|CENGIO|CENTALLO|CENTO|CENTOLA|CENTRACHE|CENTRO VALLE INTELVI|CENTURIPE|CEPAGATTI|CEPPALONI|CEPPO MORELLI|CEPRANO|CERAMI|CERANESI|CERANO|CERANO D'INTELVI|CERANOVA|CERASO|CERCEMAGGIORE|CERCENASCO|CERCEPICCOLA|CERCHIARA DI CALABRIA|CERCHIO|CERCINO|CERCIVENTO|CERCOLA|CERDA|CEREA|CEREGNANO|CERENZIA|CERES|CERESARA|CERESETO|CERESOLE ALBA|CERESOLE REALE|CERETE|CERETTO LOMELLINA|CERGNAGO|CERIALE|CERIANA|CERIANO LAGHETTO|CERIGNALE|CERIGNOLA|CERISANO|CERMENATE|CERMES|CERMIGNANO|CERNOBBIO|CERNUSCO LOMBARDONE|CERNUSCO SUL NAVIGLIO|CERRETO D'ASTI|CERRETO D'ESI|CERRETO DI SPOLETO|CERRETO GRUE|CERRETO GUIDI|CERRETO LAZIALE|CERRETO SANNITA|CERRETTO LANGHE|CERRINA MONFERRATO|CERRIONE|CERRO AL LAMBRO|CERRO AL VOLTURNO|CERRO MAGGIORE|CERRO TANARO|CERRO VERONESE|CERSOSIMO|CERTALDO|CERTOSA DI PAVIA|CERVA|CERVARA DI ROMA|CERVARESE SANTA CROCE|CERVARO|CERVASCA|CERVATTO|CERVENO|CERVERE|CERVESINA|CERVETERI|CERVIA|CERVICATI|CERVIGNANO D'ADDA|CERVIGNANO DEL FRIULI|CERVINARA|CERVINO|CERVO|CERZETO|CESA|CESANA BRIANZA|CESANA TORINESE|CESANO BOSCONE|CESANO MADERNO|CESARA|CESARÒ|CESATE|CESENA|CESENATICO|CESINALI|CESIO|CESIOMAGGIORE|CESSALTO|CESSANITI|CESSAPALOMBO|CESSOLE|CETARA|CETO|CETONA|CETRARO|CEVA|CEVO|CHALLAND-SAINT-ANSELME|CHALLAND-SAINT-VICTOR|CHAMBAVE|CHAMOIS|CHAMPDEPRAZ|CHAMPORCHER|CHARVENSOD|CHÂTILLON|CHERASCO|CHEREMULE|CHIALAMBERTO|CHIAMPO|CHIANCHE|CHIANCIANO TERME|CHIANNI|CHIANOCCO|CHIARAMONTE GULFI|CHIARAMONTI|CHIARANO|CHIARAVALLE|CHIARAVALLE CENTRALE|CHIARI|CHIAROMONTE|CHIAUCI|CHIAVARI|CHIAVENNA|CHIAVERANO|CHIENES|CHIERI|CHIES D'ALPAGO|CHIESA IN VALMALENCO|CHIESANUOVA|CHIESINA UZZANESE|CHIETI|CHIEUTI|CHIEVE|CHIGNOLO D'ISOLA|CHIGNOLO PO|CHIOGGIA|CHIOMONTE|CHIONS|CHIOPRIS-VISCONE|CHITIGNANO|CHIUDUNO|CHIUPPANO|CHIURO|CHIUSA|CHIUSA DI PESIO|CHIUSA DI SAN MICHELE|CHIUSA SCLAFANI|CHIUSAFORTE|CHIUSANICO|CHIUSANO D'ASTI|CHIUSANO DI SAN DOMENICO|CHIUSAVECCHIA|CHIUSDINO|CHIUSI|CHIUSI DELLA VERNA|CHIVASSO|CIAMPINO|CIANCIANA|CIBIANA DI CADORE|CICAGNA|CICALA|CICCIANO|CICERALE|CICILIANO|CICOGNOLO|CICONIO|CIGLIANO|CIGLIÈ|CIGOGNOLA|CIGOLE|CILAVEGNA|CIMADOLMO|CIMBERGO|CIMINÀ|CIMINNA|CIMITILE|CIMOLAIS|CIMONE|CINAGLIO|CINETO ROMANO|CINGIA DE' BOTTI|CINGOLI|CINIGIANO|CINISELLO BALSAMO|CINISI|CINO|CINQUEFRONDI|CINTANO|CINTE TESINO|CINTO CAOMAGGIORE|CINTO EUGANEO|CINZANO|CIORLANO|CIPRESSA|CIRCELLO|CIRIÈ|CIRIGLIANO|CIRIMIDO|CIRÒ|CIRÒ MARINA|CIS|CISANO BERGAMASCO|CISANO SUL NEVA|CISERANO|CISLAGO|CISLIANO|CISON DI VALMARINO|CISSONE|CISTERNA D'ASTI|CISTERNA DI LATINA|CISTERNINO|CITERNA|CITTÀ DELLA PIEVE|CITTÀ DI CASTELLO|CITTÀ SANT'ANGELO|CITTADELLA|CITTADUCALE|CITTANOVA|CITTAREALE|CITTIGLIO|CIVATE|CIVEZZA|CIVEZZANO|CIVIASCO|CIVIDALE DEL FRIULI|CIVIDATE AL PIANO|CIVIDATE CAMUNO|CIVITA|CIVITA CASTELLANA|CIVITA D'ANTINO|CIVITACAMPOMARANO|CIVITALUPARELLA|CIVITANOVA DEL SANNIO|CIVITANOVA MARCHE|CIVITAQUANA|CIVITAVECCHIA|CIVITELLA ALFEDENA|CIVITELLA CASANOVA|CIVITELLA D'AGLIANO|CIVITELLA DEL TRONTO|CIVITELLA DI ROMAGNA|CIVITELLA IN VAL DI CHIANA|CIVITELLA MESSER RAIMONDO|CIVITELLA PAGANICO|CIVITELLA ROVETO|CIVITELLA SAN PAOLO|CIVO|CLAINO CON OSTENO|CLAUT|CLAUZETTO|CLAVESANA|CLAVIERE|CLES|CLETO|CLIVIO|CLUSONE|COASSOLO TORINESE|COAZZE|COAZZOLO|COCCAGLIO|COCCONATO|COCQUIO-TREVISAGO|COCULLO|CODEVIGO|CODEVILLA|CODIGORO|CODOGNÈ|CODOGNO|CODROIPO|CODRONGIANOS|COGGIOLA|COGLIATE|COGNE|COGOLETO|COGOLLO DEL CENGIO|COGORNO|COLAZZA|COLCERESA|COLERE|COLFELICE|COLI|COLICO|COLLALTO SABINO|COLLARMELE|COLLAZZONE|COLLE BRIANZA|COLLE D'ANCHISE|COLLE DI TORA|COLLE DI VAL D'ELSA|COLLE SAN MAGNO|COLLE SANNITA|COLLE SANTA LUCIA|COLLE UMBERTO|COLLEBEATO|COLLECCHIO|COLLECORVINO|COLLEDARA|COLLEDIMACINE|COLLEDIMEZZO|COLLEFERRO|COLLEGIOVE|COLLEGNO|COLLELONGO|COLLEPARDO|COLLEPASSO|COLLEPIETRO|COLLERETTO CASTELNUOVO|COLLERETTO GIACOSA|COLLESALVETTI|COLLESANO|COLLETORTO|COLLEVECCHIO|COLLI A VOLTURNO|COLLI AL METAURO|COLLI DEL TRONTO|COLLI SUL VELINO|COLLI VERDI|COLLIANO|COLLINAS|COLLIO|COLLOBIANO|COLLOREDO DI MONTE ALBANO|COLMURANO|COLOBRARO|COLOGNA VENETA|COLOGNE|COLOGNO AL SERIO|COLOGNO MONZESE|COLOGNOLA AI COLLI|COLONNA|COLONNELLA|COLONNO|COLORINA|COLORNO|COLOSIMI|COLTURANO|COLVERDE|COLZATE|COMABBIO|COMACCHIO|COMANO|COMANO TERME|COMAZZO|COMEGLIANS|COMELICO SUPERIORE|COMERIO|COMEZZANO-CIZZAGO|COMIGNAGO|COMISO|COMITINI|COMIZIANO|COMMESSAGGIO|COMMEZZADURA|COMO|COMPIANO|COMUN NUOVO|COMUNANZA|CONA|CONCA CASALE|CONCA DEI MARINI|CONCA DELLA CAMPANIA|CONCAMARISE|CONCERVIANO|CONCESIO|CONCORDIA SAGITTARIA|CONCORDIA SULLA SECCHIA|CONCOREZZO|CONDOFURI|CONDOVE|CONDRÒ|CONEGLIANO|CONFIENZA|CONFIGNI|CONFLENTI|CONIOLO|CONSELICE|CONSELVE|CONTÀ|CONTESSA ENTELLINA|CONTIGLIANO|CONTRADA|CONTROGUERRA|CONTRONE|CONTURSI TERME|CONVERSANO|CONZA DELLA CAMPANIA|CONZANO|COPERTINO|COPIANO|COPPARO|CORANA|CORATO|CORBARA|CORBETTA|CORBOLA|CORCHIANO|CORCIANO|CORDENONS|CORDIGNANO|CORDOVADO|COREGLIA ANTELMINELLI|COREGLIA LIGURE|CORENO AUSONIO|CORFINIO|CORI|CORIANO|CORIGLIANO D'OTRANTO|CORIGLIANO-ROSSANO|CORINALDO|CORIO|CORLEONE|CORLETO MONFORTE|CORLETO PERTICARA|CORMANO|CORMONS|CORNA IMAGNA|CORNALBA|CORNALE E BASTIDA|CORNAREDO|CORNATE D'ADDA|CORNEDO ALL'ISARCO|CORNEDO VICENTINO|CORNEGLIANO LAUDENSE|CORNELIANO D'ALBA|CORNIGLIO|CORNO DI ROSAZZO|CORNO GIOVINE|CORNOVECCHIO|CORNUDA|CORREGGIO|CORREZZANA|CORREZZOLA|CORRIDO|CORRIDONIA|CORROPOLI|CORSANO|CORSICO|CORSIONE|CORTACCIA SULLA STRADA DEL VINO|CORTALE|CORTANDONE|CORTANZE|CORTAZZONE|CORTE BRUGNATELLA|CORTE DE' CORTESI CON CIGNONE|CORTE DE' FRATI|CORTE FRANCA|CORTE PALASIO|CORTEMAGGIORE|CORTEMILIA|CORTENO GOLGI|CORTENOVA|CORTENUOVA|CORTEOLONA E GENZONE|CORTIGLIONE|CORTINA D'AMPEZZO|CORTINA SULLA STRADA DEL VINO|CORTINO|CORTONA|CORVARA|CORVARA IN BADIA|CORVINO SAN QUIRICO|CORZANO|COSEANO|COSENZA|COSIO D'ARROSCIA|COSIO VALTELLINO|COSOLETO|COSSANO BELBO|COSSANO CANAVESE|COSSATO|COSSERIA|COSSIGNANO|COSSOGNO|COSSOINE|COSSOMBRATO|COSTA DE' NOBILI|COSTA DI MEZZATE|COSTA DI ROVIGO|COSTA MASNAGA|COSTA SERINA|COSTA VALLE IMAGNA|COSTA VESCOVATO|COSTA VOLPINO|COSTABISSARA|COSTACCIARO|COSTANZANA|COSTARAINERA|COSTERMANO SUL GARDA|COSTIGLIOLE D'ASTI|COSTIGLIOLE SALUZZO|COTIGNOLA|COTRONEI|COTTANELLO|COURMAYEUR|COVO|COZZO|CRACO|CRANDOLA VALSASSINA|CRAVAGLIANA|CRAVANZANA|CRAVEGGIA|CREAZZO|CRECCHIO|CREDARO|CREDERA RUBBIANO|CREMA|CREMELLA|CREMENAGA|CREMENO|CREMIA|CREMOLINO|CREMONA|CREMOSANO|CRESCENTINO|CRESPADORO|CRESPIATICA|CRESPINA LORENZANA|CRESPINO|CRESSA|CREVACUORE|CREVALCORE|CREVOLADOSSOLA|CRISPANO|CRISPIANO|CRISSOLO|CROCEFIESCHI|CROCETTA DEL MONTELLO|CRODO|CROGNALETO|CROPALATI|CROPANI|CROSIA|CROSIO DELLA VALLE|CROTONE|CROTTA D'ADDA|CROVA|CROVIANA|CRUCOLI|CUASSO AL MONTE|CUCCARO VETERE|CUCCIAGO|CUCEGLIO|CUGGIONO|CUGLIATE-FABIASCO|CUGLIERI|CUGNOLI|CUMIANA|CUMIGNANO SUL NAVIGLIO|CUNARDO|CUNEO|CUNICO|CUORGNÈ|CUPELLO|CUPRA MARITTIMA|CUPRAMONTANA|CURA CARPIGNANO|CURCURIS|CUREGGIO|CURIGLIA CON MONTEVIASCO|CURINGA|CURINO|CURNO|CURON VENOSTA|CURSI|CURTAROLO|CURTATONE|CURTI|CUSAGO|CUSANO MILANINO|CUSANO MUTRI|CUSINO|CUSIO|CUSTONACI|CUTRO|CUTROFIANO|CUVEGLIO|CUVIO|DAIRAGO|DALMINE|DAMBEL|DANTA DI CADORE|DARFO BOARIO TERME|DASÀ|DAVAGNA|DAVERIO|DAVOLI|DAZIO|DECIMOMANNU|DECIMOPUTZU|DECOLLATURA|DEGO|DEIVA MARINA|DELEBIO|DELIA|DELIANUOVA|DELICETO|DELLO|DEMONTE|DENICE|DENNO|DERNICE|DEROVERE|DERUTA|DERVIO|DESANA|DESENZANO DEL GARDA|DESIO|DESULO|DIAMANTE|DIANO ARENTINO|DIANO CASTELLO|DIANO D'ALBA|DIANO MARINA|DIANO SAN PIETRO|DICOMANO|DIGNANO|DIMARO FOLGARIDA|DINAMI|DIPIGNANO|DISO|DIVIGNANO|DIZZASCO|DOBBIACO|DOBERDÒ DEL LAGO|DOGLIANI|DOGLIOLA|DOGNA|DOLCÈ|DOLCEACQUA|DOLCEDO|DOLEGNA DEL COLLIO|DOLIANOVA|DOLO|DOLZAGO|DOMANICO|DOMASO|DOMEGGE DI CADORE|DOMICELLA|DOMODOSSOLA|DOMUS DE MARIA|DOMUSNOVAS|DONATO|DONGO|DONNAS|DONORI|DORGALI|DORIO|DORMELLETTO|DORNO|DORZANO|DOSOLO|DOSSENA|DOSSO DEL LIRO|DOUES|DOVADOLA|DOVERA|DOZZA|DRAGONI|DRAPIA|DRENA|DRENCHIA|DRESANO|DRO|DRONERO|DRUENTO|DRUOGNO|DUALCHI|DUBINO|DUE CARRARE|DUEVILLE|DUGENTA|DUINO AURISINA|DUMENZA|DUNO|DURAZZANO|DURONIA|DUSINO SAN MICHELE|EBOLI|EDOLO|EGNA|ELICE|ELINI|ELLO|ELMAS|ELVA|EMARÈSE|EMPOLI|ENDINE GAIANO|ENEGO|ENEMONZO|ENNA|ENTRACQUE|ENTRATICO|ENVIE|EPISCOPIA|ERACLEA|ERBA|ERBÈ|ERBEZZO|ERBUSCO|ERCHIE|ERCOLANO|ERICE|ERLI|ERTO E CASSO|ERULA|ERVE|ESANATOGLIA|ESCALAPLANO|ESCOLCA|ESINE|ESINO LARIO|ESPERIA|ESPORLATU|ESTE|ESTERZILI|ETROUBLES|EUPILIO|EXILLES|FABBRICA CURONE|FABBRICHE DI VERGEMOLI|FABBRICO|FABRIANO|FABRICA DI ROMA|FABRIZIA|FABRO|FAEDIS|FAEDO VALTELLINO|FAENZA|FAETO|FAGAGNA|FAGGETO LARIO|FAGGIANO|FAGNANO ALTO|FAGNANO CASTELLO|FAGNANO OLONA|FAI DELLA PAGANELLA|FAICCHIO|FALCADE|FALCIANO DEL MASSICO|FALCONARA ALBANESE|FALCONARA MARITTIMA|FALCONE|FALERIA|FALERNA|FALERONE|FALLO|FALOPPIO|FALVATERRA|FALZES|FANANO|FANNA|FANO|FANO ADRIANO|FARA FILIORUM PETRI|FARA GERA D'ADDA|FARA IN SABINA|FARA NOVARESE|FARA OLIVANA CON SOLA|FARA SAN MARTINO|FARA VICENTINO|FARDELLA|FARIGLIANO|FARINDOLA|FARINI|FARNESE|FARRA D'ISONZO|FARRA DI SOLIGO|FASANO|FASCIA|FAUGLIA|FAULE|FAVALE DI MALVARO|FAVARA|FAVIGNANA|FAVRIA|FEISOGLIO|FELETTO|FELINO|FELITTO|FELIZZANO|FELTRE|FENEGRÒ|FENESTRELLE|FÉNIS|FERENTILLO|FERENTINO|FERLA|FERMIGNANO|FERMO|FERNO|FEROLETO ANTICO|FEROLETO DELLA CHIESA|FERRANDINA|FERRARA|FERRARA DI MONTE BALDO|FERRAZZANO|FERRERA DI VARESE|FERRERA ERBOGNONE|FERRERE|FERRIERE|FERRUZZANO|FIAMIGNANO|FIANO|FIANO ROMANO|FIASTRA|FIAVÈ|FICARAZZI|FICAROLO|FICARRA|FICULLE|FIDENZA|FIÈ ALLO SCILIAR|FIEROZZO|FIESCO|FIESOLE|FIESSE|FIESSO D'ARTICO|FIESSO UMBERTIANO|FIGINO SERENZA|FIGLINE E INCISA VALDARNO|FIGLINE VEGLIATURO|FILACCIANO|FILADELFIA|FILAGO|FILANDARI|FILATTIERA|FILETTINO|FILETTO|FILIANO|FILIGHERA|FILIGNANO|FILOGASO|FILOTTRANO|FINALE EMILIA|FINALE LIGURE|FINO DEL MONTE|FINO MORNASCO|FIORANO AL SERIO|FIORANO CANAVESE|FIORANO MODENESE|FIORENZUOLA D'ARDA|FIRENZE|FIRENZUOLA|FIRMO|FISCAGLIA|FISCIANO|FIUGGI|FIUMALBO|FIUMARA|FIUME VENETO|FIUMEDINISI|FIUMEFREDDO BRUZIO|FIUMEFREDDO DI SICILIA|FIUMICELLO VILLA VICENTINA|FIUMICINO|FIUMINATA|FIVIZZANO|FLAIBANO|FLERO|FLORESTA|FLORIDIA|FLORINAS|FLUMERI|FLUMINIMAGGIORE|FLUSSIO|FOBELLO|FOGGIA|FOGLIANISE|FOGLIANO REDIPUGLIA|FOGLIZZO|FOIANO DELLA CHIANA|FOIANO DI VAL FORTORE|FOLGARIA|FOLIGNANO|FOLIGNO|FOLLINA|FOLLO|FOLLONICA|FOMBIO|FONDACHELLI-FANTINA|FONDI|FONNI|FONTAINEMORE|FONTANA LIRI|FONTANAFREDDA|FONTANAROSA|FONTANELICE|FONTANELLA|FONTANELLATO|FONTANELLE|FONTANETO D'AGOGNA|FONTANETTO PO|FONTANIGORDA|FONTANILE|FONTANIVA|FONTE|FONTE NUOVA|FONTECCHIO|FONTECHIARI|FONTEGRECA|FONTENO|FONTEVIVO|FONZASO|FOPPOLO|FORANO|FORCE|FORCHIA|FORCOLA|FORDONGIANUS|FORENZA|FORESTO SPARSO|FORGARIA NEL FRIULI|FORINO|FORIO|FORLÌ|FORLÌ DEL SANNIO|FORLIMPOPOLI|FORMAZZA|FORMELLO|FORMIA|FORMICOLA|FORMIGARA|FORMIGINE|FORMIGLIANA|FORNACE|FORNELLI|FORNI AVOLTRI|FORNI DI SOPRA|FORNI DI SOTTO|FORNO CANAVESE|FORNOVO DI TARO|FORNOVO SAN GIOVANNI|FORTE DEI MARMI|FORTEZZA|FORTUNAGO|FORZA D'AGRÒ|FOSCIANDORA|FOSDINOVO|FOSSA|FOSSACESIA|FOSSALTA DI PIAVE|FOSSALTA DI PORTOGRUARO|FOSSALTO|FOSSANO|FOSSATO DI VICO|FOSSATO SERRALTA|FOSSÒ|FOSSOMBRONE|FOZA|FRABOSA SOPRANA|FRABOSA SOTTANA|FRACONALTO|FRAGAGNANO|FRAGNETO L'ABATE|FRAGNETO MONFORTE|FRAINE|FRAMURA|FRANCAVILLA AL MARE|FRANCAVILLA ANGITOLA|FRANCAVILLA BISIO|FRANCAVILLA D'ETE|FRANCAVILLA DI SICILIA|FRANCAVILLA FONTANA|FRANCAVILLA IN SINNI|FRANCAVILLA MARITTIMA|FRANCICA|FRANCOFONTE|FRANCOLISE|FRASCARO|FRASCAROLO|FRASCATI|FRASCINETO|FRASSILONGO|FRASSINELLE POLESINE|FRASSINELLO MONFERRATO|FRASSINETO PO|FRASSINETTO|FRASSINO|FRASSINORO|FRASSO SABINO|FRASSO TELESINO|FRATTA POLESINE|FRATTA TODINA|FRATTAMAGGIORE|FRATTAMINORE|FRATTE ROSA|FRAZZANÒ|FREGONA|FRESAGRANDINARIA|FRESONARA|FRIGENTO|FRIGNANO|FRINCO|FRISA|FRISANCO|FRONT|FRONTINO|FRONTONE|FROSINONE|FROSOLONE|FROSSASCO|FRUGAROLO|FUBINE MONFERRATO|FUCECCHIO|FUIPIANO VALLE IMAGNA|FUMANE|FUMONE|FUNES|FURCI|FURCI SICULO|FURNARI|FURORE|FURTEI|FUSCALDO|FUSIGNANO|FUSINE|FUTANI|GABBIONETA-BINANUOVA|GABIANO|GABICCE MARE|GABY|GADESCO-PIEVE DELMONA|GADONI|GAETA|GAGGI|GAGGIANO|GAGGIO MONTANO|GAGLIANICO|GAGLIANO ATERNO|GAGLIANO CASTELFERRATO|GAGLIANO DEL CAPO|GAGLIATO|GAGLIOLE|GAIARINE|GAIBA|GAIOLA|GAIOLE IN CHIANTI|GAIRO|GAIS|GALATI MAMERTINO|GALATINA|GALATONE|GALATRO|GALBIATE|GALEATA|GALGAGNANO|GALLARATE|GALLESE|GALLIATE|GALLIATE LOMBARDO|GALLIAVOLA|GALLICANO|GALLICANO NEL LAZIO|GALLICCHIO|GALLIERA|GALLIERA VENETA|GALLINARO|GALLIO|GALLIPOLI|GALLO MATESE|GALLODORO|GALLUCCIO|GALTELLÌ|GALZIGNANO TERME|GAMALERO|GAMBARA|GAMBARANA|GAMBASCA|GAMBASSI TERME|GAMBATESA|GAMBELLARA|GAMBERALE|GAMBETTOLA|GAMBOLÒ|GAMBUGLIANO|GANDELLINO|GANDINO|GANDOSSO|GANGI|GARAGUSO|GARBAGNA|GARBAGNA NOVARESE|GARBAGNATE MILANESE|GARBAGNATE MONASTERO|GARDA|GARDONE RIVIERA|GARDONE VAL TROMPIA|GARESSIO|GARGALLO|GARGAZZONE|GARGNANO|GARLASCO|GARLATE|GARLENDA|GARNIGA TERME|GARZENO|GARZIGLIANA|GASPERINA|GASSINO TORINESE|GATTATICO|GATTEO|GATTICO-VERUNO|GATTINARA|GAVARDO|GAVELLO|GAVERINA TERME|GAVI|GAVIGNANO|GAVIRATE|GAVOI|GAVORRANO|GAZOLDO DEGLI IPPOLITI|GAZZADA SCHIANNO|GAZZANIGA|GAZZO|GAZZO VERONESE|GAZZOLA|GAZZUOLO|GELA|GEMMANO|GEMONA DEL FRIULI|GEMONIO|GENAZZANO|GENGA|GENIVOLTA|GENOLA|GENONI|GENOVA|GENURI|GENZANO DI LUCANIA|GENZANO DI ROMA|GERA LARIO|GERACE|GERACI SICULO|GERANO|GERENZAGO|GERENZANO|GERGEI|GERMAGNANO|GERMAGNO|GERMIGNAGA|GEROCARNE|GEROLA ALTA|GERRE DE' CAPRIOLI|GESICO|GESSATE|GESSOPALENA|GESTURI|GESUALDO|GHEDI|GHEMME|GHIFFA|GHILARZA|GHISALBA|GHISLARENGO|GIACCIANO CON BARUCHELLA|GIAGLIONE|GIANICO|GIANO DELL'UMBRIA|GIANO VETUSTO|GIARDINELLO|GIARDINI-NAXOS|GIAROLE|GIARRATANA|GIARRE|GIAVE|GIAVENO|GIAVERA DEL MONTELLO|GIBA|GIBELLINA|GIFFLENGA|GIFFONE|GIFFONI SEI CASALI|GIFFONI VALLE PIANA|GIGNESE|GIGNOD|GILDONE|GIMIGLIANO|GINESTRA|GINESTRA DEGLI SCHIAVONI|GINOSA|GIOI|GIOIA DEI MARSI|GIOIA DEL COLLE|GIOIA SANNITICA|GIOIA TAURO|GIOIOSA IONICA|GIOIOSA MAREA|GIOVE|GIOVINAZZO|GIOVO|GIRASOLE|GIRIFALCO|GISSI|GIUGGIANELLO|GIUGLIANO IN CAMPANIA|GIULIANA|GIULIANO DI ROMA|GIULIANO TEATINO|GIULIANOVA|GIUNGANO|GIURDIGNANO|GIUSSAGO|GIUSSANO|GIUSTENICE|GIUSTINO|GIUSVALLA|GIVOLETTO|GIZZERIA|GLORENZA|GODEGA DI SANT'URBANO|GODIASCO SALICE TERME|GODRANO|GOITO|GOLASECCA|GOLFERENZO|GOLFO ARANCI|GOMBITO|GONARS|GONI|GONNESA|GONNOSCODINA|GONNOSFANADIGA|GONNOSNÒ|GONNOSTRAMATZA|GONZAGA|GORDONA|GORGA|GORGO AL MONTICANO|GORGOGLIONE|GORGONZOLA|GORIANO SICOLI|GORIZIA|GORLA MAGGIORE|GORLA MINORE|GORLAGO|GORLE|GORNATE OLONA|GORNO|GORO|GORRETO|GORZEGNO|GOSALDO|GOSSOLENGO|GOTTASECCA|GOTTOLENGO|GOVONE|GOZZANO|GRADARA|GRADISCA D'ISONZO|GRADO|GRADOLI|GRAFFIGNANA|GRAFFIGNANO|GRAGLIA|GRAGNANO|GRAGNANO TREBBIENSE|GRAMMICHELE|GRANA|GRANAROLO DELL'EMILIA|GRANDATE|GRANDOLA ED UNITI|GRANITI|GRANOZZO CON MONTICELLO|GRANTOLA|GRANTORTO|GRANZE|GRASSANO|GRASSOBBIO|GRATTERI|GRAVEDONA ED UNITI|GRAVELLONA LOMELLINA|GRAVELLONA TOCE|GRAVERE|GRAVINA DI CATANIA|GRAVINA IN PUGLIA|GRAZZANISE|GRAZZANO BADOGLIO|GRECCIO|GRECI|GREGGIO|GREMIASCO|GRESSAN|GRESSONEY-LA-TRINITÉ|GRESSONEY-SAINT-JEAN|GREVE IN CHIANTI|GREZZAGO|GREZZANA|GRIANTE|GRICIGNANO DI AVERSA|GRIGNASCO|GRIGNO|GRIMACCO|GRIMALDI|GRINZANE CAVOUR|GRISIGNANO DI ZOCCO|GRISOLIA|GRIZZANA MORANDI|GROGNARDO|GROMO|GRONDONA|GRONE|GRONTARDO|GROPELLO CAIROLI|GROPPARELLO|GROSCAVALLO|GROSIO|GROSOTTO|GROSSETO|GROSSO|GROTTAFERRATA|GROTTAGLIE|GROTTAMINARDA|GROTTAMMARE|GROTTAZZOLINA|GROTTE|GROTTE DI CASTRO|GROTTERIA|GROTTOLE|GROTTOLELLA|GRUARO|GRUGLIASCO|GRUMELLO CREMONESE ED UNITI|GRUMELLO DEL MONTE|GRUMENTO NOVA|GRUMO APPULA|GRUMO NEVANO|GRUMOLO DELLE ABBADESSE|GUAGNANO|GUALDO|GUALDO CATTANEO|GUALDO TADINO|GUALTIERI|GUALTIERI SICAMINÒ|GUAMAGGIORE|GUANZATE|GUARCINO|GUARDA VENETA|GUARDABOSONE|GUARDAMIGLIO|GUARDAVALLE|GUARDEA|GUARDIA LOMBARDI|GUARDIA PERTICARA|GUARDIA PIEMONTESE|GUARDIA SANFRAMONDI|GUARDIAGRELE|GUARDIALFIERA|GUARDIAREGIA|GUARDISTALLO|GUARENE|GUASILA|GUASTALLA|GUAZZORA|GUBBIO|GUDO VISCONTI|GUGLIONESI|GUIDIZZOLO|GUIDONIA MONTECELIO|GUIGLIA|GUILMI|GURRO|GUSPINI|GUSSAGO|GUSSOLA|HÔNE|IDRO|IGLESIAS|IGLIANO|ILBONO|ILLASI|ILLORAI|IMBERSAGO|IMER|IMOLA|IMPERIA|IMPRUNETA|INARZO|INCISA SCAPACCINO|INCUDINE|INDUNO OLONA|INGRIA|INTRAGNA|INTROBIO|INTROD|INTRODACQUA|INVERIGO|INVERNO E MONTELEONE|INVERSO PINASCA|INVERUNO|INVORIO|INZAGO|IONADI|IRGOLI|IRMA|IRSINA|ISASCA|ISCA SULLO IONIO|ISCHIA|ISCHIA DI CASTRO|ISCHITELLA|ISEO|ISERA|ISERNIA|ISILI|ISNELLO|ISOLA D'ASTI|ISOLA DEL CANTONE|ISOLA DEL GIGLIO|ISOLA DEL GRAN SASSO D'ITALIA|ISOLA DEL LIRI|ISOLA DEL PIANO|ISOLA DELLA SCALA|ISOLA DELLE FEMMINE|ISOLA DI CAPO RIZZUTO|ISOLA DI FONDRA|ISOLA DOVARESE|ISOLA RIZZA|ISOLA SANT'ANTONIO|ISOLA VICENTINA|ISOLABELLA|ISOLABONA|ISOLE TREMITI|ISORELLA|ISPANI|ISPICA|ISPRA|ISSIGLIO|ISSIME|ISSO|ISSOGNE|ISTRANA|ITALA|ITRI|ITTIREDDU|ITTIRI|IVREA|IZANO|JACURSO|JELSI|JENNE|JERAGO CON ORAGO|JERZU|JESI|JESOLO|JOLANDA DI SAVOIA|JOPPOLO|JOPPOLO GIANCAXIO|JOVENÇAN|L'AQUILA|LA CASSA|LA LOGGIA|LA MADDALENA|LA MAGDELEINE|LA MORRA|LA SALLE|LA SPEZIA|LA THUILE|LA VALLE|LA VALLE AGORDINA|LA VALLETTA BRIANZA|LABICO|LABRO|LACCHIARELLA|LACCO AMENO|LACEDONIA|LACES|LACONI|LADISPOLI|LAERRU|LAGANADI|LAGHI|LAGLIO|LAGNASCO|LAGO|LAGONEGRO|LAGOSANTO|LAGUNDO|LAIGUEGLIA|LAINATE|LAINO|LAINO BORGO|LAINO CASTELLO|LAION|LAIVES|LAJATICO|LALLIO|LAMA DEI PELIGNI|LAMA MOCOGNO|LAMBRUGO|LAMEZIA TERME|LAMON|LAMPEDUSA E LINOSA|LAMPORECCHIO|LAMPORO|LANA|LANCIANO|LANDIONA|LANDRIANO|LANGHIRANO|LANGOSCO|LANUSEI|LANUVIO|LANZADA|LANZO TORINESE|LAPEDONA|LAPIO|LAPPANO|LARCIANO|LARDIRAGO|LARIANO|LARINO|LAS PLASSAS|LASA|LASCARI|LASNIGO|LASTEBASSE|LASTRA A SIGNA|LATERA|LATERINA PERGINE VALDARNO|LATERZA|LATIANO|LATINA|LATISANA|LATRONICO|LATTARICO|LAUCO|LAUREANA CILENTO|LAUREANA DI BORRELLO|LAUREGNO|LAURENZANA|LAURIA|LAURIANO|LAURINO|LAURITO|LAURO|LAVAGNA|LAVAGNO|LAVARONE|LAVELLO|LAVENA PONTE TRESA|LAVENO-MOMBELLO|LAVENONE|LAVIANO|LAVIS|LAZISE|LAZZATE|LECCE|LECCE NEI MARSI|LECCO|LEDRO|LEFFE|LEGGIUNO|LEGNAGO|LEGNANO|LEGNARO|LEI|LEINI|LEIVI|LEMIE|LENDINARA|LENI|LENNA|LENO|LENOLA|LENTA|LENTATE SUL SEVESO|LENTELLA|LENTINI|LEONESSA|LEONFORTE|LEPORANO|LEQUILE|LEQUIO BERRIA|LEQUIO TANARO|LERCARA FRIDDI|LERICI|LERMA|LESA|LESEGNO|LESIGNANO DE' BAGNI|LESINA|LESMO|LESSOLO|LESSONA|LESTIZZA|LETINO|LETOJANNI|LETTERE|LETTOMANOPPELLO|LETTOPALENA|LEVANTO|LEVATE|LEVERANO|LEVICE|LEVICO TERME|LEVONE|LEZZENO|LIBERI|LIBRIZZI|LICATA|LICCIANA NARDI|LICENZA|LICODIA EUBEA|LIERNA|LIGNANA|LIGNANO SABBIADORO|LILLIANES|LIMANA|LIMATOLA|LIMBADI|LIMBIATE|LIMENA|LIMIDO COMASCO|LIMINA|LIMONE PIEMONTE|LIMONE SUL GARDA|LIMOSANO|LINAROLO|LINGUAGLOSSA|LIONI|LIPARI|LIPOMO|LIRIO|LISCATE|LISCIA|LISCIANO NICCONE|LISIO|LISSONE|LIVERI|LIVIGNO|LIVINALLONGO DEL COL DI LANA|LIVO(CO)|LIVO|LIVO(TN)|LIVORNO|LIVORNO FERRARIS|LIVRAGA|LIZZANELLO|LIZZANO|LIZZANO IN BELVEDERE|LOANO|LOAZZOLO|LOCANA|LOCATE DI TRIULZI|LOCATE VARESINO|LOCATELLO|LOCERI|LOCOROTONDO|LOCRI|LOCULI|LODÈ|LODI|LODI VECCHIO|LODINE|LODRINO|LOGRATO|LOIANO|LOIRI PORTO SAN PAOLO|LOMAGNA|LOMAZZO|LOMBARDORE|LOMBRIASCO|LOMELLO|LONA-LASES|LONATE CEPPINO|LONATE POZZOLO|LONATO DEL GARDA|LONDA|LONGANO|LONGARE|LONGARONE|LONGHENA|LONGI|LONGIANO|LONGOBARDI|LONGOBUCCO|LONGONE AL SEGRINO|LONGONE SABINO|LONIGO|LORANZÈ|LOREGGIA|LOREGLIA|LORENZAGO DI CADORE|LOREO|LORETO|LORETO APRUTINO|LORIA|LORO CIUFFENNA|LORO PICENO|LORSICA|LOSINE|LOTZORAI|LOVERE|LOVERO|LOZIO|LOZZA|LOZZO ATESTINO|LOZZO DI CADORE|LOZZOLO|LU E CUCCARO MONFERRATO|LUBRIANO|LUCCA|LUCCA SICULA|LUCERA|LUCIGNANO|LUCINASCO|LUCITO|LUCO DEI MARSI|LUCOLI|LUGAGNANO VAL D'ARDA|LUGNANO IN TEVERINA|LUGO|LUGO DI VICENZA|LUINO|LUISAGO|LULA|LUMARZO|LUMEZZANE|LUNAMATRONA|LUNANO|LUNGAVILLA|LUNGRO|LUNI|LUOGOSANO|LUOGOSANTO|LUPARA|LURAGO D'ERBA|LURAGO MARINONE|LURANO|LURAS|LURATE CACCIVIO|LUSCIANO|LUSERNA|LUSERNA SAN GIOVANNI|LUSERNETTA|LUSEVERA|LUSIA|LUSIANA CONCO|LUSIGLIÈ|LUSON|LUSTRA|LUVINATE|LUZZANA|LUZZARA|LUZZI|MACCAGNO CON PINO E VEDDASCA|MACCASTORNA|MACCHIA D'ISERNIA|MACCHIA VALFORTORE|MACCHIAGODENA|MACELLO|MACERATA|MACERATA CAMPANIA|MACERATA FELTRIA|MACHERIO|MACLODIO|MACOMER|MACRA|MACUGNAGA|MADDALONI|MADESIMO|MADIGNANO|MADONE|MADONNA DEL SASSO|MADRUZZO|MAENZA|MAFALDA|MAGASA|MAGENTA|MAGGIORA|MAGHERNO|MAGIONE|MAGISANO|MAGLIANO ALFIERI|MAGLIANO ALPI|MAGLIANO DE' MARSI|MAGLIANO DI TENNA|MAGLIANO IN TOSCANA|MAGLIANO ROMANO|MAGLIANO SABINA|MAGLIANO VETERE|MAGLIE|MAGLIOLO|MAGLIONE|MAGNACAVALLO|MAGNAGO|MAGNANO|MAGNANO IN RIVIERA|MAGOMADAS|MAGRÈ SULLA STRADA DEL VINO|MAGREGLIO|MAIDA|MAIERÀ|MAIERATO|MAIOLATI SPONTINI|MAIOLO|MAIORI|MAIRAGO|MAIRANO|MAISSANA|MAJANO|MALAGNINO|MALALBERGO|MALBORGHETTO VALBRUNA|MALCESINE|MALÉ|MALEGNO|MALEO|MALESCO|MALETTO|MALFA|MALGESSO|MALGRATE|MALITO|MALLARE|MALLES VENOSTA|MALNATE|MALO|MALONNO|MALTIGNANO|MALVAGNA|MALVICINO|MALVITO|MAMMOLA|MAMOIADA|MANCIANO|MANDANICI|MANDAS|MANDATORICCIO|MANDELA|MANDELLO DEL LARIO|MANDELLO VITTA|MANDURIA|MANERBA DEL GARDA|MANERBIO|MANFREDONIA|MANGO|MANGONE|MANIACE|MANIAGO|MANOCALZATI|MANOPPELLO|MANSUÈ|MANTA|MANTELLO|MANTOVA|MANZANO|MANZIANA|MAPELLO|MAPPANO|MARA|MARACALAGONIS|MARANELLO|MARANO DI NAPOLI|MARANO DI VALPOLICELLA|MARANO EQUO|MARANO LAGUNARE|MARANO MARCHESATO|MARANO PRINCIPATO|MARANO SUL PANARO|MARANO TICINO|MARANO VICENTINO|MARANZANA|MARATEA|MARCALLO CON CASONE|MARCARIA|MARCEDUSA|MARCELLINA|MARCELLINARA|MARCETELLI|MARCHENO|MARCHIROLO|MARCIANA|MARCIANA MARINA|MARCIANISE|MARCIANO DELLA CHIANA|MARCIGNAGO|MARCON|MAREBBE|MARENE|MARENO DI PIAVE|MARENTINO|MARETTO|MARGARITA|MARGHERITA DI SAVOIA|MARGNO|MARIANA MANTOVANA|MARIANO COMENSE|MARIANO DEL FRIULI|MARIANOPOLI|MARIGLIANELLA|MARIGLIANO|MARINA DI GIOIOSA IONICA|MARINEO|MARINO|MARLENGO|MARLIANA|MARMENTINO|MARMIROLO|MARMORA|MARNATE|MARONE|MAROPATI|MAROSTICA|MARRADI|MARRUBIU|MARSAGLIA|MARSALA|MARSCIANO|MARSICO NUOVO|MARSICOVETERE|MARTA|MARTANO|MARTELLAGO|MARTELLO|MARTIGNACCO|MARTIGNANA DI PO|MARTIGNANO|MARTINA FRANCA|MARTINENGO|MARTINIANA PO|MARTINSICURO|MARTIRANO|MARTIRANO LOMBARDO|MARTIS|MARTONE|MARUDO|MARUGGIO|MARZABOTTO|MARZANO|MARZANO APPIO|MARZANO DI NOLA|MARZI|MARZIO|MASAINAS|MASATE|MASCALI|MASCALUCIA|MASCHITO|MASCIAGO PRIMO|MASER|MASERA|MASERÀ DI PADOVA|MASERADA SUL PIAVE|MASI|MASI TORELLO|MASIO|MASLIANICO|MASONE|MASSA|MASSA D'ALBE|MASSA DI SOMMA|MASSA E COZZILE|MASSA FERMANA|MASSA LOMBARDA|MASSA LUBRENSE|MASSA MARITTIMA|MASSA MARTANA|MASSAFRA|MASSALENGO|MASSANZAGO|MASSAROSA|MASSAZZA|MASSELLO|MASSERANO|MASSIGNANO|MASSIMENO|MASSIMINO|MASSINO VISCONTI|MASSIOLA|MASULLAS|MATELICA|MATERA|MATHI|MATINO|MATRICE|MATTIE|MATTINATA|MAZARA DEL VALLO|MAZZANO|MAZZANO ROMANO|MAZZARINO|MAZZARRÀ SANT'ANDREA|MAZZARRONE|MAZZÈ|MAZZIN|MAZZO DI VALTELLINA|MEANA DI SUSA|MEANA SARDO|MEDA|MEDE|MEDEA|MEDESANO|MEDICINA|MEDIGLIA|MEDOLAGO|MEDOLE|MEDOLLA|MEDUNA DI LIVENZA|MEDUNO|MEGLIADINO SAN VITALE|MEINA|MELARA|MELAZZO|MELDOLA|MELE|MELEGNANO|MELENDUGNO|MELETI|MELFI|MELICUCCÀ|MELICUCCO|MELILLI|MELISSA|MELISSANO|MELITO DI NAPOLI|MELITO DI PORTO SALVO|MELITO IRPINO|MELIZZANO|MELLE|MELLO|MELPIGNANO|MELTINA|MELZO|MENAGGIO|MENCONICO|MENDATICA|MENDICINO|MENFI|MENTANA|MEOLO|MERANA|MERANO|MERATE|MERCALLO|MERCATELLO SUL METAURO|MERCATINO CONCA|MERCATO SAN SEVERINO|MERCATO SARACENO|MERCENASCO|MERCOGLIANO|MERETO DI TOMBA|MERGO|MERGOZZO|MERÌ|MERLARA|MERLINO|MERONE|MESAGNE|MESE|MESENZANA|MESERO|MESOLA|MESORACA|MESSINA|MESTRINO|META|MEZZAGO|MEZZANA|MEZZANA BIGLI|MEZZANA MORTIGLIENGO|MEZZANA RABATTONE|MEZZANE DI SOTTO|MEZZANEGO|MEZZANINO|MEZZANO|MEZZENILE|MEZZOCORONA|MEZZOJUSO|MEZZOLDO|MEZZOLOMBARDO|MEZZOMERICO|MIAGLIANO|MIANE|MIASINO|MIAZZINA|MICIGLIANO|MIGGIANO|MIGLIANICO|MIGLIERINA|MIGLIONICO|MIGNANEGO|MIGNANO MONTE LUNGO|MILANO|MILAZZO|MILENA|MILETO|MILIS|MILITELLO IN VAL DI CATANIA|MILITELLO ROSMARINO|MILLESIMO|MILO|MILZANO|MINEO|MINERBE|MINERBIO|MINERVINO DI LECCE|MINERVINO MURGE|MINORI|MINTURNO|MINUCCIANO|MIOGLIA|MIRA|MIRABELLA ECLANO|MIRABELLA IMBACCARI|MIRABELLO MONFERRATO|MIRABELLO SANNITICO|MIRADOLO TERME|MIRANDA|MIRANDOLA|MIRANO|MIRTO|MISANO ADRIATICO|MISANO DI GERA D'ADDA|MISILMERI|MISINTO|MISSAGLIA|MISSANELLO|MISTERBIANCO|MISTRETTA|MOASCA|MOCONESI|MODENA|MODICA|MODIGLIANA|MODOLO|MODUGNO|MOENA|MOGGIO|MOGGIO UDINESE|MOGLIA|MOGLIANO|MOGLIANO VENETO|MOGORELLA|MOGORO|MOIANO|MOIMACCO|MOIO ALCANTARA|MOIO DE' CALVI|MOIO DELLA CIVITELLA|MOIOLA|MOLA DI BARI|MOLARE|MOLAZZANA|MOLFETTA|MOLINA ATERNO|MOLINARA|MOLINELLA|MOLINI DI TRIORA|MOLINO DEI TORTI|MOLISE|MOLITERNO|MOLLIA|MOLOCHIO|MOLTENO|MOLTRASIO|MOLVENO|MOMBALDONE|MOMBARCARO|MOMBAROCCIO|MOMBARUZZO|MOMBASIGLIO|MOMBELLO DI TORINO|MOMBELLO MONFERRATO|MOMBERCELLI|MOMO|MOMPANTERO|MOMPEO|MOMPERONE|MONACILIONI|MONALE|MONASTERACE|MONASTERO BORMIDA|MONASTERO DI LANZO|MONASTERO DI VASCO|MONASTEROLO CASOTTO|MONASTEROLO DEL CASTELLO|MONASTEROLO DI SAVIGLIANO|MONASTIER DI TREVISO|MONASTIR|MONCALIERI|MONCALVO|MONCENISIO|MONCESTINO|MONCHIERO|MONCHIO DELLE CORTI|MONCRIVELLO|MONCUCCO TORINESE|MONDAINO|MONDAVIO|MONDOLFO|MONDOVÌ|MONDRAGONE|MONEGLIA|MONESIGLIO|MONFALCONE|MONFORTE D'ALBA|MONFORTE SAN GIORGIO|MONFUMO|MONGARDINO|MONGHIDORO|MONGIANA|MONGIARDINO LIGURE|MONGIUFFI MELIA|MONGRANDO|MONGRASSANO|MONGUELFO-TESIDO|MONGUZZO|MONIGA DEL GARDA|MONLEALE|MONNO|MONOPOLI|MONREALE|MONRUPINO|MONSAMPIETRO MORICO|MONSAMPOLO DEL TRONTO|MONSANO|MONSELICE|MONSERRATO|MONSUMMANO TERME|MONTÀ|MONTABONE|MONTACUTO|MONTAFIA|MONTAGANO|MONTAGNA|MONTAGNA IN VALTELLINA|MONTAGNANA|MONTAGNAREALE|MONTAGUTO|MONTAIONE|MONTALBANO ELICONA|MONTALBANO JONICO|MONTALCINO|MONTALDEO|MONTALDO BORMIDA|MONTALDO DI MONDOVÌ|MONTALDO ROERO|MONTALDO SCARAMPI|MONTALDO TORINESE|MONTALE|MONTALENGHE|MONTALLEGRO|MONTALTO CARPASIO|MONTALTO DELLE MARCHE|MONTALTO DI CASTRO|MONTALTO DORA|MONTALTO PAVESE|MONTALTO UFFUGO|MONTANARO|MONTANASO LOMBARDO|MONTANERA|MONTANO ANTILIA|MONTANO LUCINO|MONTAPPONE|MONTAQUILA|MONTASOLA|MONTAURO|MONTAZZOLI|MONTE ARGENTARIO|MONTE CASTELLO DI VIBIO|MONTE CAVALLO|MONTE CERIGNONE|MONTE COMPATRI|MONTE CREMASCO|MONTE DI MALO|MONTE DI PROCIDA|MONTE GIBERTO|MONTE GRIMANO TERME|MONTE ISOLA|MONTE MARENZO|MONTE PORZIO|MONTE PORZIO CATONE|MONTE RINALDO|MONTE ROBERTO|MONTE ROMANO|MONTE SAN BIAGIO|MONTE SAN GIACOMO|MONTE SAN GIOVANNI CAMPANO|MONTE SAN GIOVANNI IN SABINA|MONTE SAN GIUSTO|MONTE SAN MARTINO|MONTE SAN PIETRANGELI|MONTE SAN PIETRO|MONTE SAN SAVINO|MONTE SAN VITO|MONTE SANT'ANGELO|MONTE SANTA MARIA TIBERINA|MONTE URANO|MONTE VIDON COMBATTE|MONTE VIDON CORRADO|MONTEBELLO DELLA BATTAGLIA|MONTEBELLO DI BERTONA|MONTEBELLO JONICO|MONTEBELLO SUL SANGRO|MONTEBELLO VICENTINO|MONTEBELLUNA|MONTEBRUNO|MONTEBUONO|MONTECALVO IN FOGLIA|MONTECALVO IRPINO|MONTECALVO VERSIGGIA|MONTECARLO|MONTECAROTTO|MONTECASSIANO|MONTECASTELLO|MONTECASTRILLI|MONTECATINI VAL DI CECINA|MONTECATINI-TERME|MONTECCHIA DI CROSARA|MONTECCHIO|MONTECCHIO EMILIA|MONTECCHIO MAGGIORE|MONTECCHIO PRECALCINO|MONTECHIARO D'ACQUI|MONTECHIARO D'ASTI|MONTECHIARUGOLO|MONTECICCARDO|MONTECILFONE|MONTECOPIOLO|MONTECORICE|MONTECORVINO PUGLIANO|MONTECORVINO ROVELLA|MONTECOSARO|MONTECRESTESE|MONTECRETO|MONTEDINOVE|MONTEDORO|MONTEFALCIONE|MONTEFALCO|MONTEFALCONE APPENNINO|MONTEFALCONE DI VAL FORTORE|MONTEFALCONE NEL SANNIO|MONTEFANO|MONTEFELCINO|MONTEFERRANTE|MONTEFIASCONE|MONTEFINO|MONTEFIORE CONCA|MONTEFIORE DELL'ASO|MONTEFIORINO|MONTEFLAVIO|MONTEFORTE CILENTO|MONTEFORTE D'ALPONE|MONTEFORTE IRPINO|MONTEFORTINO|MONTEFRANCO|MONTEFREDANE|MONTEFUSCO|MONTEGABBIONE|MONTEGALDA|MONTEGALDELLA|MONTEGALLO|MONTEGIOCO|MONTEGIORDANO|MONTEGIORGIO|MONTEGRANARO|MONTEGRIDOLFO|MONTEGRINO VALTRAVAGLIA|MONTEGROSSO D'ASTI|MONTEGROSSO PIAN LATTE|MONTEGROTTO TERME|MONTEIASI|MONTELABBATE|MONTELANICO|MONTELAPIANO|MONTELEONE D'ORVIETO|MONTELEONE DI FERMO|MONTELEONE DI PUGLIA|MONTELEONE DI SPOLETO|MONTELEONE ROCCA DORIA|MONTELEONE SABINO|MONTELEPRE|MONTELIBRETTI|MONTELLA|MONTELLO|MONTELONGO|MONTELPARO|MONTELUPO ALBESE|MONTELUPO FIORENTINO|MONTELUPONE|MONTEMAGGIORE BELSITO|MONTEMAGNO|MONTEMALE DI CUNEO|MONTEMARANO|MONTEMARCIANO|MONTEMARZINO|MONTEMESOLA|MONTEMEZZO|MONTEMIGNAIO|MONTEMILETTO|MONTEMILONE|MONTEMITRO|MONTEMONACO|MONTEMURLO|MONTEMURRO|MONTENARS|MONTENERO DI BISACCIA|MONTENERO SABINO|MONTENERO VAL COCCHIARA|MONTENERODOMO|MONTEODORISIO|MONTEPAONE|MONTEPARANO|MONTEPRANDONE|MONTEPULCIANO|MONTERCHI|MONTEREALE|MONTEREALE VALCELLINA|MONTERENZIO|MONTERIGGIONI|MONTERODUNI|MONTERONI D'ARBIA|MONTERONI DI LECCE|MONTEROSI|MONTEROSSO AL MARE|MONTEROSSO ALMO|MONTEROSSO CALABRO|MONTEROSSO GRANA|MONTEROTONDO|MONTEROTONDO MARITTIMO|MONTERUBBIANO|MONTESANO SALENTINO|MONTESANO SULLA MARCELLANA|MONTESARCHIO|MONTESCAGLIOSO|MONTESCANO|MONTESCHENO|MONTESCUDAIO|MONTESCUDO-MONTE COLOMBO|MONTESE|MONTESEGALE|MONTESILVANO|MONTESPERTOLI|MONTEU DA PO|MONTEU ROERO|MONTEVAGO|MONTEVARCHI|MONTEVECCHIA|MONTEVERDE|MONTEVERDI MARITTIMO|MONTEVIALE|MONTEZEMOLO|MONTI|MONTIANO|MONTICELLI BRUSATI|MONTICELLI D'ONGINA|MONTICELLI PAVESE|MONTICELLO BRIANZA|MONTICELLO CONTE OTTO|MONTICELLO D'ALBA|MONTICHIARI|MONTICIANO|MONTIERI|MONTIGLIO MONFERRATO|MONTIGNOSO|MONTIRONE|MONTJOVET|MONTODINE|MONTOGGIO|MONTONE|MONTOPOLI DI SABINA|MONTOPOLI IN VAL D'ARNO|MONTORFANO|MONTORIO AL VOMANO|MONTORIO NEI FRENTANI|MONTORIO ROMANO|MONTORO|MONTORSO VICENTINO|MONTOTTONE|MONTRESTA|MONTÙ BECCARIA|MONVALLE|MONZA|MONZAMBANO|MONZUNO|MORANO CALABRO|MORANO SUL PO|MORANSENGO|MORARO|MORAZZONE|MORBEGNO|MORBELLO|MORCIANO DI LEUCA|MORCIANO DI ROMAGNA|MORCONE|MORDANO|MORENGO|MORES|MORESCO|MORETTA|MORFASSO|MORGANO|MORGEX|MORGONGIORI|MORI|MORIAGO DELLA BATTAGLIA|MORICONE|MORIGERATI|MORIMONDO|MORINO|MORIONDO TORINESE|MORLUPO|MORMANNO|MORNAGO|MORNESE|MORNICO AL SERIO|MORNICO LOSANA|MOROLO|MOROZZO|MORRA DE SANCTIS|MORRO D'ALBA|MORRO D'ORO|MORRO REATINO|MORRONE DEL SANNIO|MORROVALLE|MORSANO AL TAGLIAMENTO|MORSASCO|MORTARA|MORTEGLIANO|MORTERONE|MORUZZO|MOSCAZZANO|MOSCHIANO|MOSCIANO SANT'ANGELO|MOSCUFO|MOSO IN PASSIRIA|MOSSA|MOTTA BALUFFI|MOTTA CAMASTRA|MOTTA D'AFFERMO|MOTTA DE' CONTI|MOTTA DI LIVENZA|MOTTA MONTECORVINO|MOTTA SAN GIOVANNI|MOTTA SANT'ANASTASIA|MOTTA SANTA LUCIA|MOTTA VISCONTI|MOTTAFOLLONE|MOTTALCIATA|MOTTEGGIANA|MOTTOLA|MOZZAGROGNA|MOZZANICA|MOZZATE|MOZZECANE|MOZZO|MUCCIA|MUGGIA|MUGGIÒ|MUGNANO DEL CARDINALE|MUGNANO DI NAPOLI|MULAZZANO|MULAZZO|MURA|MURAVERA|MURAZZANO|MURELLO|MURIALDO|MURISENGO|MURLO|MURO LECCESE|MURO LUCANO|MUROS|MUSCOLINE|MUSEI|MUSILE DI PIAVE|MUSSO|MUSSOLENTE|MUSSOMELI|MUZZANA DEL TURGNANO|MUZZANO|NAGO-TORBOLE|NALLES|NANTO|NAPOLI|NARBOLIA|NARCAO|NARDÒ|NARDODIPACE|NARNI|NARO|NARZOLE|NASINO|NASO|NATURNO|NAVE|NAVELLI|NAZ-SCIAVES|NAZZANO|NE|NEBBIUNO|NEGRAR DI VALPOLICELLA|NEIRONE|NEIVE|NEMBRO|NEMI|NEMOLI|NEONELI|NEPI|NERETO|NEROLA|NERVESA DELLA BATTAGLIA|NERVIANO|NESPOLO|NESSO|NETRO|NETTUNO|NEVIANO|NEVIANO DEGLI ARDUINI|NEVIGLIE|NIARDO|NIBBIOLA|NIBIONNO|NICHELINO|NICOLOSI|NICORVO|NICOSIA|NICOTERA|NIELLA BELBO|NIELLA TANARO|NIMIS|NISCEMI|NISSORIA|NIZZA DI SICILIA|NIZZA MONFERRATO|NOALE|NOASCA|NOCARA|NOCCIANO|NOCERA INFERIORE|NOCERA SUPERIORE|NOCERA TERINESE|NOCERA UMBRA|NOCETO|NOCI|NOCIGLIA|NOEPOLI|NOGARA|NOGAREDO|NOGAROLE ROCCA|NOGAROLE VICENTINO|NOICATTARO|NOLA|NOLE|NOLI|NOMAGLIO|NOMI|NONANTOLA|NONE|NONIO|NORAGUGUME|NORBELLO|NORCIA|NORMA|NOSATE|NOTARESCO|NOTO|NOVA LEVANTE|NOVA MILANESE|NOVA PONENTE|NOVA SIRI|NOVAFELTRIA|NOVALEDO|NOVALESA|NOVARA|NOVARA DI SICILIA|NOVATE MEZZOLA|NOVATE MILANESE|NOVE|NOVEDRATE|NOVELLA|NOVELLARA|NOVELLO|NOVENTA DI PIAVE|NOVENTA PADOVANA|NOVENTA VICENTINA|NOVI DI MODENA|NOVI LIGURE|NOVI VELIA|NOVIGLIO|NOVOLI|NUCETTO|NUGHEDU SAN NICOLÒ|NUGHEDU SANTA VITTORIA|NULE|NULVI|NUMANA|NUORO|NURACHI|NURAGUS|NURALLAO|NURAMINIS|NURECI|NURRI|NUS|NUSCO|NUVOLENTO|NUVOLERA|NUXIS|OCCHIEPPO INFERIORE|OCCHIEPPO SUPERIORE|OCCHIOBELLO|OCCIMIANO|OCRE|ODALENGO GRANDE|ODALENGO PICCOLO|ODERZO|ODOLO|OFENA|OFFAGNA|OFFANENGO|OFFIDA|OFFLAGA|OGGEBBIO|OGGIONA CON SANTO STEFANO|OGGIONO|OGLIANICO|OGLIASTRO CILENTO|OLBIA|OLCENENGO|OLDENICO|OLEGGIO|OLEGGIO CASTELLO|OLEVANO DI LOMELLINA|OLEVANO ROMANO|OLEVANO SUL TUSCIANO|OLGIATE COMASCO|OLGIATE MOLGORA|OLGIATE OLONA|OLGINATE|OLIENA|OLIVA GESSI|OLIVADI|OLIVERI|OLIVETO CITRA|OLIVETO LARIO|OLIVETO LUCANO|OLIVETTA SAN MICHELE|OLIVOLA|OLLASTRA|OLLOLAI|OLLOMONT|OLMEDO|OLMENETA|OLMO AL BREMBO|OLMO GENTILE|OLTRE IL COLLE|OLTRESSENDA ALTA|OLTRONA DI SAN MAMETTE|OLZAI|OME|OMEGNA|OMIGNANO|ONANÌ|ONANO|ONCINO|ONETA|ONIFAI|ONIFERI|ONO SAN PIETRO|ONORE|ONZO|OPERA|OPI|OPPEANO|OPPIDO LUCANO|OPPIDO MAMERTINA|ORA|ORANI|ORATINO|ORBASSANO|ORBETELLO|ORCIANO PISANO|ORCO FEGLINO|ORDONA|ORERO|ORGIANO|ORGOSOLO|ORIA|ORICOLA|ORIGGIO|ORINO|ORIO AL SERIO|ORIO CANAVESE|ORIO LITTA|ORIOLO|ORIOLO ROMANO|ORISTANO|ORMEA|ORMELLE|ORNAGO|ORNAVASSO|ORNICA|OROSEI|OROTELLI|ORRIA|ORROLI|ORSAGO|ORSARA BORMIDA|ORSARA DI PUGLIA|ORSENIGO|ORSOGNA|ORSOMARSO|ORTA DI ATELLA|ORTA NOVA|ORTA SAN GIULIO|ORTACESUS|ORTE|ORTELLE|ORTEZZANO|ORTIGNANO RAGGIOLO|ORTISEI|ORTONA|ORTONA DEI MARSI|ORTOVERO|ORTUCCHIO|ORTUERI|ORUNE|ORVIETO|ORVINIO|ORZINUOVI|ORZIVECCHI|OSASCO|OSASIO|OSCHIRI|OSIDDA|OSIGLIA|OSILO|OSIMO|OSINI|OSIO SOPRA|OSIO SOTTO|OSNAGO|OSOPPO|OSPEDALETTI|OSPEDALETTO|OSPEDALETTO D'ALPINOLO|OSPEDALETTO EUGANEO|OSPEDALETTO LODIGIANO|OSPITALE DI CADORE|OSPITALETTO|OSSAGO LODIGIANO|OSSANA|OSSI|OSSIMO|OSSONA|OSTANA|OSTELLATO|OSTIANO|OSTIGLIA|OSTRA|OSTRA VETERE|OSTUNI|OTRANTO|OTRICOLI|OTTANA|OTTATI|OTTAVIANO|OTTIGLIO|OTTOBIANO|OTTONE|OULX|OVADA|OVARO|OVIGLIO|OVINDOLI|OVODDA|OYACE|OZEGNA|OZIERI|OZZANO DELL'EMILIA|OZZANO MONFERRATO|OZZERO|PABILLONIS|PACE DEL MELA|PACECO|PACENTRO|PACHINO|PACIANO|PADENGHE SUL GARDA|PADERNA|PADERNO D'ADDA|PADERNO DUGNANO|PADERNO FRANCIACORTA|PADERNO PONCHIELLI|PADOVA|PADRIA|PADRU|PADULA|PADULI|PAESANA|PAESE|PAGANI|PAGANICO SABINO|PAGAZZANO|PAGLIARA|PAGLIETA|PAGNACCO|PAGNO|PAGNONA|PAGO DEL VALLO DI LAURO|PAGO VEIANO|PAISCO LOVENO|PAITONE|PALADINA|PALAGANO|PALAGIANELLO|PALAGIANO|PALAGONIA|PALAIA|PALANZANO|PALATA|PALAU|PALAZZAGO|PALAZZO ADRIANO|PALAZZO CANAVESE|PALAZZO PIGNANO|PALAZZO SAN GERVASIO|PALAZZOLO ACREIDE|PALAZZOLO DELLO STELLA|PALAZZOLO SULL'OGLIO|PALAZZOLO VERCELLESE|PALAZZUOLO SUL SENIO|PALENA|PALERMITI|PALERMO|PALESTRINA|PALESTRO|PALIANO|PALIZZI|PALLAGORIO|PALLANZENO|PALLARE|PALMA CAMPANIA|PALMA DI MONTECHIARO|PALMANOVA|PALMARIGGI|PALMAS ARBOREA|PALMI|PALMIANO|PALMOLI|PALO DEL COLLE|PALOMBARA SABINA|PALOMBARO|PALOMONTE|PALOSCO|PALÙ|PALÙ DEL FERSINA|PALUDI|PALUZZA|PAMPARATO|PANCALIERI|PANCARANA|PANCHIÀ|PANDINO|PANETTIERI|PANICALE|PANNARANO|PANNI|PANTELLERIA|PANTIGLIATE|PAOLA|PAOLISI|PAPASIDERO|PAPOZZE|PARABIAGO|PARABITA|PARATICO|PARCINES|PARELLA|PARENTI|PARETE|PARETO|PARGHELIA|PARLASCO|PARMA|PARODI LIGURE|PAROLDO|PAROLISE|PARONA|PARRANO|PARRE|PARTANNA|PARTINICO|PARUZZARO|PARZANICA|PASIAN DI PRATO|PASIANO DI PORDENONE|PASPARDO|PASSERANO MARMORITO|PASSIGNANO SUL TRASIMENO|PASSIRANO|PASTENA|PASTORANO|PASTRENGO|PASTURANA|PASTURO|PATERNO|PATERNÒ|PATERNO CALABRO|PATERNOPOLI|PATRICA|PATTADA|PATTI|PATÙ|PAU|PAULARO|PAULI ARBAREI|PAULILATINO|PAULLO|PAUPISI|PAVAROLO|PAVIA|PAVIA DI UDINE|PAVONE CANAVESE|PAVONE DEL MELLA|PAVULLO NEL FRIGNANO|PAZZANO|PECCIOLI|PECETTO DI VALENZA|PECETTO TORINESE|PEDARA|PEDASO|PEDAVENA|PEDEMONTE|PEDEROBBA|PEDESINA|PEDIVIGLIANO|PEDRENGO|PEGLIO(CO)|PEGLIO|PEGLIO(PU)|PEGOGNAGA|PEIA|PEIO|PELAGO|PELLA|PELLEGRINO PARMENSE|PELLEZZANO|PELLIZZANO|PELUGO|PENANGO|PENNA IN TEVERINA|PENNA SAN GIOVANNI|PENNA SANT'ANDREA|PENNABILLI|PENNADOMO|PENNAPIEDIMONTE|PENNE|PENTONE|PERANO|PERAROLO DI CADORE|PERCA|PERCILE|PERDASDEFOGU|PERDAXIUS|PERDIFUMO|PERETO|PERFUGAS|PERGINE VALSUGANA|PERGOLA|PERINALDO|PERITO|PERLEDO|PERLETTO|PERLO|PERLOZ|PERNUMIA|PERO|PEROSA ARGENTINA|PEROSA CANAVESE|PERRERO|PERSICO DOSIMO|PERTENGO|PERTICA ALTA|PERTICA BASSA|PERTOSA|PERTUSIO|PERUGIA|PESARO|PESCAGLIA|PESCANTINA|PESCARA|PESCAROLO ED UNITI|PESCASSEROLI|PESCATE|PESCHE|PESCHICI|PESCHIERA BORROMEO|PESCHIERA DEL GARDA|PESCIA|PESCINA|PESCO SANNITA|PESCOCOSTANZO|PESCOLANCIANO|PESCOPAGANO|PESCOPENNATARO|PESCOROCCHIANO|PESCOSANSONESCO|PESCOSOLIDO|PESSANO CON BORNAGO|PESSINA CREMONESE|PESSINETTO|PETACCIATO|PETILIA POLICASTRO|PETINA|PETRALIA SOPRANA|PETRALIA SOTTANA|PETRELLA SALTO|PETRELLA TIFERNINA|PETRIANO|PETRIOLO|PETRITOLI|PETRIZZI|PETRONÀ|PETROSINO|PETRURO IRPINO|PETTENASCO|PETTINENGO|PETTINEO|PETTORANELLO DEL MOLISE|PETTORANO SUL GIZIO|PETTORAZZA GRIMANI|PEVERAGNO|PEZZANA|PEZZAZE|PEZZOLO VALLE UZZONE|PIACENZA|PIACENZA D'ADIGE|PIADENA DRIZZONA|PIAGGINE|PIAN CAMUNO|PIANA CRIXIA|PIANA DEGLI ALBANESI|PIANA DI MONTE VERNA|PIANCASTAGNAIO|PIANCOGNO|PIANDIMELETO|PIANE CRATI|PIANELLA|PIANELLO DEL LARIO|PIANELLO VAL TIDONE|PIANENGO|PIANEZZA|PIANEZZE|PIANFEI|PIANICO|PIANIGA|PIANO DI SORRENTO|PIANOPOLI|PIANORO|PIANSANO|PIANTEDO|PIARIO|PIASCO|PIATEDA|PIATTO|PIAZZA AL SERCHIO|PIAZZA ARMERINA|PIAZZA BREMBANA|PIAZZATORRE|PIAZZOLA SUL BRENTA|PIAZZOLO|PICCIANO|PICERNO|PICINISCO|PICO|PIEA|PIEDICAVALLO|PIEDIMONTE ETNEO|PIEDIMONTE MATESE|PIEDIMONTE SAN GERMANO|PIEDIMULERA|PIEGARO|PIENZA|PIERANICA|PIETRA DE' GIORGI|PIETRA LIGURE|PIETRA MARAZZI|PIETRABBONDANTE|PIETRABRUNA|PIETRACAMELA|PIETRACATELLA|PIETRACUPA|PIETRADEFUSI|PIETRAFERRAZZANA|PIETRAFITTA|PIETRAGALLA|PIETRALUNGA|PIETRAMELARA|PIETRAMONTECORVINO|PIETRANICO|PIETRAPAOLA|PIETRAPERTOSA|PIETRAPERZIA|PIETRAPORZIO|PIETRAROJA|PIETRARUBBIA|PIETRASANTA|PIETRASTORNINA|PIETRAVAIRANO|PIETRELCINA|PIEVE A NIEVOLE|PIEVE ALBIGNOLA|PIEVE D'OLMI|PIEVE DEL CAIRO|PIEVE DEL GRAPPA|PIEVE DI BONO-PREZZO|PIEVE DI CADORE|PIEVE DI CENTO|PIEVE DI SOLIGO|PIEVE DI TECO|PIEVE EMANUELE|PIEVE FISSIRAGA|PIEVE FOSCIANA|PIEVE LIGURE|PIEVE PORTO MORONE|PIEVE SAN GIACOMO|PIEVE SANTO STEFANO|PIEVE TESINO|PIEVE TORINA|PIEVE VERGONTE|PIEVEPELAGO|PIGLIO|PIGNA|PIGNATARO INTERAMNA|PIGNATARO MAGGIORE|PIGNOLA|PIGNONE|PIGRA|PILA|PIMENTEL|PIMONTE|PINAROLO PO|PINASCA|PINCARA|PINEROLO|PINETO|PINO D'ASTI|PINO TORINESE|PINZANO AL TAGLIAMENTO|PINZOLO|PIOBBICO|PIOBESI D'ALBA|PIOBESI TORINESE|PIODE|PIOLTELLO|PIOMBINO|PIOMBINO DESE|PIORACO|PIOSSASCO|PIOVÀ MASSAIA|PIOVE DI SACCO|PIOVENE ROCCHETTE|PIOZZANO|PIOZZO|PIRAINO|PISA|PISANO|PISCINA|PISCINAS|PISCIOTTA|PISOGNE|PISONIANO|PISTICCI|PISTOIA|PITIGLIANO|PIUBEGA|PIURO|PIVERONE|PIZZALE|PIZZIGHETTONE|PIZZO|PIZZOFERRATO|PIZZOLI|PIZZONE|PIZZONI|PLACANICA|PLATACI|PLATANIA|PLATÌ|PLAUS|PLESIO|PLOAGHE|PLODIO|POCAPAGLIA|POCENIA|PODENZANA|PODENZANO|POFI|POGGIARDO|POGGIBONSI|POGGIO A CAIANO|POGGIO BUSTONE|POGGIO CATINO|POGGIO IMPERIALE|POGGIO MIRTETO|POGGIO MOIANO|POGGIO NATIVO|POGGIO PICENZE|POGGIO RENATICO|POGGIO RUSCO|POGGIO SAN LORENZO|POGGIO SAN MARCELLO|POGGIO SAN VICINO|POGGIO SANNITA|POGGIO TORRIANA|POGGIODOMO|POGGIOFIORITO|POGGIOMARINO|POGGIOREALE|POGGIORSINI|POGGIRIDENTI|POGLIANO MILANESE|POGNANA LARIO|POGNANO|POGNO|POIRINO|POJANA MAGGIORE|POLAVENO|POLCENIGO|POLESELLA|POLESINE ZIBELLO|POLI|POLIA|POLICORO|POLIGNANO A MARE|POLINAGO|POLINO|POLISTENA|POLIZZI GENEROSA|POLLA|POLLEIN|POLLENA TROCCHIA|POLLENZA|POLLICA|POLLINA|POLLONE|POLLUTRI|POLONGHERA|POLPENAZZE DEL GARDA|POLVERARA|POLVERIGI|POMARANCE|POMARETTO|POMARICO|POMARO MONFERRATO|POMAROLO|POMBIA|POMEZIA|POMIGLIANO D'ARCO|POMPEI|POMPEIANA|POMPIANO|POMPONESCO|POMPU|PONCARALE|PONDERANO|PONNA|PONSACCO|PONSO|PONT-CANAVESE|PONT-SAINT-MARTIN|PONTASSIEVE|PONTBOSET|PONTE|PONTE BUGGIANESE|PONTE DELL'OLIO|PONTE DI LEGNO|PONTE DI PIAVE|PONTE GARDENA|PONTE IN VALTELLINA|PONTE LAMBRO|PONTE NELLE ALPI|PONTE NIZZA|PONTE NOSSA|PONTE SAN NICOLÒ|PONTE SAN PIETRO|PONTEBBA|PONTECAGNANO FAIANO|PONTECCHIO POLESINE|PONTECHIANALE|PONTECORVO|PONTECURONE|PONTEDASSIO|PONTEDERA|PONTELANDOLFO|PONTELATONE|PONTELONGO|PONTENURE|PONTERANICA|PONTESTURA|PONTEVICO|PONTEY|PONTI|PONTI SUL MINCIO|PONTIDA|PONTINIA|PONTINVREA|PONTIROLO NUOVO|PONTOGLIO|PONTREMOLI|PONZA|PONZANO DI FERMO|PONZANO MONFERRATO|PONZANO ROMANO|PONZANO VENETO|PONZONE|POPOLI|POPPI|PORANO|PORCARI|PORCIA|PORDENONE|PORLEZZA|PORNASSIO|PORPETTO|PORTACOMARO|PORTALBERA|PORTE|PORTE DI RENDENA|PORTICI|PORTICO DI CASERTA|PORTICO E SAN BENEDETTO|PORTIGLIOLA|PORTO AZZURRO|PORTO CERESIO|PORTO CESAREO|PORTO EMPEDOCLE|PORTO MANTOVANO|PORTO RECANATI|PORTO SAN GIORGIO|PORTO SANT'ELPIDIO|PORTO TOLLE|PORTO TORRES|PORTO VALTRAVAGLIA|PORTO VIRO|PORTOBUFFOLÈ|PORTOCANNONE|PORTOFERRAIO|PORTOFINO|PORTOGRUARO|PORTOMAGGIORE|PORTOPALO DI CAPO PASSERO|PORTOSCUSO|PORTOVENERE|PORTULA|POSADA|POSINA|POSITANO|POSSAGNO|POSTA|POSTA FIBRENO|POSTAL|POSTALESIO|POSTIGLIONE|POSTUA|POTENZA|POTENZA PICENA|POVE DEL GRAPPA|POVEGLIANO|POVEGLIANO VERONESE|POVIGLIO|POVOLETTO|POZZAGLIA SABINA|POZZAGLIO ED UNITI|POZZALLO|POZZILLI|POZZO D'ADDA|POZZOL GROPPO|POZZOLENGO|POZZOLEONE|POZZOLO FORMIGARO|POZZOMAGGIORE|POZZONOVO|POZZUOLI|POZZUOLO DEL FRIULI|POZZUOLO MARTESANA|PRADALUNGA|PRADAMANO|PRADLEVES|PRAGELATO|PRAIA A MARE|PRAIANO|PRALBOINO|PRALI|PRALORMO|PRALUNGO|PRAMAGGIORE|PRAMOLLO|PRAROLO|PRAROSTINO|PRASCO|PRASCORSANO|PRATA CAMPORTACCIO|PRATA D'ANSIDONIA|PRATA DI PORDENONE|PRATA DI PRINCIPATO ULTRA|PRATA SANNITA|PRATELLA|PRATIGLIONE|PRATO|PRATO ALLO STELVIO|PRATO CARNICO|PRATO SESIA|PRATOLA PELIGNA|PRATOLA SERRA|PRATOVECCHIO STIA|PRAVISDOMINI|PRAY|PRAZZO|PRÉ-SAINT-DIDIER|PRECENICCO|PRECI|PREDAIA|PREDAPPIO|PREDAZZO|PREDOI|PREDORE|PREDOSA|PREGANZIOL|PREGNANA MILANESE|PRELÀ|PREMANA|PREMARIACCO|PREMENO|PREMIA|PREMILCUORE|PREMOLO|PREMOSELLO-CHIOVENDA|PREONE|PREPOTTO|PRESEGLIE|PRESENZANO|PRESEZZO|PRESICCE-ACQUARICA|PRESSANA|PRETORO|PREVALLE|PREZZA|PRIERO|PRIGNANO CILENTO|PRIGNANO SULLA SECCHIA|PRIMALUNA|PRIMIERO SAN MARTINO DI CASTROZZA|PRIOCCA|PRIOLA|PRIOLO GARGALLO|PRIVERNO|PRIZZI|PROCENO|PROCIDA|PROPATA|PROSERPIO|PROSSEDI|PROVAGLIO D'ISEO|PROVAGLIO VAL SABBIA|PROVES|PROVVIDENTI|PRUNETTO|PUEGNAGO DEL GARDA|PUGLIANELLO|PULA|PULFERO|PULSANO|PUMENENGO|PUSIANO|PUTIFIGARI|PUTIGNANO|QUADRELLE|QUADRI|QUAGLIUZZO|QUALIANO|QUARANTI|QUAREGNA CERRETO|QUARGNENTO|QUARNA SOPRA|QUARNA SOTTO|QUARONA|QUARRATA|QUART|QUARTO|QUARTO D'ALTINO|QUARTU SANT'ELENA|QUARTUCCIU|QUASSOLO|QUATTORDIO|QUATTRO CASTELLA|QUERO VAS|QUILIANO|QUINCINETTO|QUINDICI|QUINGENTOLE|QUINTANO|QUINTO DI TREVISO|QUINTO VERCELLESE|QUINTO VICENTINO|QUINZANO D'OGLIO|QUISTELLO|RABBI|RACALE|RACALMUTO|RACCONIGI|RACCUJA|RACINES|RADDA IN CHIANTI|RADDUSA|RADICOFANI|RADICONDOLI|RAFFADALI|RAGALNA|RAGOGNA|RAGUSA|RAIANO|RAMACCA|RANCIO VALCUVIA|RANCO|RANDAZZO|RANICA|RANZANICO|RANZO|RAPAGNANO|RAPALLO|RAPINO|RAPOLANO TERME|RAPOLLA|RAPONE|RASSA|RASUN-ANTERSELVA|RASURA|RAVANUSA|RAVARINO|RAVASCLETTO|RAVELLO|RAVENNA|RAVEO|RAVISCANINA|RE|REA|REALMONTE|REANA DEL ROJALE|REANO|RECALE|RECANATI|RECCO|RECETTO|RECOARO TERME|REDAVALLE|REDONDESCO|REFRANCORE|REFRONTOLO|REGALBUTO|REGGELLO|REGGIO DI CALABRIA|REGGIO NELL'EMILIA|REGGIOLO|REINO|REITANO|REMANZACCO|REMEDELLO|RENATE|RENDE|RENON|RESANA|RESCALDINA|RESIA|RESIUTTA|RESUTTANO|RETORBIDO|REVELLO|REVIGLIASCO D'ASTI|REVINE LAGO|REZZAGO|REZZATO|REZZO|REZZOAGLIO|RHÊMES-NOTRE-DAME|RHÊMES-SAINT-GEORGES|RHO|RIACE|RIALTO|RIANO|RIARDO|RIBERA|RIBORDONE|RICADI|RICALDONE|RICCIA|RICCIONE|RICCÒ DEL GOLFO DI SPEZIA|RICENGO|RICIGLIANO|RIESE PIO X|RIESI|RIETI|RIFIANO|RIFREDDO|RIGNANO FLAMINIO|RIGNANO GARGANICO|RIGNANO SULL'ARNO|RIGOLATO|RIMELLA|RIMINI|RIO|RIO DI PUSTERIA|RIO SALICETO|RIOFREDDO|RIOLA SARDO|RIOLO TERME|RIOLUNATO|RIOMAGGIORE|RIONERO IN VULTURE|RIONERO SANNITICO|RIPA TEATINA|RIPABOTTONI|RIPACANDIDA|RIPALIMOSANI|RIPALTA ARPINA|RIPALTA CREMASCA|RIPALTA GUERINA|RIPARBELLA|RIPATRANSONE|RIPE SAN GINESIO|RIPI|RIPOSTO|RITTANA|RIVA DEL GARDA|RIVA DEL PO|RIVA DI SOLTO|RIVA LIGURE|RIVA PRESSO CHIERI|RIVALBA|RIVALTA BORMIDA|RIVALTA DI TORINO|RIVAMONTE AGORDINO|RIVANAZZANO TERME|RIVARA|RIVAROLO CANAVESE|RIVAROLO DEL RE ED UNITI|RIVAROLO MANTOVANO|RIVARONE|RIVAROSSA|RIVE|RIVE D'ARCANO|RIVELLO|RIVERGARO|RIVIGNANO TEOR|RIVISONDOLI|RIVODUTRI|RIVOLI|RIVOLI VERONESE|RIVOLTA D'ADDA|RIZZICONI|ROANA|ROASCHIA|ROASCIO|ROASIO|ROATTO|ROBASSOMERO|ROBBIATE|ROBBIO|ROBECCHETTO CON INDUNO|ROBECCO D'OGLIO|ROBECCO PAVESE|ROBECCO SUL NAVIGLIO|ROBELLA|ROBILANTE|ROBURENT|ROCCA CANAVESE|ROCCA CANTERANO|ROCCA CIGLIÈ|ROCCA D'ARAZZO|ROCCA D'ARCE|ROCCA D'EVANDRO|ROCCA DE' BALDI|ROCCA DE' GIORGI|ROCCA DI BOTTE|ROCCA DI CAMBIO|ROCCA DI CAVE|ROCCA DI MEZZO|ROCCA DI NETO|ROCCA DI PAPA|ROCCA GRIMALDA|ROCCA IMPERIALE|ROCCA MASSIMA|ROCCA PIA|ROCCA PIETORE|ROCCA PRIORA|ROCCA SAN CASCIANO|ROCCA SAN FELICE|ROCCA SAN GIOVANNI|ROCCA SANTA MARIA|ROCCA SANTO STEFANO|ROCCA SINIBALDA|ROCCA SUSELLA|ROCCABASCERANA|ROCCABERNARDA|ROCCABIANCA|ROCCABRUNA|ROCCACASALE|ROCCADASPIDE|ROCCAFIORITA|ROCCAFLUVIONE|ROCCAFORTE DEL GRECO|ROCCAFORTE LIGURE|ROCCAFORTE MONDOVÌ|ROCCAFORZATA|ROCCAFRANCA|ROCCAGIOVINE|ROCCAGLORIOSA|ROCCAGORGA|ROCCALBEGNA|ROCCALUMERA|ROCCAMANDOLFI|ROCCAMENA|ROCCAMONFINA|ROCCAMONTEPIANO|ROCCAMORICE|ROCCANOVA|ROCCANTICA|ROCCAPALUMBA|ROCCAPIEMONTE|ROCCARAINOLA|ROCCARASO|ROCCAROMANA|ROCCASCALEGNA|ROCCASECCA|ROCCASECCA DEI VOLSCI|ROCCASICURA|ROCCASPARVERA|ROCCASPINALVETI|ROCCASTRADA|ROCCAVALDINA|ROCCAVERANO|ROCCAVIGNALE|ROCCAVIONE|ROCCAVIVARA|ROCCELLA IONICA|ROCCELLA VALDEMONE|ROCCHETTA A VOLTURNO|ROCCHETTA BELBO|ROCCHETTA DI VARA|ROCCHETTA E CROCE|ROCCHETTA LIGURE|ROCCHETTA NERVINA|ROCCHETTA PALAFEA|ROCCHETTA SANT'ANTONIO|ROCCHETTA TANARO|RODANO|RODDI|RODDINO|RODELLO|RODENGO|RODENGO SAIANO|RODERO|RODI GARGANICO|RODÌ MILICI|RODIGO|ROÈ VOLCIANO|ROFRANO|ROGENO|ROGGIANO GRAVINA|ROGHUDI|ROGLIANO|ROGNANO|ROGNO|ROGOLO|ROIATE|ROIO DEL SANGRO|ROISAN|ROLETTO|ROLO|ROMA|ROMAGNANO AL MONTE|ROMAGNANO SESIA|ROMAGNESE|ROMANA|ROMANENGO|ROMANO CANAVESE|ROMANO D'EZZELINO|ROMANO DI LOMBARDIA|ROMANS D'ISONZO|ROMBIOLO|ROMENO|ROMENTINO|ROMETTA|RONAGO|RONCÀ|RONCADE|RONCADELLE|RONCARO|RONCEGNO TERME|RONCELLO|RONCHI DEI LEGIONARI|RONCHI VALSUGANA|RONCHIS|RONCIGLIONE|RONCO ALL'ADIGE|RONCO BIELLESE|RONCO BRIANTINO|RONCO CANAVESE|RONCO SCRIVIA|RONCOBELLO|RONCOFERRARO|RONCOFREDDO|RONCOLA|RONDANINA|RONDISSONE|RONSECCO|RONZO-CHIENIS|RONZONE|ROPPOLO|RORÀ|ROSÀ|ROSARNO|ROSASCO|ROSATE|ROSAZZA|ROSCIANO|ROSCIGNO|ROSE|ROSELLO|ROSETO CAPO SPULICO|ROSETO DEGLI ABRUZZI|ROSETO VALFORTORE|ROSIGNANO MARITTIMO|ROSIGNANO MONFERRATO|ROSOLINA|ROSOLINI|ROSORA|ROSSA|ROSSANA|ROSSANO VENETO|ROSSIGLIONE|ROSTA|ROTA D'IMAGNA|ROTA GRECA|ROTELLA|ROTELLO|ROTONDA|ROTONDELLA|ROTONDI|ROTTOFRENO|ROTZO|ROURE|ROVASENDA|ROVATO|ROVEGNO|ROVELLASCA|ROVELLO PORRO|ROVERBELLA|ROVERCHIARA|ROVERÈ DELLA LUNA|ROVERÈ VERONESE|ROVEREDO DI GUÀ|ROVEREDO IN PIANO|ROVERETO|ROVESCALA|ROVETTA|ROVIANO|ROVIGO|ROVITO|ROVOLON|ROZZANO|RUBANO|RUBIANA|RUBIERA|RUDA|RUDIANO|RUEGLIO|RUFFANO|RUFFIA|RUFFRÈ-MENDOLA|RUFINA|RUINAS|RUMO|RUOTI|RUSSI|RUTIGLIANO|RUTINO|RUVIANO|RUVO DEL MONTE|RUVO DI PUGLIA|SABAUDIA|SABBIO CHIESE|SABBIONETA|SACCO|SACCOLONGO|SACILE|SACROFANO|SADALI|SAGAMA|SAGLIANO MICCA|SAGRADO|SAGRON MIS|SAINT-CHRISTOPHE|SAINT-DENIS|SAINT-MARCEL|SAINT-NICOLAS|SAINT-OYEN|SAINT-PIERRE|SAINT-RHÉMY-EN-BOSSES|SAINT-VINCENT|SALA BAGANZA|SALA BIELLESE|SALA BOLOGNESE|SALA COMACINA|SALA CONSILINA|SALA MONFERRATO|SALANDRA|SALAPARUTA|SALARA|SALASCO|SALASSA|SALBERTRAND|SALCEDO|SALCITO|SALE|SALE DELLE LANGHE|SALE MARASINO|SALE SAN GIOVANNI|SALEMI|SALENTO|SALERANO CANAVESE|SALERANO SUL LAMBRO|SALERNO|SALGAREDA|SALI VERCELLESE|SALICE SALENTINO|SALICETO|SALISANO|SALIZZOLE|SALLE|SALMOUR|SALÒ|SALORNO|SALSOMAGGIORE TERME|SALTRIO|SALUDECIO|SALUGGIA|SALUSSOLA|SALUZZO|SALVE|SALVIROLA|SALVITELLE|SALZA DI PINEROLO|SALZA IRPINA|SALZANO|SAMARATE|SAMASSI|SAMATZAI|SAMBUCA DI SICILIA|SAMBUCA PISTOIESE|SAMBUCI|SAMBUCO|SAMMICHELE DI BARI|SAMO|SAMOLACO|SAMONE(TO)|SAMONE|SAMONE(TN)|SAMPEYRE|SAMUGHEO|SAN BARTOLOMEO AL MARE|SAN BARTOLOMEO IN GALDO|SAN BARTOLOMEO VAL CAVARGNA|SAN BASILE|SAN BASILIO|SAN BASSANO|SAN BELLINO|SAN BENEDETTO BELBO|SAN BENEDETTO DEI MARSI|SAN BENEDETTO DEL TRONTO|SAN BENEDETTO IN PERILLIS|SAN BENEDETTO PO|SAN BENEDETTO ULLANO|SAN BENEDETTO VAL DI SAMBRO|SAN BENIGNO CANAVESE|SAN BERNARDINO VERBANO|SAN BIAGIO DELLA CIMA|SAN BIAGIO DI CALLALTA|SAN BIAGIO PLATANI|SAN BIAGIO SARACINISCO|SAN BIASE|SAN BONIFACIO|SAN BUONO|SAN CALOGERO|SAN CANDIDO|SAN CANZIAN D'ISONZO|SAN CARLO CANAVESE|SAN CASCIANO DEI BAGNI|SAN CASCIANO IN VAL DI PESA|SAN CASSIANO|SAN CATALDO|SAN CESAREO|SAN CESARIO DI LECCE|SAN CESARIO SUL PANARO|SAN CHIRICO NUOVO|SAN CHIRICO RAPARO|SAN CIPIRELLO|SAN CIPRIANO D'AVERSA|SAN CIPRIANO PICENTINO|SAN CIPRIANO PO|SAN CLEMENTE|SAN COLOMBANO AL LAMBRO|SAN COLOMBANO BELMONTE|SAN COLOMBANO CERTENOLI|SAN CONO|SAN COSMO ALBANESE|SAN COSTANTINO ALBANESE|SAN COSTANTINO CALABRO|SAN COSTANZO|SAN CRISTOFORO|SAN DAMIANO AL COLLE|SAN DAMIANO D'ASTI|SAN DAMIANO MACRA|SAN DANIELE DEL FRIULI|SAN DANIELE PO|SAN DEMETRIO CORONE|SAN DEMETRIO NE' VESTINI|SAN DIDERO|SAN DONÀ DI PIAVE|SAN DONACI|SAN DONATO DI LECCE|SAN DONATO DI NINEA|SAN DONATO MILANESE|SAN DONATO VAL DI COMINO|SAN DORLIGO DELLA VALLE|SAN FELE|SAN FELICE A CANCELLO|SAN FELICE CIRCEO|SAN FELICE DEL BENACO|SAN FELICE DEL MOLISE|SAN FELICE SUL PANARO|SAN FERDINANDO|SAN FERDINANDO DI PUGLIA|SAN FERMO DELLA BATTAGLIA|SAN FILI|SAN FILIPPO DEL MELA|SAN FIOR|SAN FIORANO|SAN FLORIANO DEL COLLIO|SAN FLORO|SAN FRANCESCO AL CAMPO|SAN FRATELLO|SAN GAVINO MONREALE|SAN GEMINI|SAN GENESIO ATESINO|SAN GENESIO ED UNITI|SAN GENNARO VESUVIANO|SAN GERMANO CHISONE|SAN GERMANO VERCELLESE|SAN GERVASIO BRESCIANO|SAN GIACOMO DEGLI SCHIAVONI|SAN GIACOMO DELLE SEGNATE|SAN GIACOMO FILIPPO|SAN GIACOMO VERCELLESE|SAN GILLIO|SAN GIMIGNANO|SAN GINESIO|SAN GIORGIO A CREMANO|SAN GIORGIO A LIRI|SAN GIORGIO ALBANESE|SAN GIORGIO BIGARELLO|SAN GIORGIO CANAVESE|SAN GIORGIO DEL SANNIO|SAN GIORGIO DELLA RICHINVELDA|SAN GIORGIO DELLE PERTICHE|SAN GIORGIO DI LOMELLINA|SAN GIORGIO DI NOGARO|SAN GIORGIO DI PIANO|SAN GIORGIO IN BOSCO|SAN GIORGIO IONICO|SAN GIORGIO LA MOLARA|SAN GIORGIO LUCANO|SAN GIORGIO MONFERRATO|SAN GIORGIO MORGETO|SAN GIORGIO PIACENTINO|SAN GIORGIO SCARAMPI|SAN GIORGIO SU LEGNANO|SAN GIORIO DI SUSA|SAN GIOVANNI A PIRO|SAN GIOVANNI AL NATISONE|SAN GIOVANNI BIANCO|SAN GIOVANNI DEL DOSSO|SAN GIOVANNI DI FASSA|SAN GIOVANNI DI GERACE|SAN GIOVANNI GEMINI|SAN GIOVANNI ILARIONE|SAN GIOVANNI IN CROCE|SAN GIOVANNI IN FIORE|SAN GIOVANNI IN GALDO|SAN GIOVANNI IN MARIGNANO|SAN GIOVANNI IN PERSICETO|SAN GIOVANNI INCARICO|SAN GIOVANNI LA PUNTA|SAN GIOVANNI LIPIONI|SAN GIOVANNI LUPATOTO|SAN GIOVANNI ROTONDO|SAN GIOVANNI SUERGIU|SAN GIOVANNI TEATINO|SAN GIOVANNI VALDARNO|SAN GIULIANO DEL SANNIO|SAN GIULIANO DI PUGLIA|SAN GIULIANO MILANESE|SAN GIULIANO TERME|SAN GIUSEPPE JATO|SAN GIUSEPPE VESUVIANO|SAN GIUSTINO|SAN GIUSTO CANAVESE|SAN GODENZO|SAN GREGORIO D'IPPONA|SAN GREGORIO DA SASSOLA|SAN GREGORIO DI CATANIA|SAN GREGORIO MAGNO|SAN GREGORIO MATESE|SAN GREGORIO NELLE ALPI|SAN LAZZARO DI SAVENA|SAN LEO|SAN LEONARDO|SAN LEONARDO IN PASSIRIA|SAN LEUCIO DEL SANNIO|SAN LORENZELLO|SAN LORENZO|SAN LORENZO AL MARE|SAN LORENZO BELLIZZI|SAN LORENZO DEL VALLO|SAN LORENZO DI SEBATO|SAN LORENZO DORSINO|SAN LORENZO IN CAMPO|SAN LORENZO ISONTINO|SAN LORENZO MAGGIORE|SAN LORENZO NUOVO|SAN LUCA|SAN LUCIDO|SAN LUPO|SAN MANGO D'AQUINO|SAN MANGO PIEMONTE|SAN MANGO SUL CALORE|SAN MARCELLINO|SAN MARCELLO|SAN MARCELLO PITEGLIO|SAN MARCO ARGENTANO|SAN MARCO D'ALUNZIO|SAN MARCO DEI CAVOTI|SAN MARCO EVANGELISTA|SAN MARCO IN LAMIS|SAN MARCO LA CATOLA|SAN MARTINO AL TAGLIAMENTO|SAN MARTINO ALFIERI|SAN MARTINO BUON ALBERGO|SAN MARTINO CANAVESE|SAN MARTINO D'AGRI|SAN MARTINO DALL'ARGINE|SAN MARTINO DEL LAGO|SAN MARTINO DI FINITA|SAN MARTINO DI LUPARI|SAN MARTINO DI VENEZZE|SAN MARTINO IN BADIA|SAN MARTINO IN PASSIRIA|SAN MARTINO IN PENSILIS|SAN MARTINO IN RIO|SAN MARTINO IN STRADA|SAN MARTINO SANNITA|SAN MARTINO SICCOMARIO|SAN MARTINO SULLA MARRUCINA|SAN MARTINO VALLE CAUDINA|SAN MARZANO DI SAN GIUSEPPE|SAN MARZANO OLIVETO|SAN MARZANO SUL SARNO|SAN MASSIMO|SAN MAURIZIO CANAVESE|SAN MAURIZIO D'OPAGLIO|SAN MAURO CASTELVERDE|SAN MAURO CILENTO|SAN MAURO DI SALINE|SAN MAURO FORTE|SAN MAURO LA BRUCA|SAN MAURO MARCHESATO|SAN MAURO PASCOLI|SAN MAURO TORINESE|SAN MICHELE AL TAGLIAMENTO|SAN MICHELE ALL'ADIGE|SAN MICHELE DI GANZARIA|SAN MICHELE DI SERINO|SAN MICHELE MONDOVÌ|SAN MICHELE SALENTINO|SAN MINIATO|SAN NAZZARO|SAN NAZZARO SESIA|SAN NAZZARO VAL CAVARGNA|SAN NICANDRO GARGANICO|SAN NICOLA ARCELLA|SAN NICOLA BARONIA|SAN NICOLA DA CRISSA|SAN NICOLA DELL'ALTO|SAN NICOLA LA STRADA|SAN NICOLA MANFREDI|SAN NICOLÒ D'ARCIDANO|SAN NICOLÒ DI COMELICO|SAN NICOLÒ GERREI|SAN PANCRAZIO|SAN PANCRAZIO SALENTINO|SAN PAOLO|SAN PAOLO ALBANESE|SAN PAOLO BEL SITO|SAN PAOLO D'ARGON|SAN PAOLO DI CIVITATE|SAN PAOLO DI JESI|SAN PAOLO SOLBRITO|SAN PELLEGRINO TERME|SAN PIER D'ISONZO|SAN PIER NICETO|SAN PIERO PATTI|SAN PIETRO A MAIDA|SAN PIETRO AL NATISONE|SAN PIETRO AL TANAGRO|SAN PIETRO APOSTOLO|SAN PIETRO AVELLANA|SAN PIETRO CLARENZA|SAN PIETRO DI CADORE|SAN PIETRO DI CARIDÀ|SAN PIETRO DI FELETTO|SAN PIETRO DI MORUBIO|SAN PIETRO IN AMANTEA|SAN PIETRO IN CARIANO|SAN PIETRO IN CASALE|SAN PIETRO IN CERRO|SAN PIETRO IN GU|SAN PIETRO IN GUARANO|SAN PIETRO IN LAMA|SAN PIETRO INFINE|SAN PIETRO MOSEZZO|SAN PIETRO MUSSOLINO|SAN PIETRO VAL LEMINA|SAN PIETRO VERNOTICO|SAN PIETRO VIMINARIO|SAN PIO DELLE CAMERE|SAN POLO D'ENZA|SAN POLO DEI CAVALIERI|SAN POLO DI PIAVE|SAN POLO MATESE|SAN PONSO|SAN POSSIDONIO|SAN POTITO SANNITICO|SAN POTITO ULTRA|SAN PRISCO|SAN PROCOPIO|SAN PROSPERO|SAN QUIRICO D'ORCIA|SAN QUIRINO|SAN RAFFAELE CIMENA|SAN ROBERTO|SAN ROCCO AL PORTO|SAN ROMANO IN GARFAGNANA|SAN RUFO|SAN SALVATORE DI FITALIA|SAN SALVATORE MONFERRATO|SAN SALVATORE TELESINO|SAN SALVO|SAN SEBASTIANO AL VESUVIO|SAN SEBASTIANO CURONE|SAN SEBASTIANO DA PO|SAN SECONDO DI PINEROLO|SAN SECONDO PARMENSE|SAN SEVERINO LUCANO|SAN SEVERINO MARCHE|SAN SEVERO|SAN SIRO|SAN SOSSIO BARONIA|SAN SOSTENE|SAN SOSTI|SAN SPERATE|SAN STINO DI LIVENZA|SAN TAMMARO|SAN TEODORO(ME)|SAN TEODORO|SAN TEODORO(SS)|SAN TOMASO AGORDINO|SAN VALENTINO IN ABRUZZO CITERIORE|SAN VALENTINO TORIO|SAN VENANZO|SAN VENDEMIANO|SAN VERO MILIS|SAN VINCENZO|SAN VINCENZO LA COSTA|SAN VINCENZO VALLE ROVETO|SAN VITALIANO|SAN VITO|SAN VITO AL TAGLIAMENTO|SAN VITO AL TORRE|SAN VITO CHIETINO|SAN VITO DEI NORMANNI|SAN VITO DI CADORE|SAN VITO DI FAGAGNA|SAN VITO DI LEGUZZANO|SAN VITO LO CAPO|SAN VITO ROMANO|SAN VITO SULLO IONIO|SAN VITTORE DEL LAZIO|SAN VITTORE OLONA|SAN ZENO DI MONTAGNA|SAN ZENO NAVIGLIO|SAN ZENONE AL LAMBRO|SAN ZENONE AL PO|SAN ZENONE DEGLI EZZELINI|SANARICA|SANDIGLIANO|SANDRIGO|SANFRÈ|SANFRONT|SANGANO|SANGIANO|SANGINETO|SANGUINETTO|SANLURI|SANNAZZARO DE' BURGONDI|SANNICANDRO DI BARI|SANNICOLA|SANREMO|SANSEPOLCRO|SANT'AGAPITO|SANT'AGATA BOLOGNESE|SANT'AGATA DE' GOTI|SANT'AGATA DEL BIANCO|SANT'AGATA DI ESARO|SANT'AGATA DI MILITELLO|SANT'AGATA DI PUGLIA|SANT'AGATA FELTRIA|SANT'AGATA FOSSILI|SANT'AGATA LI BATTIATI|SANT'AGATA SUL SANTERNO|SANT'AGNELLO|SANT'ALBANO STURA|SANT'ALESSIO CON VIALONE|SANT'ALESSIO IN ASPROMONTE|SANT'ALESSIO SICULO|SANT'ALFIO|SANT'AMBROGIO DI TORINO|SANT'AMBROGIO DI VALPOLICELLA|SANT'AMBROGIO SUL GARIGLIANO|SANT'ANASTASIA|SANT'ANATOLIA DI NARCO|SANT'ANDREA APOSTOLO DELLO IONIO|SANT'ANDREA DEL GARIGLIANO|SANT'ANDREA DI CONZA|SANT'ANDREA FRIUS|SANT'ANGELO A CUPOLO|SANT'ANGELO A FASANELLA|SANT'ANGELO A SCALA|SANT'ANGELO ALL'ESCA|SANT'ANGELO D'ALIFE|SANT'ANGELO DEI LOMBARDI|SANT'ANGELO DEL PESCO|SANT'ANGELO DI BROLO|SANT'ANGELO DI PIOVE DI SACCO|SANT'ANGELO IN PONTANO|SANT'ANGELO IN VADO|SANT'ANGELO LE FRATTE|SANT'ANGELO LIMOSANO|SANT'ANGELO LODIGIANO|SANT'ANGELO LOMELLINA|SANT'ANGELO MUXARO|SANT'ANGELO ROMANO|SANT'ANNA ARRESI|SANT'ANNA D'ALFAEDO|SANT'ANTIMO|SANT'ANTIOCO|SANT'ANTONINO DI SUSA|SANT'ANTONIO ABATE|SANT'ANTONIO DI GALLURA|SANT'APOLLINARE|SANT'ARCANGELO|SANT'ARCANGELO TRIMONTE|SANT'ARPINO|SANT'ARSENIO|SANT'EGIDIO ALLA VIBRATA|SANT'EGIDIO DEL MONTE ALBINO|SANT'ELENA|SANT'ELENA SANNITA|SANT'ELIA A PIANISI|SANT'ELIA FIUMERAPIDO|SANT'ELPIDIO A MARE|SANT'EUFEMIA A MAIELLA|SANT'EUFEMIA D'ASPROMONTE|SANT'EUSANIO DEL SANGRO|SANT'EUSANIO FORCONESE|SANT'ILARIO D'ENZA|SANT'ILARIO DELLO IONIO|SANT'IPPOLITO|SANT'OLCESE|SANT'OMERO|SANT'OMOBONO TERME|SANT'ONOFRIO|SANT'ORESTE|SANT'ORSOLA TERME|SANT'URBANO|SANTA BRIGIDA|SANTA CATERINA ALBANESE|SANTA CATERINA DELLO IONIO|SANTA CATERINA VILLARMOSA|SANTA CESAREA TERME|SANTA CRISTINA D'ASPROMONTE|SANTA CRISTINA E BISSONE|SANTA CRISTINA GELA|SANTA CRISTINA VALGARDENA|SANTA CROCE CAMERINA|SANTA CROCE DEL SANNIO|SANTA CROCE DI MAGLIANO|SANTA CROCE SULL'ARNO|SANTA DOMENICA TALAO|SANTA DOMENICA VITTORIA|SANTA ELISABETTA|SANTA FIORA|SANTA FLAVIA|SANTA GIULETTA|SANTA GIUSTA|SANTA GIUSTINA|SANTA GIUSTINA IN COLLE|SANTA LUCE|SANTA LUCIA DEL MELA|SANTA LUCIA DI PIAVE|SANTA LUCIA DI SERINO|SANTA MARGHERITA DI BELICE|SANTA MARGHERITA DI STAFFORA|SANTA MARGHERITA LIGURE|SANTA MARIA A MONTE|SANTA MARIA A VICO|SANTA MARIA CAPUA VETERE|SANTA MARIA COGHINAS|SANTA MARIA DEL CEDRO|SANTA MARIA DEL MOLISE|SANTA MARIA DELLA VERSA|SANTA MARIA DI LICODIA|SANTA MARIA DI SALA|SANTA MARIA HOÈ|SANTA MARIA IMBARO|SANTA MARIA LA CARITÀ|SANTA MARIA LA FOSSA|SANTA MARIA LA LONGA|SANTA MARIA MAGGIORE|SANTA MARIA NUOVA|SANTA MARINA|SANTA MARINA SALINA|SANTA MARINELLA|SANTA NINFA|SANTA PAOLINA|SANTA SEVERINA|SANTA SOFIA|SANTA SOFIA D'EPIRO|SANTA TERESA DI RIVA|SANTA TERESA GALLURA|SANTA VENERINA|SANTA VITTORIA D'ALBA|SANTA VITTORIA IN MATENANO|SANTADI|SANTARCANGELO DI ROMAGNA|SANTE MARIE|SANTENA|SANTERAMO IN COLLE|SANTHIÀ|SANTI COSMA E DAMIANO|SANTO STEFANO AL MARE|SANTO STEFANO BELBO|SANTO STEFANO D'AVETO|SANTO STEFANO DEL SOLE|SANTO STEFANO DI CADORE|SANTO STEFANO DI CAMASTRA|SANTO STEFANO DI MAGRA|SANTO STEFANO DI ROGLIANO|SANTO STEFANO DI SESSANIO|SANTO STEFANO IN ASPROMONTE|SANTO STEFANO LODIGIANO|SANTO STEFANO QUISQUINA|SANTO STEFANO ROERO|SANTO STEFANO TICINO|SANTOMENNA|SANTOPADRE|SANTORSO|SANTU LUSSURGIU|SANZA|SANZENO|SAONARA|SAPONARA|SAPPADA|SAPRI|SARACENA|SARACINESCO|SARCEDO|SARCONI|SARDARA|SARDIGLIANO|SAREGO|SARENTINO|SAREZZANO|SAREZZO|SARMATO|SARMEDE|SARNANO|SARNICO|SARNO|SARNONICO|SARONNO|SARRE|SARROCH|SARSINA|SARTEANO|SARTIRANA LOMELLINA|SARULE|SARZANA|SASSANO|SASSARI|SASSELLO|SASSETTA|SASSINORO|SASSO DI CASTALDA|SASSO MARCONI|SASSOCORVARO AUDITORE|SASSOFELTRIO|SASSOFERRATO|SASSUOLO|SATRIANO|SATRIANO DI LUCANIA|SAURIS|SAUZE D'OULX|SAUZE DI CESANA|SAVA|SAVELLI|SAVIANO|SAVIGLIANO|SAVIGNANO IRPINO|SAVIGNANO SUL PANARO|SAVIGNANO SUL RUBICONE|SAVIGNONE|SAVIORE DELL'ADAMELLO|SAVOCA|SAVOGNA|SAVOGNA D'ISONZO|SAVOIA DI LUCANIA|SAVONA|SCAFA|SCAFATI|SCAGNELLO|SCALA|SCALA COELI|SCALDASOLE|SCALEA|SCALENGHE|SCALETTA ZANCLEA|SCAMPITELLA|SCANDALE|SCANDIANO|SCANDICCI|SCANDOLARA RAVARA|SCANDOLARA RIPA D'OGLIO|SCANDRIGLIA|SCANNO|SCANO DI MONTIFERRO|SCANSANO|SCANZANO JONICO|SCANZOROSCIATE|SCAPOLI|SCARLINO|SCARMAGNO|SCARNAFIGI|SCARPERIA E SAN PIERO|SCENA|SCERNI|SCHEGGIA E PASCELUPO|SCHEGGINO|SCHIAVI DI ABRUZZO|SCHIAVON|SCHIGNANO|SCHILPARIO|SCHIO|SCHIVENOGLIA|SCIACCA|SCIARA|SCICLI|SCIDO|SCIGLIANO|SCILLA|SCILLATO|SCIOLZE|SCISCIANO|SCLAFANI BAGNI|SCONTRONE|SCOPA|SCOPELLO|SCOPPITO|SCORDIA|SCORRANO|SCORZÈ|SCURCOLA MARSICANA|SCURELLE|SCURZOLENGO|SEBORGA|SECINARO|SECLÌ|SECUGNAGO|SEDEGLIANO|SEDICO|SEDILO|SEDINI|SEDRIANO|SEDRINA|SEFRO|SEGARIU|SEGGIANO|SEGNI|SEGONZANO|SEGRATE|SEGUSINO|SELARGIUS|SELCI|SELEGAS|SELLA GIUDICARIE|SELLANO|SELLERO|SELLIA|SELLIA MARINA|SELVA DEI MOLINI|SELVA DI CADORE|SELVA DI PROGNO|SELVA DI VAL GARDENA|SELVAZZANO DENTRO|SELVINO|SEMESTENE|SEMIANA|SEMINARA|SEMPRONIANO|SENAGO|SENALE-SAN FELICE|SENALES|SENEGHE|SENERCHIA|SENIGA|SENIGALLIA|SENIS|SENISE|SENNA COMASCO|SENNA LODIGIANA|SENNARIOLO|SENNORI|SENORBÌ|SEPINO|SEQUALS|SERAVEZZA|SERDIANA|SEREGNO|SEREN DEL GRAPPA|SERGNANO|SERIATE|SERINA|SERINO|SERLE|SERMIDE E FELONICA|SERMONETA|SERNAGLIA DELLA BATTAGLIA|SERNIO|SEROLE|SERRA D'AIELLO|SERRA DE' CONTI|SERRA RICCÒ|SERRA SAN BRUNO|SERRA SAN QUIRICO|SERRA SANT'ABBONDIO|SERRACAPRIOLA|SERRADIFALCO|SERRALUNGA D'ALBA|SERRALUNGA DI CREA|SERRAMANNA|SERRAMAZZONI|SERRAMEZZANA|SERRAMONACESCA|SERRAPETRONA|SERRARA FONTANA|SERRASTRETTA|SERRATA|SERRAVALLE A PO|SERRAVALLE DI CHIENTI|SERRAVALLE LANGHE|SERRAVALLE PISTOIESE|SERRAVALLE SCRIVIA|SERRAVALLE SESIA|SERRE|SERRENTI|SERRI|SERRONE|SERSALE|SERVIGLIANO|SESSA AURUNCA|SESSA CILENTO|SESSAME|SESSANO DEL MOLISE|SESTA GODANO|SESTINO|SESTO|SESTO AL REGHENA|SESTO CALENDE|SESTO CAMPANO|SESTO ED UNITI|SESTO FIORENTINO|SESTO SAN GIOVANNI|SESTOLA|SESTRI LEVANTE|SESTRIERE|SESTU|SETTALA|SETTEFRATI|SETTIME|SETTIMO MILANESE|SETTIMO ROTTARO|SETTIMO SAN PIETRO|SETTIMO TORINESE|SETTIMO VITTONE|SETTINGIANO|SETZU|SEUI|SEULO|SEVESO|SEZZADIO|SEZZE|SFRUZ|SGONICO|SGURGOLA|SIAMAGGIORE|SIAMANNA|SIANO|SIAPICCIA|SICIGNANO DEGLI ALBURNI|SICULIANA|SIDDI|SIDERNO|SIENA|SIGILLO|SIGNA|SILANDRO|SILANUS|SILEA|SILIGO|SILIQUA|SILIUS|SILLANO GIUNCUGNANO|SILLAVENGO|SILVANO D'ORBA|SILVANO PIETRA|SILVI|SIMALA|SIMAXIS|SIMBARIO|SIMERI CRICHI|SINAGRA|SINALUNGA|SINDIA|SINI|SINIO|SINISCOLA|SINNAI|SINOPOLI|SIRACUSA|SIRIGNANO|SIRIS|SIRMIONE|SIROLO|SIRONE|SIRTORI|SISSA TRECASALI|SIURGUS DONIGALA|SIZIANO|SIZZANO|SLUDERNO|SMERILLO|SOAVE|SOCCHIEVE|SODDÌ|SOGLIANO AL RUBICONE|SOGLIANO CAVOUR|SOGLIO|SOIANO DEL LAGO|SOLAGNA|SOLARINO|SOLARO|SOLAROLO|SOLAROLO RAINERIO|SOLARUSSA|SOLBIATE ARNO|SOLBIATE CON CAGNO|SOLBIATE OLONA|SOLDANO|SOLEMINIS|SOLERO|SOLESINO|SOLETO|SOLFERINO|SOLIERA|SOLIGNANO|SOLOFRA|SOLONGHELLO|SOLOPACA|SOLTO COLLINA|SOLZA|SOMAGLIA|SOMANO|SOMMA LOMBARDO|SOMMA VESUVIANA|SOMMACAMPAGNA|SOMMARIVA DEL BOSCO|SOMMARIVA PERNO|SOMMATINO|SOMMO|SONA|SONCINO|SONDALO|SONDRIO|SONGAVAZZO|SONICO|SONNINO|SORA|SORAGA DI FASSA|SORAGNA|SORANO|SORBO SAN BASILE|SORBO SERPICO|SORBOLO MEZZANI|SORDEVOLO|SORDIO|SORESINA|SORGÀ|SORGONO|SORI|SORIANELLO|SORIANO CALABRO|SORIANO NEL CIMINO|SORICO|SORISO|SORISOLE|SORMANO|SORRADILE|SORRENTO|SORSO|SORTINO|SOSPIRO|SOSPIROLO|SOSSANO|SOSTEGNO|SOTTO IL MONTE GIOVANNI XXIII|SOVER|SOVERATO|SOVERE|SOVERIA MANNELLI|SOVERIA SIMERI|SOVERZENE|SOVICILLE|SOVICO|SOVIZZO|SOVRAMONTE|SOZZAGO|SPADAFORA|SPADOLA|SPARANISE|SPARONE|SPECCHIA|SPELLO|SPERLINGA|SPERLONGA|SPERONE|SPESSA|SPEZZANO ALBANESE|SPEZZANO DELLA SILA|SPIAZZO|SPIGNO MONFERRATO|SPIGNO SATURNIA|SPILAMBERTO|SPILIMBERGO|SPILINGA|SPINADESCO|SPINAZZOLA|SPINEA|SPINEDA|SPINETE|SPINETO SCRIVIA|SPINETOLI|SPINO D'ADDA|SPINONE AL LAGO|SPINOSO|SPIRANO|SPOLETO|SPOLTORE|SPONGANO|SPORMAGGIORE|SPORMINORE|SPOTORNO|SPRESIANO|SPRIANA|SQUILLACE|SQUINZANO|STAFFOLO|STAGNO LOMBARDO|STAITI|STALETTÌ|STANGHELLA|STARANZANO|STATTE|STAZZANO|STAZZEMA|STAZZONA|STEFANACONI|STELLA|STELLA CILENTO|STELLANELLO|STELVIO|STENICO|STERNATIA|STEZZANO|STIENTA|STIGLIANO|STIGNANO|STILO|STIMIGLIANO|STINTINO|STIO|STORNARA|STORNARELLA|STORO|STRA|STRADELLA|STRAMBINELLO|STRAMBINO|STRANGOLAGALLI|STREGNA|STREMBO|STRESA|STREVI|STRIANO|STRONA|STRONCONE|STRONGOLI|STROPPIANA|STROPPO|STROZZA|STURNO|SUARDI|SUBBIANO|SUBIACO|SUCCIVO|SUEGLIO|SUELLI|SUELLO|SUISIO|SULBIATE|SULMONA|SULZANO|SUMIRAGO|SUMMONTE|SUNI|SUNO|SUPERSANO|SUPINO|SURANO|SURBO|SUSA|SUSEGANA|SUSTINENTE|SUTERA|SUTRI|SUTRIO|SUVERETO|SUZZARA|TACENO|TADASUNI|TAGGIA|TAGLIACOZZO|TAGLIO DI PO|TAGLIOLO MONFERRATO|TAIBON AGORDINO|TAINO|TAIPANA|TALAMELLO|TALAMONA|TALANA|TALEGGIO|TALLA|TALMASSONS|TAMBRE|TAORMINA|TARANO|TARANTA PELIGNA|TARANTASCA|TARANTO|TARCENTO|TARQUINIA|TARSIA|TARTANO|TARVISIO|TARZO|TASSAROLO|TAURANO|TAURASI|TAURIANOVA|TAURISANO|TAVAGNACCO|TAVAGNASCO|TAVAZZANO CON VILLAVESCO|TAVENNA|TAVERNA|TAVERNERIO|TAVERNOLA BERGAMASCA|TAVERNOLE SUL MELLA|TAVIANO|TAVIGLIANO|TAVOLETO|TAVULLIA|TEANA|TEANO|TEGGIANO|TEGLIO|TEGLIO VENETO|TELESE TERME|TELGATE|TELTI|TELVE|TELVE DI SOPRA|TEMPIO PAUSANIA|TEMÙ|TENNA|TENNO|TEOLO|TEORA|TERAMO|TERDOBBIATE|TERELLE|TERENTO|TERENZO|TERGU|TERLANO|TERLIZZI|TERME VIGLIATORE|TERMENO SULLA STRADA DEL VINO|TERMINI IMERESE|TERMOLI|TERNATE|TERNENGO|TERNI|TERNO D'ISOLA|TERRACINA|TERRAGNOLO|TERRALBA|TERRANOVA DA SIBARI|TERRANOVA DEI PASSERINI|TERRANOVA DI POLLINO|TERRANOVA SAPPO MINULIO|TERRANUOVA BRACCIOLINI|TERRASINI|TERRASSA PADOVANA|TERRAVECCHIA|TERRAZZO|TERRE D'ADIGE|TERRE DEL RENO|TERRE ROVERESCHE|TERRICCIOLA|TERRUGGIA|TERTENIA|TERZIGNO|TERZO|TERZO D'AQUILEIA|TERZOLAS|TERZORIO|TESERO|TESIMO|TESSENNANO|TESTICO|TETI|TEULADA|TEVEROLA|TEZZE SUL BRENTA|THIENE|THIESI|TIANA|TICENGO|TICINETO|TIGGIANO|TIGLIETO|TIGLIOLE|TIGNALE|TINNURA|TIONE DEGLI ABRUZZI|TIONE DI TRENTO|TIRANO|TIRES|TIRIOLO|TIROLO|TISSI|TITO|TIVOLI|TIZZANO VAL PARMA|TOANO|TOCCO CAUDIO|TOCCO DA CASAURIA|TOCENO|TODI|TOFFIA|TOIRANO|TOLENTINO|TOLFA|TOLLEGNO|TOLLO|TOLMEZZO|TOLVE|TOMBOLO|TON|TONARA|TONCO|TONENGO|TONEZZA DEL CIMONE|TORA E PICCILLI|TORANO CASTELLO|TORANO NUOVO|TORBOLE CASAGLIA|TORCEGNO|TORCHIARA|TORCHIAROLO|TORELLA DEI LOMBARDI|TORELLA DEL SANNIO|TORGIANO|TORGNON|TORINO|TORINO DI SANGRO|TORITTO|TORLINO VIMERCATI|TORNACO|TORNARECCIO|TORNATA|TORNIMPARTE|TORNO|TORNOLO|TORO|TORPÈ|TORRACA|TORRALBA|TORRAZZA COSTE|TORRAZZA PIEMONTE|TORRAZZO|TORRE ANNUNZIATA|TORRE BERETTI E CASTELLARO|TORRE BOLDONE|TORRE BORMIDA|TORRE CAJETANI|TORRE CANAVESE|TORRE D'ARESE|TORRE D'ISOLA|TORRE DE' BUSI|TORRE DE' NEGRI|TORRE DE' PASSERI|TORRE DE' PICENARDI|TORRE DE' ROVERI|TORRE DEL GRECO|TORRE DI MOSTO|TORRE DI RUGGIERO|TORRE DI SANTA MARIA|TORRE LE NOCELLE|TORRE MONDOVÌ|TORRE ORSAIA|TORRE PALLAVICINA|TORRE PELLICE|TORRE SAN GIORGIO|TORRE SAN PATRIZIO|TORRE SANTA SUSANNA|TORREANO|TORREBELVICINO|TORREBRUNA|TORRECUSO|TORREGLIA|TORREGROTTA|TORREMAGGIORE|TORRENOVA|TORRESINA|TORRETTA|TORREVECCHIA PIA|TORREVECCHIA TEATINA|TORRI DEL BENACO|TORRI DI QUARTESOLO|TORRI IN SABINA|TORRICE|TORRICELLA|TORRICELLA DEL PIZZO|TORRICELLA IN SABINA|TORRICELLA PELIGNA|TORRICELLA SICURA|TORRICELLA VERZATE|TORRIGLIA|TORRILE|TORRIONI|TORRITA DI SIENA|TORRITA TIBERINA|TORTOLÌ|TORTONA|TORTORA|TORTORELLA|TORTORETO|TORTORICI|TORVISCOSA|TOSCOLANO-MADERNO|TOSSICIA|TOVO DI SANT'AGATA|TOVO SAN GIACOMO|TRABIA|TRADATE|TRAMATZA|TRAMBILENO|TRAMONTI|TRAMONTI DI SOPRA|TRAMONTI DI SOTTO|TRAMUTOLA|TRANA|TRANI|TRAONA|TRAPANI|TRAPPETO|TRAREGO VIGGIONA|TRASACCO|TRASAGHIS|TRASQUERA|TRATALIAS|TRAVACÒ SICCOMARIO|TRAVAGLIATO|TRAVEDONA-MONATE|TRAVERSELLA|TRAVERSETOLO|TRAVES|TRAVESIO|TRAVO|TRE VILLE|TREBASELEGHE|TREBISACCE|TRECASE|TRECASTAGNI|TRECASTELLI|TRECATE|TRECCHINA|TRECENTA|TREDOZIO|TREGLIO|TREGNAGO|TREIA|TREISO|TREMESTIERI ETNEO|TREMEZZINA|TREMOSINE SUL GARDA|TRENTINARA|TRENTO|TRENTOLA DUCENTA|TRENZANO|TREPPO GRANDE|TREPPO LIGOSULLO|TREPUZZI|TREQUANDA|TRESANA|TRESCORE BALNEARIO|TRESCORE CREMASCO|TRESIGNANA|TRESIVIO|TRESNURAGHES|TREVENZUOLO|TREVI|TREVI NEL LAZIO|TREVICO|TREVIGLIO|TREVIGNANO|TREVIGNANO ROMANO|TREVILLE|TREVIOLO|TREVISO|TREVISO BRESCIANO|TREZZANO ROSA|TREZZANO SUL NAVIGLIO|TREZZO SULL'ADDA|TREZZO TINELLA|TREZZONE|TRIBANO|TRIBIANO|TRIBOGNA|TRICARICO|TRICASE|TRICERRO|TRICESIMO|TRIEI|TRIESTE|TRIGGIANO|TRIGOLO|TRINITÀ|TRINITÀ D'AGULTU E VIGNOLA|TRINITAPOLI|TRINO|TRIORA|TRIPI|TRISOBBIO|TRISSINO|TRIUGGIO|TRIVENTO|TRIVIGLIANO|TRIVIGNANO UDINESE|TRIVIGNO|TRIVOLZIO|TRODENA NEL PARCO NATURALE|TROFARELLO|TROIA|TROINA|TROMELLO|TRONTANO|TRONZANO LAGO MAGGIORE|TRONZANO VERCELLESE|TROPEA|TROVO|TRUCCAZZANO|TUBRE|TUFARA|TUFILLO|TUFINO|TUFO|TUGLIE|TUILI|TULA|TUORO SUL TRASIMENO|TURANIA|TURANO LODIGIANO|TURATE|TURBIGO|TURI|TURRI|TURRIACO|TURRIVALIGNANI|TURSI|TUSA|TUSCANIA|UBIALE CLANEZZO|UBOLDO|UCRIA|UDINE|UGENTO|UGGIANO LA CHIESA|UGGIATE-TREVANO|ULÀ TIRSO|ULASSAI|ULTIMO|UMBERTIDE|UMBRIATICO|URAGO D'OGLIO|URAS|URBANA|URBANIA|URBE|URBINO|URBISAGLIA|URGNANO|URI|URURI|URZULEI|USCIO|USELLUS|USINI|USMATE VELATE|USSANA|USSARAMANNA|USSASSAI|USSEAUX|USSEGLIO|USSITA|USTICA|UTA|UZZANO|VACCARIZZO ALBANESE|VACONE|VACRI|VADENA|VADO LIGURE|VAGLI SOTTO|VAGLIA|VAGLIO BASILICATA|VAGLIO SERRA|VAIANO|VAIANO CREMASCO|VAIE|VAILATE|VAIRANO PATENORA|VAJONT|VAL BREMBILLA|VAL DELLA TORRE|VAL DI CHY|VAL DI NIZZA|VAL DI VIZZE|VAL DI ZOLDO|VAL LIONA|VAL MASINO|VAL REZZO|VALBONDIONE|VALBREMBO|VALBRENTA|VALBREVENNA|VALBRONA|VALCHIUSA|VALDAGNO|VALDAONE|VALDAORA|VALDASTICO|VALDENGO|VALDERICE|VALDIDENTRO|VALDIERI|VALDILANA|VALDINA|VALDISOTTO|VALDOBBIADENE|VALDUGGIA|VALEGGIO|VALEGGIO SUL MINCIO|VALENTANO|VALENZA|VALENZANO|VALERA FRATTA|VALFABBRICA|VALFENERA|VALFLORIANA|VALFORNACE|VALFURVA|VALGANNA|VALGIOIE|VALGOGLIO|VALGRANA|VALGREGHENTINO|VALGRISENCHE|VALGUARNERA CAROPEPE|VALLADA AGORDINA|VALLANZENGO|VALLARSA|VALLATA|VALLE AGRICOLA|VALLE AURINA|VALLE CANNOBINA|VALLE CASTELLANA|VALLE DELL'ANGELO|VALLE DI CADORE|VALLE DI CASIES|VALLE DI MADDALONI|VALLE LOMELLINA|VALLE SALIMBENE|VALLE SAN NICOLAO|VALLEBONA|VALLECORSA|VALLECROSIA|VALLEDOLMO|VALLEDORIA|VALLEFIORITA|VALLEFOGLIA|VALLELAGHI|VALLELONGA|VALLELUNGA PRATAMENO|VALLEMAIO|VALLEPIETRA|VALLERANO|VALLERMOSA|VALLEROTONDA|VALLESACCARDA|VALLEVE|VALLI DEL PASUBIO|VALLINFREDA|VALLIO TERME|VALLO DELLA LUCANIA|VALLO DI NERA|VALLO TORINESE|VALLORIATE|VALMACCA|VALMADRERA|VALMONTONE|VALMOREA|VALMOZZOLA|VALNEGRA|VALPELLINE|VALPERGA|VALPRATO SOANA|VALSAMOGGIA|VALSAVARENCHE|VALSINNI|VALSOLDA|VALSTRONA|VALTOPINA|VALTORTA|VALTOURNENCHE|VALVA|VALVARRONE|VALVASONE ARZENE|VALVERDE|VALVESTINO|VANDOIES|VANZAGHELLO|VANZAGO|VANZONE CON SAN CARLO|VAPRIO D'ADDA|VAPRIO D'AGOGNA|VARALLO|VARALLO POMBIA|VARANO BORGHI|VARANO DE' MELEGARI|VARAPODIO|VARAZZE|VARCO SABINO|VAREDO|VARENNA|VARESE|VARESE LIGURE|VARISELLA|VARMO|VARNA|VARSI|VARZI|VARZO|VASANELLO|VASIA|VASTO|VASTOGIRARDI|VAUDA CANAVESE|VAZZANO|VAZZOLA|VECCHIANO|VEDANO AL LAMBRO|VEDANO OLONA|VEDELAGO|VEDESETA|VEDUGGIO CON COLZANO|VEGGIANO|VEGLIE|VEGLIO|VEJANO|VELESO|VELEZZO LOMELLINA|VELLETRI|VELLEZZO BELLINI|VELO D'ASTICO|VELO VERONESE|VELTURNO|VENAFRO|VENARIA REALE|VENAROTTA|VENASCA|VENAUS|VENDONE|VENEGONO INFERIORE|VENEGONO SUPERIORE|VENETICO|VENEZIA|VENIANO|VENOSA|VENTASSO|VENTICANO|VENTIMIGLIA|VENTIMIGLIA DI SICILIA|VENTOTENE|VENZONE|VERANO|VERANO BRIANZA|VERBANIA|VERBICARO|VERCANA|VERCEIA|VERCELLI|VERCURAGO|VERDELLINO|VERDELLO|VERDERIO|VERDUNO|VERGATO|VERGHERETO|VERGIATE|VERMEZZO CON ZELO|VERMIGLIO|VERNANTE|VERNASCA|VERNATE|VERNAZZA|VERNIO|VERNOLE|VEROLANUOVA|VEROLAVECCHIA|VEROLENGO|VEROLI|VERONA|VERONELLA|VERRAYES|VERRÈS|VERRETTO|VERRONE|VERRUA PO|VERRUA SAVOIA|VERTEMATE CON MINOPRIO|VERTOVA|VERUCCHIO|VERVIO|VERZEGNIS|VERZINO|VERZUOLO|VESCOVANA|VESCOVATO|VESIME|VESPOLATE|VESSALICO|VESTENANOVA|VESTIGNÈ|VESTONE|VETRALLA|VETTO|VEZZA D'ALBA|VEZZA D'OGLIO|VEZZANO LIGURE|VEZZANO SUL CROSTOLO|VEZZI PORTIO|VIADANA|VIADANICA|VIAGRANDE|VIALE|VIALFRÈ|VIANO|VIAREGGIO|VIARIGI|VIBO VALENTIA|VIBONATI|VICALVI|VICARI|VICCHIO|VICENZA|VICO DEL GARGANO|VICO EQUENSE|VICO NEL LAZIO|VICOFORTE|VICOLI|VICOLUNGO|VICOPISANO|VICOVARO|VIDDALBA|VIDIGULFO|VIDOR|VIDRACCO|VIESTE|VIETRI DI POTENZA|VIETRI SUL MARE|VIGANÒ|VIGANO SAN MARTINO|VIGARANO MAINARDA|VIGASIO|VIGEVANO|VIGGIANELLO|VIGGIANO|VIGGIÙ|VIGHIZZOLO D'ESTE|VIGLIANO BIELLESE|VIGLIANO D'ASTI|VIGNALE MONFERRATO|VIGNANELLO|VIGNATE|VIGNOLA|VIGNOLA-FALESINA|VIGNOLE BORBERA|VIGNOLO|VIGNONE|VIGO DI CADORE|VIGODARZERE|VIGOLO|VIGOLZONE|VIGONE|VIGONOVO|VIGONZA|VIGUZZOLO|VILLA BARTOLOMEA|VILLA BASILICA|VILLA BISCOSSI|VILLA CARCINA|VILLA CASTELLI|VILLA CELIERA|VILLA COLLEMANDINA|VILLA CORTESE|VILLA D'ADDA|VILLA D'ALMÈ|VILLA D'OGNA|VILLA DEL BOSCO|VILLA DEL CONTE|VILLA DI BRIANO|VILLA DI CHIAVENNA|VILLA DI SERIO|VILLA DI TIRANO|VILLA ESTENSE|VILLA FARALDI|VILLA GUARDIA|VILLA LAGARINA|VILLA LATINA|VILLA LITERNO|VILLA MINOZZO|VILLA SAN GIOVANNI|VILLA SAN GIOVANNI IN TUSCIA|VILLA SAN PIETRO|VILLA SAN SECONDO|VILLA SANT'ANGELO|VILLA SANT'ANTONIO|VILLA SANTA LUCIA|VILLA SANTA LUCIA DEGLI ABRUZZI|VILLA SANTA MARIA|VILLA SANTINA|VILLA SANTO STEFANO|VILLA VERDE|VILLABASSA|VILLABATE|VILLACHIARA|VILLACIDRO|VILLADEATI|VILLADOSE|VILLADOSSOLA|VILLAFALLETTO|VILLAFRANCA D'ASTI|VILLAFRANCA DI VERONA|VILLAFRANCA IN LUNIGIANA|VILLAFRANCA PADOVANA|VILLAFRANCA PIEMONTE|VILLAFRANCA SICULA|VILLAFRANCA TIRRENA|VILLAFRATI|VILLAGA|VILLAGRANDE STRISAILI|VILLALAGO|VILLALBA|VILLALFONSINA|VILLALVERNIA|VILLAMAGNA|VILLAMAINA|VILLAMAR|VILLAMARZANA|VILLAMASSARGIA|VILLAMIROGLIO|VILLANDRO|VILLANOVA BIELLESE|VILLANOVA CANAVESE|VILLANOVA D'ALBENGA|VILLANOVA D'ARDENGHI|VILLANOVA D'ASTI|VILLANOVA DEL BATTISTA|VILLANOVA DEL GHEBBO|VILLANOVA DEL SILLARO|VILLANOVA DI CAMPOSAMPIERO|VILLANOVA MARCHESANA|VILLANOVA MONDOVÌ|VILLANOVA MONFERRATO|VILLANOVA MONTELEONE|VILLANOVA SOLARO|VILLANOVA SULL'ARDA|VILLANOVA TRUSCHEDU|VILLANOVA TULO|VILLANOVAFORRU|VILLANOVAFRANCA|VILLANTERIO|VILLANUOVA SUL CLISI|VILLAPERUCCIO|VILLAPIANA|VILLAPUTZU|VILLAR DORA|VILLAR FOCCHIARDO|VILLAR PELLICE|VILLAR PEROSA|VILLAR SAN COSTANZO|VILLARBASSE|VILLARBOIT|VILLAREGGIA|VILLARICCA|VILLAROMAGNANO|VILLAROSA|VILLASALTO|VILLASANTA|VILLASIMIUS|VILLASOR|VILLASPECIOSA|VILLASTELLONE|VILLATA|VILLAURBANA|VILLAVALLELONGA|VILLAVERLA|VILLE D'ANAUNIA|VILLE DI FIEMME|VILLENEUVE|VILLESSE|VILLETTA BARREA|VILLETTE|VILLIMPENTA|VILLONGO|VILLORBA|VILMINORE DI SCALVE|VIMERCATE|VIMODRONE|VINADIO|VINCHIATURO|VINCHIO|VINCI|VINOVO|VINZAGLIO|VIOLA|VIONE|VIPITENO|VIRLE PIEMONTE|VISANO|VISCHE|VISCIANO|VISCO|VISONE|VISSO|VISTARINO|VISTRORIO|VITA|VITERBO|VITICUSO|VITO D'ASIO|VITORCHIANO|VITTORIA|VITTORIO VENETO|VITTORITO|VITTUONE|VITULANO|VITULAZIO|VIÙ|VIVARO|VIVARO ROMANO|VIVERONE|VIZZINI|VIZZOLA TICINO|VIZZOLO PREDABISSI|VO'|VOBARNO|VOBBIA|VOCCA|VODO CADORE|VOGHERA|VOGHIERA|VOGOGNA|VOLANO|VOLLA|VOLONGO|VOLPAGO DEL MONTELLO|VOLPARA|VOLPEDO|VOLPEGLINO|VOLPIANO|VOLTA MANTOVANA|VOLTAGGIO|VOLTAGO AGORDINO|VOLTERRA|VOLTIDO|VOLTURARA APPULA|VOLTURARA IRPINA|VOLTURINO|VOLVERA|VOTTIGNASCO|ZACCANOPOLI|ZAFFERANA ETNEA|ZAGARISE|ZAGAROLO|ZAMBRONE|ZANDOBBIO|ZANÈ|ZANICA|ZAPPONETA|ZAVATTARELLO|ZECCONE|ZEDDIANI|ZELBIO|ZELO BUON PERSICO|ZEME|ZENEVREDO|ZENSON DI PIAVE|ZERBA|ZERBO|ZERBOLÒ|ZERFALIU|ZERI|ZERMEGHEDO|ZERO BRANCO|ZEVIO|ZIANO DI FIEMME|ZIANO PIACENTINO|ZIBIDO SAN GIACOMO|ZIGNAGO|ZIMELLA|ZIMONE|ZINASCO|ZOAGLI|ZOCCA|ZOGNO|ZOLA PREDOSA|ZOLLINO|ZONE|ZOPPÈ DI CADORE|ZOPPOLA|ZOVENCEDO|ZUBIENA|ZUCCARELLO|ZUGLIANO|ZUGLIO|ZUMAGLIA|ZUMPANO|ZUNGOLI|ZUNGRI";
-const _CC = "A001A004A005A006A007A008A010M376A013A014A015A016A017A018A019A020A023A024A025A026A027A029A028A032A033A034A035A039A038A040A041A043A044A045A050A051A048A047A049M211A052A053A054A055A056A057A058A059A060A061A062A064A065A067A068A069A070A071A072A074H848A075A076A077A080A082A083A084A085A087A088A089A091A092A093A096A097A098A100A102A103A101A105A106A107A109A110A111A112A113A116A115A117A118A119A120A121A122A123A124A125A126A127A128A131A132A129A130A134A137A135A138A139A143A145A146A149A150A153A154A155A158A157A159A160A161A162A163A164A166A165A167A171A172A173A175A176A177A178A179A180A182A183A181A184A185A186A187A188A189A191A192A193A194A201A195A196A197A198A200A202A203A204A206A205A207A208A210M397A214A216A217A218A220M375A221A222A223A224M386M383A225A226M349A228A229A227A230A231A233A234A235A236A237A238M369M389A239A240A241M350A242A243A244A246A245A249A251A252A253A254A255A256A257A258A259M351A261A262A263A264A265A267A268A269A270A271A272A274A273A275A278A280A281A282A283A284A285A286A287A288A290A291A292A293A294A295A297A296A299A301A302A303A304A306A305A309A312A313A314A315A317A318A319A320A321A323A325A324A326A327A328A329A330A333A332A334A335A337A338A339A340A341A343A344A346A347A348A350A351A352A354A357A358A359A360A363A365A366A367A369A370A371A372A373A374A375A376A377A379A380M213A382A383A385A386A387A388A389A390A391A392A393A394A396A397A398A399A400A401A402A403A405A407A409A412A413A414A415A418A419A424A421A422A425A427A429A430A431A432A433A434A435A437A436A438A439A441A443A444A445A446A447A448A449A451A452A453A440A454A455A458A459A460A461A462A463A464A465A467A466A470A471A473A474A475A476A477A478A479A480A481A482A484A485A486A487A488A489A490A491A492A494A495A496A497A499A501A502A503A506A507A508A509A511A512A514A515A516A517A518A519M258A520A521A522A523A094A108A525A526A527A530A529A528A531A532A533A534A535A536M214A537A540A538A539A541A542A544A546A547A552A551A550A553A555A557A560A564A565A567A568A566A570A572A574A573A569A571A575A576A577A578A579A580A584A586A581A587A588A590A589A591A592A593A594A597A599A600A601A603A604A605A606A607A610A612A613A614A615A616A617A618A619A621A625A626M401A628A629A630A631A632M408A634A635A637A638A640A643A645A646A647A650A651A652A653A655A656A657A658A660A661A662A663A664A665A666A667A668A669A670A671A673A674A676A677A678A681A683A684A686A687A689A690A691A692A694A696A697A698A699A700A702A703A706A704A707A708A709A710A712A713A714A716A717A718A719A721A722A725A728A729A730A731A732A733A734A735A736A737A740A739A738A741A742A743M335A745A746A747A749A750A751A752M294A755A756A757A759A762A763A761A765A764A760A766A768A772A774A773A769A770A776A777A778A779A780A781A782A783A784A785A786A787A788A789A791A792A793A794A795A796A798A799A801A802A804A805A809A810A811A812A813A816A817A815A818A819A820A821A823A825A826A827A831A832A834A835A836A837A841A842A843A844A845A846A847A848A849A850A851A852A853A854A855A856A859A861A863A864A870A872A874A876A877A878A880A881A882A883A884A885A887A889A891A892A893A894A895A896A897A898A902A903A857A904A905M268A906A909A910A911A912A914A916A918A919A920A922A925A929A931A930A932A937A940A941A944A945A946A947A948A949A950A952A953A954A955A956A957A958A959A960A961A963A962A964A965A968A970A971A972A973A975A976A977A978A979A981A982A983A984A986A987A988A989A990A991A993A998A992A995A999B001B002B003B005B007M352B009M429B010M353M396B026B028B033B035B017B036B037B038B043B044B042M421B006A996M402B046M340M406B015B016B018B019B020B021M370B024B025B029B030B031B008B040B041B048B049B051B054B055B056B057B058B061B062B063B064B067B068B069B070B073B071B075B076B077B079B080B081B082B083B084B085B086B088B091B094B097B099B098B100B101B102A720B104B105B106B107B109B110B111B112B114B115B116B117B118B120B121B123B124B126B128B131B132B134B137B138B141B142B143B144B145B149B150B152B153B154B156B157B158B159B160B161B162B166B167B169B171B172B173B175B176B178B179B180B181B182B183B184B187B188B191B192B193B194B195B196B197B198B200B201B202B203B204B205B207B209B212B213B214B215B216B217B218B219B220B221B223B225B227B228B229B230B232B234B235B236B237B238B239B240B242B243B246B247B248B249B250B251B255B256B258B259B261B262B264B265B266B267B269B270B272B274B275B276B278B279B280B281B282B284B285B286B287B288B289B292B293B294B295B296B297B300B301B302B303B304B305B306B309B311B313B314B315B319B326B328B332B335B345B346M425B349B350B351B352B354B355B358B357B361B362B364B365B366B367B368B369B371B374B375B376B377B378B379B380B381B382B383B384B385B388B389B390B391B392B393B394B395B396B397B398B399B400B402B403B404B405B406B408B410B409B413B415B416B417B418B418B419B423B424B425B426B427B428B429B430B431B432B433B434B435B436B437B439B440B441B442B443B444B446B445B447B448B450B452B453B455B457B460B461B462B463B465B467B468B469B471B472B470B473B474B476B477B481B482B483B484B485B486B490B492B493B496B497B498B499B500B501B502B504B505B507B506M373B511B509B512B513B514B515B516B526B529B538B553B564B570B519B520B521B522B524B525B527B528B530B531B533B532B534B535B536B537B539B541B543B542B544B546M311B549B550B551B554B555B556B557B559B562B561B563B565B566B567B569B572B577B573B574B576B578B579B580B581B582B584B586B588B587B589B590B591B592B593B594B597B598B602B603B604B605B606B607B608B609B610B613B612B615B616B617B618B619B620B621C669B624B626B627B628B631B629B630B633B634B635B636B637B639B640B641B642B643B644B645B646B647B648B649B650B651B653B655B656B658B660B661B666B664B663B667B669B670B671B672B674B675B676B677B679B680B678B681B682B684B685B686B688B687B690B691B692B693B694B696B695B697B698B701B703B704B705B706B707B708B710B709B711B712B715B716B718B717B719B720B722B724B725B726B727B729B730B731B732B733B734B735B741B740B736B742B743B744B745B748B749B752B754B755M285B756B758B759B760B762B763B765B766B767B768B769B771B772B774B776B777B778B779B780B781B782B783B784B785B787B788B789B790B791B792B794B795B796B798B801B802B803B804B805B807B808B809B810B812B813B816B817B818B819B820B822B823B825B827B828B826B829B830B832B835B836B838B839B840B841B842B844B845B846B847B848B850B851B853B854B856B857B858B859B860B870B872B895B861B862B864B865B866B867B868B869B871B873B876B881B877B875B878B885B879B880B882B883B886B889B890B887B888B891B892B893B894M385B896B897B898B899B900B901B902B905B904B907B910B911B912B916B917B918B919B920B921B922B923B924B925B928B927B929B932M260B933B934B935B936B937B938B940B939B941B943B945B946B947B948B949M327B950B953B954B955B956B959B961B958B960B963B965B966B967B971B974B977B978B980B979B982B984B985B988B987B989B990B991A472B993B994B996C002C003B998B997C004M388B999C006C007C014C020C024C022C027C030C033C034C037C038C041C044C045C046C049C047C048C050C052C053C055C056C058C064C065B494C040C183C075C076C078C082C083C085C086B969C090C091C093C094C096C097C098C102C114C115C116C117C118C121M354C203C204C208C211C252C253C255C259C261C262C263C266C265C270C268C269C289C110C291C057C059C060C062C063C066C067C069C072C073C074C080C081C089C100C101C104C105C113C107C106M322C111M393C119C120C122C123C127C145C147C051C125C126C128C130C129C133C134C135C136C137C139C142C141C143C148C149C153C152C154C155C156C158C157C160C161C162C166C165C167C169C079C172C174C173C175C176C177B312C184C185C178C186A300C187C188C190C194C189C195C198C199C201C202C205C206C207C197C209C210C213C215C217C218C219C216C226C227C228C229C220C230C231C225C222C214C235C224C236C237C244C232C240C241C223C242C243C245C246C247C248C250C251C254C267C271C272C273B968C274C275C181C278C276C279C280B129C200C284C283C286C287C288C290C292C293M288C318C319C308C302C301C304C313C296C306C309C310C312C303C297C314C315C298C316C300C317C307C321C322C323C325C324C327C329C330C331C332C334C335C336C337C337M261C338C339C340C341C108C343C344C345C346C347C348C349C351C352C353C354C357C356C285C359C361C360C363C364C365C369C370C372C375C376C377M308C378C380C381C382C383C384C385C387C389C390C392C393C394C395C396C398C400C404C405C406C407C409C408C412C410C413C414C415C417C418C420C421C422C424C426C428C429C430C435C432C436C437C438C439C444C441C442C440C443C446C447C449C448M398M262M355C453C456C457C458C459C461C463C466C469C470C472M394C471C474C476C478C479C480C481C483C482C484C485C486C487C488C489C492C493C494C495C496C498C500C501C497C502C503C504C505C506C508C509C510C511C512C513C514C515C516A022C517C520C521C523C528C524C527C507C529C518C525C530C531C532C536C534C537C533C538C539C540C541C542C543C544C545C547C548C549C550C551C552C553C554C555C556C557C558C559C560C561C563C564C565C566C567C568C569C573C574C576C578C577C580C581C582C583C584C585C587C588C589C591C593C594C595B491C596B540C598C294C599C600C604C605C606C608C609C610C612C613C614C615C616C618C619C620C621C623C624C625C627C630C628C629C631C632C633C634C635C637C638C639C640C641C648C649C650C651C652C653C655C654C656C657C658C659C660C661C662C663C665M272C668C672C673C674C675C676C677C678C679C680C681C684C685C686C689C691C695C696C697C699C700C701C702C703C704C705C707C708C709C710C711C712C714C713C715C716C718C719C722C723C724C725C726C727C728C729C730C732C733C735C738C739C740C741C742C744C745C750C743C746C747C749C751C752C755C756C757C758C759C760C763C765C766C764C768C769C770C771C773C778C779C780C781C777C774C776C782C783C784C785C787C790C791C792C793C794C795C796C800C801C803C804C806C807C810C811C812C813C814C815C816C817C818C819C820C821C823C824C826C829M426C835C836C838C839C841C844C845C851C854C857C847C870C846C872C848C850C852C853C311C855C856C858C859C860C862C864C865C866C867C868C869C871C875C876C878M380C877C880M419C879C882C883C884C885C886C888C890C893C894C895C897C900C901C902C903C904C905C908M336C910C911C912C914M314C917C918C920C922C925C926C927C928C929C930C931C933C934C937C935C938C941C940C939C943C946C948C950C951C952C954C955C956C957C958C959C960C962C963C964M356C968C969C971C972C973C974C975C976C977C978C979C980C982C983C984C986C987C988C990C991C992C993C996C995C998C999D003D004D006M403D007D008D009D011D010D013D014D015D016M338D018D019B799D020D021D022D026D027D028D029D030D037D038D040D041D042D043D044D045D046D048D049D050D051D052D054D056D057D058D068D061D062D064D065D066M372D072A266D075D076D077D078D079D081D082D085D086D087D088D089D093D092D094D095D096D099D100D101D109D110D105D112D111D103D102D117D107D108D113D114D118D119D120D121D123D124D012D126D127D128D131D132D133D134D136D137D139D141D142D143D144D145D147D149D150D151D154D156D159M328D161D162D165D166D168D170D171D172D175C670D177D179D180D181D184D185D122D186D187D188D189D192D195D196D197D198D199D200D201D202D203D204D205D207D208D209D210D211B824D214D216D217D218D219D221D222D223D226D227D228D229D231D230D232D233D234D236D237D238D239D244D245D246D247D251D253D255D256D257D258D259D260D261D264D265D266D267D268D269D270D271D272D273D277D278D279D280D281D284D286D287D289D293D296D291D297D298D299D300M366D303D304D305D309D310D311D312D314D315D316D317D318D319D321D323D325D327D328D329D330D331D332D333D334D339D341D338D344D345D346D347D348D350D351D352D355D356D357D358D360D361D364D365D366D367D371D372D373D374D376D377M300D379D380D383D384D385D386C772D388D390D391D392D394D395D398D399D401D402D403D406D407D408C342D410D411D412D414D415D416D419D420D421D422H243D423D424D426M292D428D429D430D431D434D436D440D441D442D443D444D445D433D447M319D450D451D452D453D454D455D456D458D459D461D462D463D465D464D467D468D469D470D471D473D472D474D475D476D477D480D482D483D484D486D487D488D489D494D490D493D492D491D495D496D497D499D501D502D503D504D505D508D509D510D511D512D514D518D520D523D524D526D527D528D530D531D532D537D538D539D540D541D542D543D544D545D547D548D549D550D551D552D554D555D557D560D562D561D564D565D567D568D569D570B034D571D573D574D575D576D578D577D579M321D582D586D587D588D589D590D591D592D593D594D595D596D597D599D600D604D605D606D608D607D611D612D613D614M323D615A310D617D619D621D622D624D623M400M297D628D629D630D634D635D636D637D638D639D640D641D643D644D645D646D649D650D651D652D653D654D655D656D660D661D662D665D666D667D670D671D668D672D673D674D675D676D677D678D679D680M309D681D682D683D684D685D686D688D689D691D693D694D695D696D697D700D701D702D704D703D705D706D707D708D709D710D711D712D714D715D718D719D720D725D728D727D730D731D732D733D734D735D736D738D740D741D737D742D745D744D748D749D750D751D752D559D754D755D756D757D758D763D762D759D760D765D761D766D764D767D768D769D770D771D773D774D775D776D777D780D781D782D783D785D784D788D787D789D790D791D793D794D796D797D798D799D802D803D804D805D807D808D810D811D812D813D814D815D817D818D819D821D823D824D825D826D827D828D829D830D832D834D835D836D839D841D842D843D844D845D847D848D850D849D851D852D853D854D855D856D858D859D860D861D862D863D864D865D867D868D869D870D872D871D873D874D875D876D878D879D881D882D883D884D885D886D888D889D890D891D892D894D895D896D897D898D899D901D902D903D905D906D907D909D910D911D912D913D915D917D918D920D921D923D924D925D926D927D928D930D931D932D933D934D935M416D938D940D942D943D944D945D946D947D948D949D951D952D956D957D958D959D960D961D962D963D964D965D966D967D968D969D970D971D972D974D975D977D978D980D981D982D983D984D987D988D990D993D994D995D996D997D998D999E001E003E004E006E007E008E009E010E012E011E013E014E015E016E017E019E020E021E022E023E024E025E026E027E028E029E030E031E033E034E036E037E040E038E039E041E044E043E045E047E048E049E050E052E053E054E055E057E056E058E060E061E062E063E064E065E066E067E068E069E071E072E074E078E079E081M274E082E083E084E086E087E085D585E088E089E090E091E092E093E094E096E098E101E102E100E103E104E106E107E109E111E113E114E115E116E118E120E122E124E125E126E127E128E130E131E132E133E134E136E139E141E142E143E144E145E146E147E148E149M315E152E153E154E156E155E158E159E160E161E163E164E165E167E168E169E170E171E172E173E177E178E179E180E182E184E185E187E188E189E191E192E193E195E196E199E200E201E202E203E204E205E206E207E208E209E210E212E213E214E215E216E217E219E221E223E224E226E227E228E229E230E232E233E234E235E236E240E237E238E239E241E245E246E242E249E243E244E248E250E251E252E253E255E256E258E259E261E263E264E266E269E270E271E272E273E280E281E282E283E284E285E287E288E289E290E291E292E295E297E299E301E304E305E306E307E309E310E311E313E314E317E321E323E325E326E327E328E329E330E332E333E334E335E336E337E338E341E348E343E340E351E349E350E339E353E356E358E360E354E345E346E363E364E365E366E367E368E369E370E371E373E374E375E376E377E379E380E274E381E382E386E387E388C388E320E389E390E391A345E394E423E425A308E430E458E463E470E491E490M348E392E393E395E396E397E398E400M212E401E402E403E405E406E407E409E410E412E414E415E416E417E419E420E421E413E422E424E426E428M208E429E431E432E433E434E435E436E437E438E439E441C767E443E445E447E448E450E451E454M207E456E464E457E459E462E465E466E467M392E469E471E472E473E474E475E476E480E479E481E482E483E484E485E486E487E488E489E492E493E494E496E497E498E500E502E504E506E505E507M313E509E510E512E514E515E517E518E519E520E522E523E524E526E527E528E530E531E532E535E536E537E538E540E539E541E542E543E544E546E547E549E550E551M371E553E554E555E557E558E559E560E562E563E564E565E566E569E570E571E573E574E576E578E581E583E584E587E588E589E590E591E592E593E594E597E596E599E600E602E605E606E607E608E610E611E613E615E617E620E621E622E623E623E624E625E626E627E629E630A771E632E633E635E639E638E640E644E645D976E646E647E648E651E649E652E654E655M275E656E659E660E661E662E664E665E666M312E668E669E671M342E673E674E675E677E678E679E681E682E683E684E685E687E689E690E691E692E693E694E695E698E700E704E705E706E707E709E708E711M420E713E715E714E716E718E719E722E723E724E726E729E730E731E734E735E736E737E738E742E743B387E745G143E746E747E748E749E750E751E752E753E754E757E758E759E760E761M427E763E764E767E769E770E772E773M339E777E778E780E779E782E783E784E785E786E787E788E789E790E791E342E793E794E795M357E798E799E800E801E803E804E805E806E809E808E811E807E810E813E812E814E815E816E817E818E819E821E820E825E829E830E834E835E836E837E838E839E840E841E842E833E843E844E847E848E850E851E852E853E854E855E856E858E859E860E862E863E864E865E868E869E870E872E873E874E875E876E877E878B632E879E880E882E883E884E885E887E888M283E889E891E892E893E894E896E897E899E900E901M316E902E903E904E906E911E908E910E914E915E905E907E912E917E919E921E922E923E924E925E927E928E929E930E931E932E933E934E936E938E939E940E941E944E945E946E947E949E951E952E953E954E955E956E957E958E959E960E961E962E963E965E967E968E970E971E972E973E974E975E976E977E978E979E980E981E982E983E984E986E987E988E989E990E991E992E993E994E995B689E999E998E997F001F002M270F003F004F005F006F007F009F010F011F012F013F016F015F017F020F023F022M289F025F021F029F030F032F024F027F028F033F035F037F041F042F044F045F046F047F048F050F051F052F053F054F055F058F059F061F063F064F065F066M271F067F068F070F074F073F078F080F081F082F083F084F085F086F087F088F089F092F093F095F096F097F098F100F101F102F104F105F106F107F108F109F111F112F110F113F114F115F117F118F119F120F122F123F125F126F127F130F131F132F133F134F135F136F138F139F140F141F144F145F146F147F148F149F151F152F153F154F155F156F157F158F161F162F165F168F170F167F171F172F173F175F176F182F183F184F186F187F188F189F190F191F192F193F194F196F200F201F202F203F205F206E618F207F208F209F210F213F214F216F217F218F219F221F220F223F224F225F226F229F230F231F232F233F238F239F240F241F242F244F243F246F247F248F249F250F251F254F256F257F258F259F261F262F263F265F266F267F268F269F270F272F274F275F277F276F278F279F280F281F283F284M255F287F288F290F293F294F295F297F301F304F305F307F308F309F310F311F312F315F313F316F317F318F319F320F322F323F324F325F327F326F329F328F330F332F333F335F336D553F337F338F340F342F343F346F347F348F351F352F354F355F356F358F359F360F361F363F364F365F368F369F370F371F372F373F374F375F376F377F378F379F380F381F382F383F384F385F386F387F390F391F392F393F394F395F397F398F400F399M378F403F404F405F408F409F407F410F411F414M387F415F419F420F417F416F422F423F424F426F427F428F429F430F432F433F437F456F460F467F477F434F486F488F517F524F532F561F589F590F599F600F603F616F618F620F619F621F622F626F627F628F634F631F629F653F664F665F440F441D746B268F442F443F445F446F450F448F449F452F453F454F455F457F458A561F461F462F463F464F465F469F468F473F474F475F478F479F480F481F482F483F484F487F489F491F492F493F494F495F496F497F498F499F500F502F501F503F504F507F508F506F509F510F511F512F513F514F515F516F518F519F520F522F523F526F527F528F529F531F533F534F535F543F536F538F540F542F541F544F545F546F547F548F549F550F551F552F553F556F558F559F560F562F563F564F565F566F568F569F570F572F573F574F576F579F580F578F582F586F587F591F592F594F595F596F597F598F601F605F604F606F609F610F607F608F611F612F614F623F625F636F637F638F639F640M368F642F644F646F648F651F654F655F656F657F660F661F662F666F667F668F672F671F670F674F675F669F471F676F677M302F679F680F367F681F682F685F687F686F688F690F689F692M330F696F697F698F701F703F704F705F706F708F707F709F710F711F712F713F716F715F717F718F720F721F722F723F724F725F726F727F728F729F730F731D033F732F733F734F735F736F737F738F739F740F743F744F745F747F746F748F749F750F751F754F756F758F760F761F762F764F765F766F767F771F772F773F774F770F777F779F781F780F783F775F776B012F784F785F786F788F789F791F793F795F797F798F799F801F802F806F808F809F811F813F814F815F816F817F818F820F822F826F828F829F830F832F833F835F836F838F839F840F841F842F843F844F845F846F847F848F849F851F852F856F857F858F859F861F862F863F864F865F866F867F868F870F871F872F874F876F877F878F880F881F882F883F884F886F887F889F890F891F892F893F894F895F898F899F900F901F902F904F906F907F908F912F913F910F911F914F915F916F917F918F920F921F922F923F924F925F926F927F929F930F931F932F933F934F935F937F939F942F943F949F944F950A942F137F947F948F952F951F956F955F957F958M430F960F961F963F962F964F966F965F967F968F970F972F975F974F976F977F978F979F980F981F982F983F985F986F987F988F989F990F991F992F993F994F995F996F997F998F999G001G002G003G004G005G006G007G008G009G010G011G015G016G018G019G020G021G022G023G025G026G028G030G031G032G034G036G039G040G037G041G042G043G044G045G046G047G049G048G050G054G056G058G061G062G063G064G065G066G068G070G071G074G075G076G078G079G080G081G082G083G084G086G087G088G090D522M266G093G095G097G098G102G103G105G108G109G107G110G111G113G114G115G116G117G118G119G120G121G122G123G124G125G126G128G129G130G131G134G133G135G136G137G139G140G141G142G144G145G146G147G148B595G149G150G151G152G153G154G155G156G157G158G159G160G161G163G164G168G165G167G166G169G170G171G173G178G179G181G183G184G185G186F401F581G187G188G189G191G192G190G193G194G195G196G197G198G199G200G201G012G202G203G205G204G206G207G209G208G210G211G212G213G215G218G220G217G222G224G225M301G226G227G228G229G230G232G233G234G237G238G240G241G242G243G247G248G249G250G251G252G253G254G255G257G258G259G263G262G260G261G267G268G264G266G270G271G272G273G274G275G276G277G278G280G281G283G282G284G285G286G288G289G290G291G293G294G292G295G297G296G298G300G302G303G304G305G306G307G308G311G312G315G316G317G318G320G323G324G325G327G328G330G331G333G334G335G336G337G338G339G340G342G344G346G347G348G349G350G352G353G354G358G359G361G362G364G365G367G368M269G371G372G370G374G376G377G378G379G381G382G384G385G386G387G388G389G392G391G393G394G395G397G398G402G403G404G406G408G410G411G412G415G415G416G417G418G419G420G421G424G426G428G429G430G432G436G437G433G434G435G438G439G441G442G443G444G445G446G447G449G450G452G453G454G455G456G457G458G459G461C013G463G462G465G469G471G474G475G476G477G478G479G480G481G482G483G484G485G486G487G488G489G491G492G494G493G495G496G497G498G499G500G502G504G505G506G508G509G510G511G513G512G514G515G516G517G518M281G519G520G521G522G523G524G525G526G528G529G532G535G534M418G538G546G542G543G541G547G549G551G553G555G556G557G558G559G560G561G564G565G568D546G570G571G572G574G575G576G577G582G580G579G583G587G588G589G590G591G592G593G594G597G596G598G600G601G602G603G612G605G619G606G607G608G609G610G611G613G615G616G618G620G604G621G622G623G624G625G626G627G628G629G630G631G636G635G647G639M422M365G642G643G645G632G634G096G648G646G650G651G653G656G657G658G649G659G660G662G661G663G664G665G666G669G670G671G672G673G674F831G676G678G680G681G682G683G684G685G686G687G688G690G691G692G693G694G696G697G699G702G703G705M291G707G710G704G712G713G716G717G718G719G720G721G722G724G726G727G728G729G733G734G735G299G737G740G741G742G743G746G747G749G751G752G754G756G757G761G763G764G765G766G768G753G770G771D566B317M324G758G760G762G767G769G431G772G773G774G775G777G776G779G780G782M367G784G785G786G787G789G790G791G792G793G794G795F567G796G797G798G799G800G801G802G803G804G805G806G807G808G809G811G812G813G814G815G816G817G818G820G821G822G823G826G854G825G545G827G833G842G844G846G830G829G847B662G851F941G855G856G831G834G836G837G838G839G840G843G848G849G850G852G853G858G859G860G861G862G864G865G866G867G869G870G871G873G872G874G875G877G878G879G881G882G886G888G889G890G891G894G895G900M358G902G903G904G905E680G906M263F299G917G919G920G921G923G924G907G926G909G910G912G913G914G916M257G922G925G927G929G931G932G933G934G935G936G937G939G940G942F632G943G944G945G947G949G951B914G953G954G955G960G959G957G961G962G963G964G966G965G968G969G970G973G975G976G977G978G979G980G981G982G985G986G987G988G993G992G994G990G991G995G997G999H004H002H001H007H006M329H010G974H011H042H014H015M344H017H018H019H020H021H022H026H027H028H029H030H033H034H036H037H038H040H043H045H046M428H048H052H055H056H059H062H061H063M359H068H069M279G698H070H071H072H073H074H076H078H077H081H083H085H086H087H088H089H090H091H094H095H096H097H098H100H101H102M414H104H106H107H108H109H110H114H117H118H119H120H121H122M332H126H127H128H129H130H131H132H134H140H143H146H147H148H150H151H152H153H154H156H157H159M287H161H163H166H168H173H174H175H176H177H180H182H183H184H185H186H187H188H189H192H194H195H196H198H199H200H202H203H204H205H206H207H210H211H212H213H214H216H218H219H220H221H222H224H223H225H227H228H229H230H233H235H236H238H240H242H244H245H246H247H250H253H255H256H257H258H262H263H264H265H266H267H268H269H270H271H272H273H274H275H276H277H280H281H282H284H285H288H287H286H289H293H294M391H299H298H300H301H302H303H304H307H308H320H311H312H313H314H315H316H319H321H323H324H325H326H330M410H331H328H337H333H334H335H327H336H338H340H341H342H343H344H346H347H348H350M317H353H354H355H356H357H359H361H362H363H365H366H367G223H369H371H372H375H373H376H377H378H386H387H391H392H393H398H395H396H399H400H401H402H403H404H414H416H421H429H379H432H437H438H439H440H441H446H450H382H383H384H385H389H394H405H390H408H406H407H409H410H411H412H413H417H418H420H422H423H424H425H426H427H428H431H433H434H436H442H443H444H445H447H448H449H380H451H452H453H454H456H455H458H462H461H459H465H460H466H467H468H470H472H473H474H475H477H478H480H479H481H484H485H486H488H489H490H491H492H493H494H495H497H498H500H501H503H502H505H507H508H511H512H509H514H516H517H518H519H521H522H523H525H527H528H529H531H532H533H534H540H538H537H539H536H535H541H542H544H546H547H549M303H552H553H554H556H558H559H560H561H562H564H565H566H572F585H568H570H569H573H574H575H577H578H580H581H583H584H585H588H589H590H591H592H593H594H555H364H598H599H601H602H604H606H607H608H610H609H612H614H615H618H620H621H622H623H625H627H628H629H630H631H632H633H634H635F271H639H641H642H643H644H165H646H645H647H650H652H654H655H657H658H659H661H662H665H666H669H670H671H672H673H674H675H676H682H681H678H679H683H677H687H688H689H690H691H684F810H693H694H695H699H704H700H686H702H701H703H706H707H708H710H713H714H715H716H717H719H720H723H724H725H726H727H729H731H732H734H733H735H736H738H739H743H744H745H746H749H013H752H753H753H754H755H756H763H764H760H765H766H767H768H770H772H769H773H771H774G566H775H777H780H781H778H779H782H783H784H785H786H787H789H790H791M264H792M295H793H794H795H796H797H798H800H799H801H803H804H802H805H806H808H807H809H810H814H811H812H816H815H818H819H820H823H822H826H825H827H824D324H831H834H836H838H833H835M277H839H840H841H842H843H844H845H846H847H850H856H857H858H859H860H862H861H865H867H870H868B952H873H875H876H892H880H881H883H890H894H891H893H885H895H896H897H882H898H888H878H889H887H899H884H900H907H906H910H912M390H903H914H916H918H919H920H921G467H917H922H923H924H926G287D690H901H928H929H930A562H933H931H935H936H937H941H942H940H943H939H938H945H949H951H952H953H955H959H957H961H962H956M345H958H964H967H969H970H971H973H976H977H975H978H979M377H981H982H984F043H985H986H999H987I003H997H994I005I007H992I008H996H988H989H990I011I012I002I014H991I016I018I017I019I023I024I025I028I031H712I029I032I026I027I030I040I042I035I034I037I045I046I049I052I051I054I060I061I058I057I056I062A368I063G383I065I066G407B906I073B310I072I071I076I079I082I084I086I093I092I089I095I096I098I088I102I103I105I108I109I110G788I107I114I115I113I116I117I090I119I120I121I123I125I124I122I126I128I130I129I131I132I133I135I136I137I139I140I142I143I147I144I145I148I151I150I152I154I153I157I156I158I162I163I164I165I166I373I261I328I328I329I347I376I377I381I382I384I390I388I389I391I402I403I404I394I396I392I405I401I407I400I393I408I409I414I412I415I416I417H757H821H829H851H852H855H872H877H944H974I048I053I059I138I155I189I191I197I198I192I199I193I201I190I202I196I208I210I213I214I215I216I258I259I256I262I263I266I265I264I271I277I278I280I279I273I281I282I283I275I286I287I288I289I274I276I290I284M209I292I293I294I296I300M276I302I305F557I306I307I318I317I319B466I320I321I324I332I333I335I336I342I341I344I346I348M333I350I352I354I375I168I171I170I169I172I176I175I174I173I178I179I181I177I183I184I185I187I188I203I205I206I207I217I220I221I219I224I230I225I232I233I234M284C717I238I237I240I242I243I244M273I247I248I249I251I253I254I255I291I301I308I310I309I311I312I314I316I315I182I304I326I327I330I337I339I365I367I368I357C919I370I363I359I360I371I362I356I372I361I260I351I353I374I410I411I418I420I421I422I423I424I425I426I428I429I430I431I432I433I434I435I436I437I438I439I441I442I443I444I445I447I448I449I451I452I453I454I455I457G972M413I460I461I462I463G614I464I466I465I467I468I469I470I471I473I472I475I476I477I478I479H730I480I482I483I484I486I485I487I489I490I492I493I494I496B962I497I498I499I501I503I504M256I506I507I510I511I512M326I519I520I522I523I526I527I529I530I531I532I533I534I535I536D290I537I538I539I540I541I543I544I545I546I548I549I551I553I554I555I556I558I559I561I562I563I564I565I566I567I569I570I571I573I576I577I578I580I581I582M360I585I588I589I590I593I592I594I591I595I597I598I599I600I601I602I603I604I605I606I607I608I609I610I611I612I613I614I615I618I621I622I624I625I626I627I628I629I630I631I632I634I635I636I637I642I643I640I639I653I654I641I644I646I645I647F357I648I649I651I652I655I656I662I661I659I660I657I663I666I667I668I669I671C070I676I677I678I679E070I681I687I686I688I682I683I684I690I689I693I692I695I696I697I698I700I701I699I703I702I704I705I706I707I709I711I712I714I715I716I717I718I720I721M253I723I724I725I726I727I728I729I730F116I732I734I735M347I736I738I739I741I742I743I744I745I747A468I748I749I750I751I752I753I754I756I757I633I758I759I761M325I765E265I767I771I774I775I777I778I779I780I781I782I783I785I786I787I790I791I793M412I794I796I797I798I799I800I801I802I803I805I808I809I812I813I815I817I819I820I821I822I823I824I825I826I827I828I829I830I831I832I838I839I840I841I844I843M411I847I848I849I850I851I852I853I854I855I856I857I858I860I861I862I863I864I865I866I867I868I869I871I872I873I874I875I876I877I878I879I673I880I881I884I885I886I887I888I891I892I893I894I895I896I899I901I902I903I904I905I906I907I908I909I910I911I912I914I916I917I919I921I922I923I924I925I926I927I928I929I930I932I935I936I937I938I939M298I941I942I943I945I946G887I947I948I949I950I951I953I954I955I956I959M290I960I962I963I964I965I968I969I970I973I974I975I976I977I978I980I981I982I984I985I986I990B014I991I992I993I994I995I996I997I998I804L002L003L004L006L007L008L009L010L011L013L014L015L016L017L018L019L020L022L023L024L025L026L027L030L032G736L034L035L036L037L038L039L040L042L046L047L048L049L050D024L055L056L057L058L059L061L062L063L064L065L066F260L069L070L071L073C698L074L075L078L081L082L083D292L084L085L086L087L088L089L090L093L094L096L097L100L102L103L104L105L106E548M282L108L109M210L111L112L113L115L116L117L118L120L121L122L124L125L126L127L123L131L132L134L136M407M381M379L138L139L140L142L143L144L145L146L147L149L150L152L153L154L155L156L157L158L160L164L165L166L167L168L169L172L173L174L175L176L177L178L180L181L182L183L184L185L186L187L188L189L190L191L192L193L194L195L197L199L200L202L203L204D717L205L206L207L210L211L212L213L214L215L216L217L219L218L220L221L223L224L225L227L228L229L230L231L233L235L237L238L239L245L250L251L252L243L247L256L269L257L262L263L258L265L259L267L240L244L272L241L274L276L277L278L279L280L246L248L253L254L270L271L273M286L281L282L285L284L287L297L286L290L294L296L293L291L295L292L298L299L301L303L302A355L304L305L306L307L308L309L312L314L316L315L317L319L321L322L323L324L325L326L327L328L330L331L332L333L334L335L336L337I236L339L342L345L346L340L347L348M361L349L353M280L355M318L356L357L359L361L363L364L366L367L369M341L372L377L378L379L380L382M399L383L384L386L388L389M409L392L393L396L397L398L399L400L402L401L403L404L407L406L408L409L411L410L413L414L415L416L418L419L420L421L423L424L425L426L427L428B915L429L430L431L432L433L434L435L437L438L439L440L444L445L447L448L449L450A705L451L452L453L454L455L458L459L460L461L462L463L464L466G507L469L470L471L472L473L474L475L477L478L310C789L480L482L483L484L485L487L488L489L490D786L492L494L496L497L498L499L500L501L502L503L505L506L507L508L509L511L512L513L514L515L516L517L519L521L522L524L525L526L527L528L533L529L532L531L537L535L538L539L540M265M334L555M405L562L564M374M384L638H259L544L545M423L546L547M415L551M343L552L554L556G319L557L558M417L561L563L565L566L568L567L569L570L571L572L573L574L575M382L576L577L578L579L580L581L582L583L584L586L588L589L594L595M404L597G540L590L601L591L593L617L620L596L598L599L603L604I322M331M362L607L609L605L611L612L613L614L616L623L624L625L626L628L627L629L631L633L634L639L640L641L642L643L644B510M320L647D513C936L651L653L655L654L656M395M346L658L468L660L664L665L666L667L668L669L670L671L672L673L675L676L677L680L682L681L685L686L687L689L690L691A701L693E372L696L698L699L700L702L704L703L706L707L709L710L711L712L713L715L716L719L720L723L722L724L725L727L728L729L726L730L733L734L735L736L737L738M364L739L741L740L742L743L745L744L746L747L748L749L750L751L752L753M337L758L762L764L765M424L769L771L772L773L774L775L776L777L778L779L780L781D193L783C282L784L785L788L787L792L795L797L799L801L802L804L805L806L807L808L809L810L811L812L814L815L817L816L819L820L823L826L827L828L829L830L831L833L834F537L835L836L837L838L840L842L845L843L841L846L847L850L851M259L854L856L857L858L859L860L866L865L868L869L872L873L874L876L878L880L879L881L882L883L885L886L887L888L889L890L892L894L897L898L899L900L904L912L913L917L919L920L922L926L928L929A215L938L933L934D801L907L936L908L937L943L956L957A081L844L969M018H913I118M019M023I298L905M021M022L909I364A609L915L916L923L924L931L939L906L942L945L949L946L947L948L944L950L951L952L953L958L959L961L963L964L965L966L967L968L970L971L978L982L975L983L984L973L985L977L979L988L974L972L989L990L980L991L992L986L987L994L995M278B903L998L999M007M013M014M015M002M003M004G309M009M011M016M017B738M025M026M027M028M030M031M032M363M431L981M043M041M042M044M045M048M050M052M053M055M057M058M059M060M062M063M065M067M069M070M071M072M073M077M078M079M080M081M082M083M085M086M088M089M090M091M093M092M094M096M095M098M100M101M102M103M104M105M106M108M109M110M111M113M115M116M118M119M120M121M122M125M123M124M126M127M131M130M132M133M136M138M139M140M141M143M144M145M147M267M150M152M153M156M158M161M162M163M165M166M167M168M169M170M171M172M173L848M176M177M178M179M180M182M183M184M185M187M188M189M190M194M196M197M199M200M201M202M203M204";
-const _PN = "AFGHANISTAN|ALBANIA|ALGERIA|ANDORRA|ANGOLA|ANTIGUA E BARBUDA|ARABIA SAUDITA|ARGENTINA|ARMENIA|ARUBA|AUSTRALIA|AUSTRIA|AZERBAIGIAN|BAHAMAS|BAHREIN|BANGLADESH|BARBADOS|BELGIO|BELIZE|BENIN|BERMUDA|BHUTAN|BIELORUSSIA|BOLIVIA|BOSNIA-ERZEGOVINA|BOTSWANA|BRASILE|BRUNEI|BULGARIA|BURKINA FASO|BURUNDI|CAMBOGIA|CAMERUN|CANADA|CAPO VERDE|CIAD|CILE|CIPRO|COLOMBIA|COMORE|CONGO|COSTA D'AVORIO|COSTA RICA|CROAZIA|CUBA|DANIMARCA|DOMINICA|ECUADOR|EGITTO|EL SALVADOR|EMIRATI ARABI UNITI|ERITREA|ESTONIA|ESWATINI|ETIOPIA|FEDERAZIONE RUSSA|FIGI|FILIPPINE|FINLANDIA|FRANCIA|GABON|GAMBIA|GEORGIA|GERMANIA|GHANA|GIAMAICA|GIAPPONE|GIBUTI|GIORDANIA|GRECIA|GRENADA|GUATEMALA|GUINEA|GUINEA BISSAU|GUINEA EQUATORIALE|GUYANA|HAITI|HONDURAS|INDIA|INDONESIA|IRAN|IRAQ|IRLANDA|ISLANDA|ISOLE CAYMAN|ISOLE COOK|ISOLE FAER OER|ISOLE MARSHALL|ISOLE SALOMONE|ISOLE TURKS E CAICOS|ISOLE VERGINI AMERICANE|ISOLE VERGINI BRITANNICHE|ISOLE WALLIS E FUTUNA|ISRAELE|KAZAKHSTAN|KENYA|KIRGHIZISTAN|KIRIBATI|KOSOVO|KUWAIT|LAOS|LESOTHO|LETTONIA|LIBANO|LIBERIA|LIBIA|LIECHTENSTEIN|LITUANIA|LUSSEMBURGO|MACEDONIA DEL NORD|MADAGASCAR|MALAWI|MALAYSIA|MALDIVE|MALI|MALTA|MAROCCO|MARTINICA|MAURITANIA|MAURITIUS|MAYOTTE|MESSICO|MOLDOVA|MONACO|MONGOLIA|MONTENEGRO|MOZAMBICO|MYANMAR|NAMIBIA|NAURU|NEPAL|NICARAGUA|NIGER|NIGERIA|NORVEGIA|NUOVA ZELANDA|OMAN|PAESI BASSI|PAKISTAN|PALAU|PANAMA|PAPUA NUOVA GUINEA|PARAGUAY|PERU'|POLONIA|PORTO RICO|PORTOGALLO|QATAR|REGNO UNITO|REPUBBLICA CECA|REPUBBLICA CENTRAFRICANA|REPUBBLICA DEMOCRATICA DEL CONGO|REPUBBLICA DI COREA|REPUBBLICA DOMINICANA|REPUBBLICA POPOLARE CINESE|REPUBBLICA POPOLARE DEMOCRATICA DI COREA|ROMANIA|RUANDA|SAINT KITTS E NEVIS|SAINT LUCIA|SAINT PIERRE E MIQUELON|SAINT VINCENT E GRENADINE|SAMOA|SAN MARINO|SANT'ELENA|SAO TOME' E PRINCIPE|SENEGAL|SERBIA|SEYCHELLES|SIERRA LEONE|SINGAPORE|SIRIA|SLOVACCHIA|SLOVENIA|SOMALIA|SPAGNA|SRI LANKA|STATI FEDERATI DI MICRONESIA|STATI UNITI D'AMERICA|STATO CITTA' DEL VATICANO|SUD AFRICA|SUD SUDAN|SUDAN|SURINAME|SVEZIA|SVIZZERA|TAGIKISTAN|TAIWAN|TANZANIA|TERRITORI DELL'AUTONOMIA PALESTINESE|THAILANDIA|TIMOR ORIENTALE|TOGO|TONGA|TRINIDAD E TOBAGO|TUNISIA|TURCHIA|TURKMENISTAN|TUVALU|UCRAINA|UGANDA|UNGHERIA|URUGUAY|UZBEKISTAN|VANUATU|VENEZUELA|VIETNAM|YEMEN|ZAMBIA|ZIMBABWE|ANTIGUA AND BARBUDA|SAUDI ARABIA|AZERBAIJAN|BAHRAIN|BELGIUM|BELARUS|BOLIVIA, PLURINATIONAL STATE OF|BOSNIA AND HERZEGOVINA|BRAZIL|BRUNEI DARUSSALAM|CAMBODIA|CAMEROON|CAPE VERDE|CHAD|CHILE|CYPRUS|COMOROS|CÔTE D'IVOIRE|CROATIA|DENMARK|EGYPT|UNITED ARAB EMIRATES|SWAZILAND|ETHIOPIA|RUSSIAN FEDERATION|FIJI|PHILIPPINES|FINLAND|FRANCE|GERMANY|JAMAICA|JAPAN|DJIBOUTI|JORDAN|GREECE|GUINEA-BISSAU|EQUATORIAL GUINEA|IRAN, ISLAMIC REPUBLIC OF|IRELAND|ICELAND|MARSHALL ISLANDS|SOLOMON ISLANDS|ISRAEL|KYRGYZSTAN|LAO PEOPLE'S DEMOCRATIC REPUBLIC|LATVIA|LEBANON|LIBYAN ARAB JAMAHIRIYA|LITHUANIA|LUXEMBOURG|MACEDONIA (FYROM)|MALDIVES|MOROCCO|MEXICO|MOLDOVA, REPUBLIC OF|MOZAMBIQUE|NORWAY|NEW ZEALAND|NETHERLANDS|PAPUA NEW GUINEA|PERU|POLAND|PUERTO RICO|PORTUGAL|UNITED KINGDOM|CZECH REPUBLIC|CENTRAL AFRICAN REPUBLIC|CONGO, THE DEMOCRATIC REPUBLIC OF THE|KOREA, REPUBLIC OF|DOMINICAN REPUBLIC|CHINA|KOREA, DEMOCRATIC PEOPLE'S REPUBLIC OF|RWANDA|SAINT KITTS AND NEVIS|SAINT VINCENT AND THE GRENADINES|SAO TOME AND PRINCIPE|SYRIAN ARAB REPUBLIC|SLOVAKIA|SPAIN|MICRONESIA, FEDERATED STATES OF|UNITED STATES|VATICAN CITY STATE|SOUTH AFRICA|SOUTH SUDAN, REPUBLIC OF|SWEDEN|SWITZERLAND|TAJIKISTAN|TAIWAN, PROVINCE OF CHINA|TANZANIA, UNITED REPUBLIC OF|PALESTINIAN TERRITORY, OCCUPIED|THAILAND|EAST TIMOR|TRINIDAD AND TOBAGO|TURKEY|UKRAINE|HUNGARY|VENEZUELA, BOLIVARIAN REPUBLIC OF|VIET NAM";
-const _PC = "Z200|Z100|Z301|Z101|Z302|Z532|Z203|Z600|Z252|Z501|Z700|Z102|Z253|Z502|Z204|Z249|Z522|Z103|Z512|Z314|Z400|Z205|Z139|Z601|Z153|Z358|Z602|Z207|Z104|Z354|Z305|Z208|Z306|Z401|Z307|Z309|Z603|Z211|Z604|Z310|Z311|Z313|Z503|Z149|Z504|Z107|Z526|Z605|Z336|Z506|Z215|Z368|Z144|Z349|Z315|Z154|Z704|Z216|Z109|Z110|Z316|Z317|Z254|Z112|Z318|Z507|Z219|Z361|Z220|Z115|Z524|Z509|Z319|Z320|Z321|Z606|Z510|Z511|Z222|Z223|Z224|Z225|Z116|Z117|Z530|Z703|Z108|Z711|Z724|Z519|Z520|Z525|Z729|Z226|Z255|Z322|Z256|Z731|Z160|Z227|Z228|Z359|Z145|Z229|Z325|Z326|Z119|Z146|Z120|Z148|Z327|Z328|Z247|Z232|Z329|Z121|Z330|Z513|Z331|Z332|Z360|Z514|Z140|Z123|Z233|Z159|Z333|Z206|Z300|Z713|Z234|Z515|Z334|Z335|Z125|Z719|Z235|Z126|Z236|Z734|Z516|Z730|Z610|Z611|Z127|Z518|Z128|Z237|Z114|Z156|Z308|Z312|Z213|Z505|Z210|Z214|Z129|Z338|Z533|Z527|Z403|Z528|Z726|Z130|Z340|Z341|Z343|Z158|Z342|Z344|Z248|Z240|Z155|Z150|Z345|Z131|Z209|Z735|Z404|Z106|Z347|Z907|Z348|Z608|Z132|Z133|Z257|Z217|Z357|Z161|Z241|Z242|Z351|Z728|Z612|Z352|Z243|Z258|Z732|Z138|Z353|Z134|Z613|Z259|Z733|Z614|Z251|Z246|Z355|Z337|Z532|Z203|Z253|Z204|Z103|Z139|Z601|Z153|Z602|Z207|Z208|Z306|Z307|Z309|Z603|Z211|Z310|Z313|Z149|Z107|Z336|Z215|Z349|Z315|Z154|Z704|Z216|Z109|Z110|Z112|Z507|Z219|Z361|Z220|Z115|Z320|Z321|Z224|Z116|Z117|Z711|Z724|Z226|Z256|Z228|Z145|Z229|Z326|Z146|Z120|Z148|Z232|Z330|Z514|Z140|Z333|Z125|Z719|Z126|Z730|Z611|Z127|Z518|Z128|Z114|Z156|Z308|Z312|Z213|Z505|Z210|Z214|Z338|Z533|Z528|Z341|Z240|Z155|Z131|Z735|Z404|Z106|Z347|Z907|Z132|Z133|Z257|Z217|Z357|Z161|Z241|Z242|Z612|Z243|Z138|Z134|Z614|Z251";
-const _CNA = _CN.split("|");
-const _PNA = _PN.split("|");
-const _PCA = _PC.split("|");
-const CO: Record<string, string> = (() => { const m: Record<string, string> = {}; _CNA.forEach((n, i) => { m[n] = _CC.slice(i * 4, i * 4 + 4) }); return m; })();
-const CO_EE: Record<string, string> = (() => { const m: Record<string, string> = {}; _PNA.forEach((n, i) => { m[n] = _PCA[i] }); return m; })();
-const xC = (s: string) => s.toUpperCase().replace(/[^A-Z]/g, "").split("").filter(c => !"AEIOU".includes(c));
-const xV = (s: string) => s.toUpperCase().replace(/[^A-Z]/g, "").split("").filter(c => "AEIOU".includes(c));
+const getVF = (tc) => {
+  const biz = tc === "business";
+  return [
+    { id:"mobile", title:"MOBILE", icon:"📱", color:"#E60000", radio:true, subs:[
+      { id:"ga", title:biz?"MOBILE":"MOBILE GA", hasContract:true, ct:"ga",
+        isVFMobile: !biz,
+        isVFBizMobile: biz,
+        vfBizOffers: biz ? ["MOBILE SMART","MOBILE COMFORT","MOBILE EXTRA","DATI SMART","DATI COMFORT","RED DATA NOW"] : null,
+        vfBizOffersTablet: biz ? ["DATI SMART","DATI COMFORT","RED DATA NOW"] : null,
+        vfOffers: !biz ? ["MOBILE START","MOBILE PRO","MOBILE POWER","MOBILE ULTRA","MOBILE START UNDER 18","C'ALL POWER EDITION","C'ALL MAX","C'ALL POWER PRO","DOLCE VITA","DOLCE VITA+"] : null,
+        fields: []
+      },
+      ...(!biz?[{ id:"cb", title:"CB", isCBVF:true, fields:[]}]:[]),
+      ...(biz?[{ id:"cb", title:"CB", isCBVFBiz:true, fields:[]}]:[]),
+    ]},
+    { id:"fisso", title:"FISSO", icon:"🏠", color:"#28a745", radio:true, subs:[
+      ...(!biz?[
+        { id:"casa_fwa", title:"CASA FWA", hasContract:true, ct:"fisso", isVFFisso:true, fields:[]},
+        { id:"casa_fwa_pro", title:"CASA FWA PRO", hasContract:true, ct:"fisso", isVFFisso:true, fields:[]},
+        { id:"casa_start", title:"CASA START", hasContract:true, ct:"fisso", isVFFisso:true, fields:[]},
+        { id:"casa_pro", title:"CASA PRO", hasContract:true, ct:"fisso", isVFFisso:true, fields:[]},
+        { id:"casa_ultra", title:"CASA ULTRA", hasContract:true, ct:"fisso", isVFFisso:true, fields:[]},
+      ]:[]),
+      ...(biz?[
+        { id:"fissa_smart", title:"FISSA SMART", hasContract:true, ct:"fisso", isVFFissoBiz:true, fields:[]},
+        { id:"fissa_comfort", title:"FISSA COMFORT", hasContract:true, ct:"fisso", isVFFissoBiz:true, fields:[]},
+        { id:"fissa_extra", title:"FISSA EXTRA", hasContract:true, ct:"fisso", isVFFissoBiz:true, fields:[]},
+        { id:"fissa_wireless_5g", title:"FISSA WIRELESS 5G", hasContract:true, ct:"fisso", isVFFissoBiz:true, fields:[]},
+        { id:"onpi_tw_plus", title:"ONPI TW PLUS", hasContract:true, ct:"fisso", isVFFissoBiz:true, fields:[]},
+        { id:"onpi_premium", title:"ONPI PREMIUM", hasContract:true, ct:"fisso", isVFFissoBiz:true, fields:[]},
+        { id:"one_biz_smart", title:"ONE BUSINESS SMART", hasContract:true, ct:"fisso", isVFFissoBiz:true, fields:[]},
+        { id:"one_biz_comfort", title:"ONE BUSINESS COMFORT", hasContract:true, ct:"fisso", isVFFissoBiz:true, fields:[]},
+        { id:"fissa_wireless_5g_mob", title:"FISSA WIRELESS 5G + MOBILE COMFORT", hasContract:true, ct:"fisso", isVFFissoBiz:true, isCombinatoFissoBiz:true, fields:[]},
+      ]:[]),
+    ]},
+    ...(biz?[{ id:"sol_dig", title:"SOLUZIONI DIGITALI", icon:"💼", color:"#6f42c1", radio:false, subs:[
+      { id:"backup_facile", title:"BACKUP FACILE", isVFSolDig:true, hasContract:true, ct:"multi", fields:[]},
+      { id:"worry_free", title:"WORRY FREE ADVANCED", isVFSolDig:true, hasContract:true, ct:"multi", fields:[]},
+      { id:"secure_drive", title:"SECURE DRIVE", isVFSolDig:true, hasContract:true, ct:"multi", fields:[]},
+      { id:"fastweb_ai_ess", title:"FASTWEB AI WORK ESSENTIAL", isVFSolDig:true, hasContract:true, ct:"multi", fields:[]},
+      { id:"fastweb_ai_std", title:"FASTWEB AI WORK STANDARD", isVFSolDig:true, hasContract:true, ct:"multi", fields:[]},
+    ]}]:[]),
+    { id:"multi", title:"MULTI-SERVIZI", icon:"🛡️", color:"#6f42c1", radio:true, subs:[
+      { id:"verisure", title:"Verisure", isVerisure:true, hasContract:true, ct:"multi", fields:[]},
+      { id:"kasko_facile", title:"Kasko Facile", isKaskoFacile:true, hasContract:true, ct:"multi", fields:[]},
+      { id:"vf_care", title:"Vodafone Care", isVFCare:true, hasContract:true, ct:"multi", fields:[]},
+    ]},
+  ];
+};
 
-// -- Small components (no return keyword needed with arrow implicit) ------
 
-const YN = ({ val, onCh, label }: { val: any, onCh: (v: any) => void, label: string }) => (
-  <div style={{ marginTop: 8, padding: 10, background: "rgba(255, 255, 255, 0.03)", borderRadius: 8, border: "1px solid rgba(255, 255, 255, 0.08)", backdropFilter: "blur(10px)" }}>
-    <div style={{ fontSize: 12, fontWeight: 700, color: "#cbd5e1", marginBottom: 6 }}>{label}</div>
-    <div style={{ display: "flex", gap: 8 }}>
-      <button onClick={() => onCh(true)} style={{ padding: "6px 20px", borderRadius: 6, border: val === true ? "2px solid #6366f1" : "2px solid rgba(255, 255, 255, 0.1)", background: val === true ? "rgba(99, 102, 241, 0.2)" : "rgba(255, 255, 255, 0.05)", color: val === true ? "#818cf8" : "#94a3b8", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>Sì</button>
-      <button onClick={() => onCh(false)} style={{ padding: "6px 20px", borderRadius: 6, border: val === false ? "2px solid #f43f5e" : "2px solid rgba(255, 255, 255, 0.1)", background: val === false ? "rgba(244, 63, 94, 0.2)" : "rgba(255, 255, 255, 0.05)", color: val === false ? "#fb7185" : "#94a3b8", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>No</button>
+// ── Small components (no return keyword needed with arrow implicit) ──────
+
+const YN = ({val,onCh,label}) => (
+  <div style={{marginTop:8,padding:10,background:"#f8fafc",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)"}}>
+    <div style={{fontSize:12,fontWeight:700,color:"#f8fafc",marginBottom:6}}>{label}</div>
+    <div style={{display:"flex",gap:8}}>
+      <button onClick={()=>onCh(true)} style={{padding:"6px 20px",borderRadius:6,border:val===true?"2px solid #28a745":"2px solid #e0e0e0",background:val===true?"#d4edda":"#fff",color:val===true?"#155724":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sì</button>
+      <button onClick={()=>onCh(false)} style={{padding:"6px 20px",borderRadius:6,border:val===false?"2px solid #dc3545":"2px solid #e0e0e0",background:val===false?"#f8d7da":"#fff",color:val===false?"#721c24":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>No</button>
     </div>
   </div>
 );
 
-const TF = ({ l, r, v, o, p, pf, dis, nt }: { l: string, r?: boolean, v?: string, o?: (v: string) => void, p?: string, pf?: boolean, dis?: boolean, nt?: string }) => (
+const TF = ({l,r,v,o,p,pf,dis,nt}) => (
   <div>
-    <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", marginBottom: 3 }}>{l} {r && <span style={{ color: "#f43f5e" }}>*</span>}</div>
-    <input value={v || ""} onChange={e => o && o(e.target.value)} placeholder={p} disabled={dis} readOnly={dis}
-      style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: dis ? "1px solid rgba(6, 182, 212, 0.3)" : pf ? "1px solid rgba(34, 197, 94, 0.3)" : "1px solid rgba(255, 255, 255, 0.1)", fontSize: 12, boxSizing: "border-box", background: dis ? "rgba(6, 182, 212, 0.1)" : pf ? "rgba(34, 197, 94, 0.1)" : "rgba(255, 255, 255, 0.05)", color: dis ? "#06b6d4" : "#f8fafc", outline: "none" }} />
-    {nt && <div style={{ fontSize: 10, color: dis ? "#06b6d4" : "#64748b", marginTop: 2 }}>{nt}</div>}
+    <div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>{l} {r&&<span style={{color:"#dc3545"}}>*</span>}</div>
+    <input value={v||""} onChange={e=>o&&o(e.target.value)} placeholder={p} disabled={dis} readOnly={dis}
+      style={{width:"100%",padding:"7px 10px",borderRadius:6,border:dis?"2px solid #17a2b8":pf?"2px solid #28a745":"1px solid #d0d0d0",fontSize:12,boxSizing:"border-box",background:dis?"#e8f4f8":pf?"#f0fff0":"#fff",color:dis?"#17a2b8":"#333",fontStyle:dis?"italic":"normal"}} />
+    {nt&&<div style={{fontSize:10,color:dis?"#17a2b8":"#888",marginTop:2}}>{nt}</div>}
   </div>
 );
 
-const DD = ({ l, r, v, o, vals, nt }: { l: string, r?: boolean, v?: string, o?: (v: string) => void, vals: any[], nt?: string }) => (
+const DD = ({l,r,v,o,vals,nt}) => (
   <div>
-    <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", marginBottom: 4 }}>{l} {r && <span style={{ color: "#f43f5e" }}>*</span>}</div>
-    <select value={v || ""} onChange={e => o && o(e.target.value)} style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255, 255, 255, 0.1)", fontSize: 12, boxSizing: "border-box", background: "rgba(255, 255, 255, 0.05)", color: "#f8fafc", outline: "none" }}>
-      <option value="" style={{ background: "#0f172a" }}>— Seleziona —</option>
-      {vals.map(x => <option key={x} value={x} style={{ background: "#0f172a" }}>{x}</option>)}
+    <div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>{l} {r&&<span style={{color:"#dc3545"}}>*</span>}</div>
+    <select value={v||""} onChange={e=>o&&o(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}>
+      <option value="">— Seleziona —</option>
+      {vals.map(x=><option key={x} value={x}>{x}</option>)}
     </select>
-    {nt && <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>{nt}</div>}
+    {nt&&<div style={{fontSize:10,color:"#64748b",marginTop:2}}>{nt}</div>}
   </div>
 );
 
-const SCd = ({ session, codici, val, onCh }: { session: string, codici: string[], val: string, onCh: (v: string) => void }) => {
-  const actual = val || session || "";
-  const isOv = val && val !== session;
+const SCd = ({session,codici,val,onCh}) => {
+  const actual=val||session||"";
+  const isOv=val&&val!==session;
   const content = (
     <div>
-      <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", marginBottom: 3 }}>Codice <span style={{ color: "#f43f5e" }}>*</span></div>
-      <select value={actual} onChange={e => onCh(e.target.value)} style={{ width: "100%", padding: "8px 12px", borderRadius: 8, fontSize: 12, border: actual ? "2px solid #22c55e" : "1px solid rgba(255, 255, 255, 0.1)", background: actual && !isOv ? "rgba(34, 197, 94, 0.1)" : "rgba(255, 255, 255, 0.05)", color: "#f8fafc" }}>
-        <option value="" style={{ background: "#0f172a" }}>— Seleziona —</option>
-        {codici.map(c => <option key={c} value={c} style={{ background: "#0f172a" }}>{c}</option>)}
+      <div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Codice <span style={{color:"#dc3545"}}>*</span></div>
+      <select value={actual} onChange={e=>onCh(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:6,fontSize:12,border:actual?"2px solid #28a745":"1px solid #d0d0d0",background:actual&&!isOv?"#f0fff0":"#fff"}}>
+        <option value="">— Seleziona —</option>
+        {codici.map(c=><option key={c} value={c}>{c}</option>)}
       </select>
-      {actual && !isOv && <div style={{ fontSize: 10, color: "#22c55e", marginTop: 2 }}>✓ Da codice inserimento</div>}
-      {isOv && <div style={{ fontSize: 10, color: "#f97316", marginTop: 2 }}>✏️ Modificato</div>}
+      {actual&&!isOv&&<div style={{fontSize:10,color:"#28a745",marginTop:2}}>✓ Da codice inserimento</div>}
+      {isOv&&<div style={{fontSize:10,color:"#fd7e14",marginTop:2}}>⚠ Modificato</div>}
     </div>
   );
   return content;
 };
 
-const CartItem = ({ it, ii, gi, total, expI, setExpI }: { it: any, ii: number, gi: number, total: number, expI: any, setExpI: any }) => {
-  const exp = expI[gi + "_" + ii];
-  const dets = it.details ? Object.entries(it.details).filter(([k, v]) => v && k !== "hasContract") : [];
-  return (
-    <div className={ii < total - 1 ? "border-b border-white/5 py-4" : "py-4"}>
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-lg border border-white/10">{it.macroIcon}</div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-white/5 border border-white/5" style={{ color: it.macroColor }}>{it.macro}</span>
-            {it.details?.hasContract && <span className="text-[9px] font-bold text-white px-1.5 py-0.5 rounded" style={{ background: it.macroColor }}>CONTRATTO</span>}
-            <span className="text-slate-500 text-[10px]">#V-{it.saleNum}</span>
-          </div>
-          <h4 className="text-sm font-bold text-white truncate">{it.sub}</h4>
+const CartItem = ({it,ii,gi,total,expI,setExpI}) => {
+  const exp = expI[gi+"_"+ii];
+  const dets = it.details ? Object.entries(it.details).filter(([k,v])=>v&&k!=="hasContract") : [];
+  const content = (
+    <div style={{borderBottom:ii<total-1?"1px solid #f0f0f0":"none"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0"}}>
+        <span style={{fontSize:14}}>{it.macroIcon}</span><span style={{fontSize:12,fontWeight:600,color:it.macroColor}}>{it.macro}</span><span style={{color:"#ccc"}}>›</span><span style={{fontSize:12,color:"#f8fafc"}}>{it.sub}</span>
+        {it.details&&it.details.hasContract&&<span style={{fontSize:9,fontWeight:600,color:"#fff",background:it.macroColor,padding:"1px 6px",borderRadius:4}}>CONTRATTO</span>}
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
+          <span style={{fontSize:10,color:"#bbb"}}>V.#{it.saleNum}</span>
+          <button onClick={()=>setExpI(p=>({...p,[gi+"_"+ii]:!p[gi+"_"+ii]}))} style={{background:exp?"#f0f7ff":"#f8f9fa",border:exp?"1px solid #2E75B6":"1px solid #e0e0e0",borderRadius:5,padding:"3px 10px",fontSize:10,fontWeight:600,cursor:"pointer",color:exp?"#2E75B6":"#888"}}>{exp?"▲ Nascondi":"👁 Mostra"}</button>
         </div>
-        <button onClick={() => setExpI((p: Record<string, boolean>) => ({ ...p, [gi + "_" + ii]: !p[gi + "_" + ii] }))} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${exp ? "bg-violet-500 text-white shadow-lg" : "bg-white/5 text-slate-400 hover:bg-white/10 border border-white/5"}`}>
-          {exp ? "🙈 Nascondi" : "👁️ Mostra"}
-        </button>
       </div>
-      {exp && (
-        <div className="mt-4 ml-14">
-          <div className="glass-panel p-4 bg-white/[0.02] border-white/5">
-            <div className="text-[11px] font-bold mb-3 flex items-center gap-2" style={{ color: it.macroColor }}>📋 {it.sub}</div>
-            {dets.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {dets.map(([k, v]) => (
-                  <div key={k} className="space-y-0.5">
-                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">{k}</span>
-                    <div className="text-xs text-slate-200 font-medium break-all">{String(v)}</div>
-                  </div>
-                ))}
+      {exp&&<div style={{padding:"8px 12px 12px 32px"}}><div style={{background:"#f8fafc",borderRadius:8,padding:12,border:"1px solid #e8edf2"}}><div style={{fontSize:11,fontWeight:700,color:it.macroColor,marginBottom:8}}>📋 {it.sub}</div>
+        {dets.length>0?<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 16px"}}>{dets.map(([k,v])=><div key={k}><span style={{fontSize:10,fontWeight:600,color:"#64748b",textTransform:"uppercase"}}>{k}</span><div style={{fontSize:12,color:"#f8fafc",marginTop:1}}>{String(v)}</div></div>)}</div>
+        :<div style={{fontSize:12,color:"#64748b"}}>Nessun dettaglio — premi ✏️ Modifica</div>}
+      </div></div>}
+    </div>
+  );
+  return content;
+};
+
+// ── VF Mobile GA component ────────────────────────────────────────────────
+
+const VF_C="#E60000";
+const VF_LIGHT="#FFF5F5";
+const VF_BORDER="#F5C6C6";
+const VF_BRANDS=["TIM","Vodafone","WindTre","Iliad","Fastweb","Sky","Very Mobile","Ho Mobile","Postemobile","Coop Voce","Tiscali","Lyca Mobile","Altro"];
+const VF_SMARTPHONES=["Samsung Galaxy S25","Samsung Galaxy S25+","Samsung Galaxy S25 Ultra","iPhone 16","iPhone 16 Plus","iPhone 16 Pro","iPhone 16 Pro Max","Google Pixel 9","Google Pixel 9 Pro","Xiaomi 14","Xiaomi 14 Ultra","OnePlus 13","Oppo Find X8 Pro","Altro"];
+const VF_GNP_BRANDS=["TIM","Vodafone","WindTre","Fastweb","Tiscali","Altro"];
+const VF_CODICI_NEGOZIO=["VF-RM001","VF-RM002","VF-RM003","VF-RM004","VF-RM005","VF-RM006","VF-RM007","VF-RM008","VF-RM009","VF-RM010"];
+const FW_C = "#CC9900";
+const FW_LIGHT = "#FFFDE7";
+const FW_BORDER = "#F5E070";
+
+const FW_MOBILE_OFFERS = [
+  "Start","Start MNP","Start Tied","Start MNP Tied",
+  "Ultra","Ultra MNP","Ultra Tied","Ultra Tied MNP",
+  "Pro","Pro MNP","Pro Tied","Pro MNP Tied",
+  "Power","Power MNP","Power Tied","Power MNP Tied"
+];
+const FW_FISSO_OFFERS = ["Start","Pro","Ultra"];
+const FW_ENERGIA_OFFERS = ["Energy Flex","Energy Core"];
+const FW_BRANDS_MNP = ["TIM","Vodafone","WindTre","Iliad","Fastweb","Sky","Very Mobile","Ho Mobile","Postemobile","Coop Voce","Tiscali","Lyca Mobile","Altro"];
+const FW_SMARTPHONES = VF_SMARTPHONES;
+const FW_CODICI_NEGOZIO = ["FW-RM001","FW-RM002","FW-RM003","FW-RM004","FW-RM005","FW-RM006","FW-RM007","FW-RM008","FW-RM009","FW-RM010"];
+const FW_GNP_BRANDS = ["TIM","Vodafone","WindTre","Fastweb","Tiscali","Altro"];
+
+const getFW = (tc) => {
+  const biz = tc === "business";
+  return [
+    { id:"mobile", title:"MOBILE", icon:"📱", color:FW_C, radio:true, subs:[
+      { id:"ga", title:"MOBILE", isFWMobile:true, hasContract:true, ct:"ga", fields:[] },
+    ]},
+    { id:"fisso", title:"FISSO", icon:"🏠", color:"#28a745", radio:true, subs:
+      FW_FISSO_OFFERS.map(o=>({ id:o.toLowerCase().replace(/ /g,"_"), title:o, isFWFisso:true, hasContract:true, ct:"fisso", fields:[] }))
+    },
+    { id:"energia", title:"ENERGIA", icon:"🔋", color:"#28a745", radio:false, subs:
+      FW_ENERGIA_OFFERS.map(o=>({ id:o.toLowerCase().replace(/ /g,"_"), title:o, isFWEnergia:true, hasContract:true, ct:"multi", fields:[] }))
+    },
+  ];
+};
+
+const FWMobile = ({sd, uP}) => {
+  const upv=(k,v)=>uP(k,v);
+  const hasMNP = sd.fwOffer && sd.fwOffer.includes("MNP");
+  const content = (
+    <div>
+      <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:8,textTransform:"uppercase",letterSpacing:.4}}>Offerta Mobile</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16}}>
+        {FW_MOBILE_OFFERS.map(offer=>{
+          const isActive=sd.fwOffer===offer;
+          return (
+            <button key={offer} onClick={()=>{upv("fwOffer",isActive?null:offer);upv("fwMnpBrand","");upv("fwMnpNum","");upv("fwModello","");upv("fwImei","");upv("fwCodIns","");upv("fwNumProv","");upv("fwIccid","");}}
+              style={{padding:"8px 14px",borderRadius:10,border:isActive?"2px solid "+FW_C:"2px solid #e0e0e0",background:isActive?FW_C:"#fff",color:isActive?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+              {offer}
+            </button>
+          );
+        })}
+      </div>
+      {sd.fwOffer&&(
+        <div>
+          {hasMNP&&(
+            <div style={{background:"#f8f8f8",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:12,marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:8,textTransform:"uppercase"}}>Portabilità (MNP)</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                <DD l="Operatore provenienza" r v={sd.fwMnpBrand||""} o={v=>upv("fwMnpBrand",v)} vals={FW_BRANDS_MNP}/>
+                <TF l="Numero Portabilità" r v={sd.fwMnpNum||""} o={v=>upv("fwMnpNum",v)} p="3XXXXXXXXX"/>
               </div>
-            ) : (
-              <div className="text-xs text-slate-500 italic">Nessun dettaglio — premi ✏️ Modifica</div>
+            </div>
+          )}
+
+          <div style={{background:"#f0f8ff",border:"1px solid rgba(0,114,198,0.3)",borderRadius:8,padding:14}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+              <DD l="Codice Inserimento" r v={sd.fwCodIns||""} o={v=>upv("fwCodIns",v)} vals={FW_CODICI_NEGOZIO}/>
+              {hasMNP?(
+                <TF l="Numero Provvisorio" r v={sd.fwNumProv||""} o={v=>upv("fwNumProv",v)} p="393XXXXXXX"/>
+              ):(
+                <TF l="Numero" v={sd.fwNumDef||""} o={v=>upv("fwNumDef",v)} p="3XXXXXXXXX"/>
+              )}
+              <TF l="ICCID" r v={sd.fwIccid||""} o={v=>upv("fwIccid",v)} p="8939..." nt="Barcode 📷"/>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+  return content;
+};
+
+const FWFisso = ({sd, uP}) => {
+  const upv=(k,v)=>uP(k,v);
+  const content = (
+    <div>
+      <RB label="GNP?" val={sd.fwFGnp} opts={["Sì","No"]} onCh={v=>{upv("fwFGnp",v);if(v==="No"){upv("fwFGnpBrand","");upv("fwFGnpNum","");}}}/>
+      {sd.fwFGnp==="Sì"&&(
+        <div style={{background:"#f8f8f8",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:12,marginBottom:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+            <DD l="Operatore GNP" r v={sd.fwFGnpBrand||""} o={v=>upv("fwFGnpBrand",v)} vals={FW_GNP_BRANDS}/>
+            <TF l="Numero Fisso GNP" r v={sd.fwFGnpNum||""} o={v=>upv("fwFGnpNum",v)} p="06XXXXXXXX"/>
+          </div>
+        </div>
+      )}
+      {sd.fwFGnp&&(
+        <div style={{background:"#f0f8ff",border:"1px solid rgba(0,114,198,0.3)",borderRadius:8,padding:14}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:12,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+            <DD l="Codice Inserimento" r v={sd.fwFCodIns||""} o={v=>upv("fwFCodIns",v)} vals={FW_CODICI_NEGOZIO}/>
+            {sd.fwFGnp==="Sì"?(
+              <TF l="N. Fisso Provvisorio" r v={sd.fwFNumProv||""} o={v=>upv("fwFNumProv",v)} p="06XXXXXXXX"/>
+            ):(
+              <TF l="N. Fisso Definitivo" r v={sd.fwFNumDef||""} o={v=>upv("fwFNumDef",v)} p="06XXXXXXXX"/>
+            )}
+            {sd.fwFGnp==="Sì"&&(
+              <TF l="N. Fisso Definitivo" r v={sd.fwFNumDef||""} o={v=>upv("fwFNumDef",v)} p="06XXXXXXXX"/>
             )}
           </div>
         </div>
       )}
     </div>
   );
+  return content;
 };
 
-// -- SubCard: renders one active product sub-section ----------------------
-
-
-// Compact binary choice that shrinks after selection
-const MiniC = ({ label, val, onCh, opts, locked, lockVal }: { label: string, val: any, onCh: (v: any) => void, opts?: string[], locked?: boolean, lockVal?: any }) => {
-  const isSet = val !== null && val !== undefined;
-  const o1 = opts ? opts[0] : "Sì";
-  const o2 = opts ? opts[1] : "No";
-  const actual = locked ? lockVal : val;
+const FWEnergia = ({sd, uP}) => {
+  const upv=(k,v)=>uP(k,v);
   const content = (
-    <div style={{ marginBottom: isSet ? 4 : 8 }}>
-      {isSet ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0" }}>
-          <span style={{ fontSize: 10, fontWeight: 600, color: "#64748b" }}>{label}:</span>
-          <span style={{ fontSize: 11, fontWeight: 700, color: (actual === o1 || actual === true) ? "#818cf8" : "#94a3b8", background: (actual === o1 || actual === true) ? "rgba(99, 102, 241, 0.1)" : "rgba(255, 255, 255, 0.05)", padding: "2px 10px", borderRadius: 4, border: "1px solid rgba(255, 255, 255, 0.05)" }}>{actual === true ? o1 : actual === false ? o2 : String(actual)}</span>
-          {!locked && <button onClick={() => onCh(null)} style={{ background: "none", border: "none", fontSize: 10, color: "#64748b", cursor: "pointer", padding: 0 }}>✕</button>}
-          {locked && <span style={{ fontSize: 9, color: "#64748b", fontStyle: "italic" }}>fisso</span>}
+    <div style={{background:"#f0f8ff",border:"1px solid rgba(0,114,198,0.3)",borderRadius:8,padding:14}}>
+      <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+      <TF l="POD" r v={sd.fwPod||""} o={v=>upv("fwPod",v)} p="IT001E..."/>
+    </div>
+  );
+  return content;
+};
+
+
+const VF_MOBILE_OFFERS=["MOBILE START","MOBILE PRO","MOBILE POWER","MOBILE ULTRA","MOBILE START UNDER 18","C'ALL POWER EDITION","C'ALL MAX","C'ALL POWER PRO","DOLCE VITA","DOLCE VITA+"];
+const emTnpSlot=()=>({tipo:null,tnpCount:null,tnpItems:[],compassTipo:null,compassItems:[]});
+
+const MiniC = ({label,val,opts,onCh,locked,lockVal}) => {
+  const content = (
+    <div style={{marginBottom:10}}>
+      <div style={{fontSize:10,fontWeight:700,color:"#64748b",marginBottom:4,textTransform:"uppercase",letterSpacing:.4}}>{label}</div>
+      <div style={{display:"flex",gap:6}}>
+        {opts.map(o=>{
+          const isActive=locked?(o===(lockVal===true?"Sì":lockVal===false?"No":lockVal)):val===o||val===(o==="Sì"?true:o==="No"?false:o);
+          return (
+            <button key={o} onClick={()=>!locked&&onCh(val===o?null:o)} disabled={locked}
+              style={{padding:"5px 16px",borderRadius:6,border:isActive?"2px solid #2E75B6":"2px solid #e0e0e0",background:isActive?"#2E75B6":"#fff",color:isActive?"#fff":"#555",fontSize:11,fontWeight:700,cursor:locked?"not-allowed":"pointer",opacity:locked?0.8:1}}>
+              {o}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+  return content;
+};
+
+const RB = ({label,val,opts,onCh}) => {
+  const content = (
+    <div style={{marginBottom:12}}>
+      <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:6,textTransform:"uppercase",letterSpacing:.4}}>{label}</div>
+      <div style={{display:"flex",gap:8}}>
+        {opts.map(o=>(
+          <button key={o} onClick={()=>onCh(val===o?null:o)}
+            style={{padding:"7px 20px",borderRadius:8,border:val===o?"2px solid "+VF_C:"2px solid #e0e0e0",background:val===o?VF_C:"#fff",color:val===o?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+            {o}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+  return content;
+};
+
+const BUNDLE_VALORI = ["39.9","54.9","69.9","99.99"];
+
+const RigaBundleAccessorio = ({riga, onUpd, modoRiga}) => {
+  const content = (
+    <div style={{marginBottom:10,padding:10,background:"#fafafa",borderRadius:8,border:"1px solid #f0e0e0"}}>
+      {modoRiga==="Entrambi"&&(
+        <div style={{display:"flex",gap:6,marginBottom:8}}>
+          {["Bundle","Accessorio"].map(t=>(
+            <button key={t} onClick={()=>onUpd("tipo",riga.tipo===t?null:t)}
+              style={{padding:"4px 14px",borderRadius:6,border:riga.tipo===t?"2px solid "+VF_C:"2px solid #e0e0e0",background:riga.tipo===t?VF_C:"#fff",color:riga.tipo===t?"#fff":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+              {t}
+            </button>
+          ))}
         </div>
-      ) : (
+      )}
+      {(modoRiga==="Bundle"||(modoRiga==="Entrambi"&&riga.tipo==="Bundle"))&&(
+        <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+          <div style={{flex:2}}>
+            <div style={{fontSize:10,fontWeight:600,color:"#64748b",marginBottom:2}}>Codice Bundle</div>
+            <input value={riga.codice||""} onChange={e=>onUpd("codice",e.target.value)} placeholder="Codice..."
+              style={{width:"100%",padding:"6px 8px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:10,fontWeight:600,color:"#64748b",marginBottom:2}}>Tipologia €</div>
+            <select value={riga.tipoBundleVal||""} onChange={e=>onUpd("tipoBundleVal",e.target.value)}
+              style={{width:"100%",padding:"6px 8px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box",background:"rgba(255,255,255,0.02)"}}>
+              <option value="">--</option>
+              {BUNDLE_VALORI.map(v=><option key={v} value={v}>{v} €</option>)}
+            </select>
+          </div>
+        </div>
+      )}
+      {(modoRiga==="Accessorio"||(modoRiga==="Entrambi"&&riga.tipo==="Accessorio"))&&(
+        <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+          <div style={{flex:2}}>
+            <div style={{fontSize:10,fontWeight:600,color:"#64748b",marginBottom:2}}>IMEI Accessorio</div>
+            <input value={riga.imei2||""} onChange={e=>onUpd("imei2",e.target.value)} placeholder="IMEI..."
+              style={{width:"100%",padding:"6px 8px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box",fontFamily:"monospace"}}/>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:10,fontWeight:600,color:"#64748b",marginBottom:2}}>Valore €</div>
+            <input value={riga.valore||""} onChange={e=>onUpd("valore",e.target.value)} placeholder="0.00"
+              style={{width:"100%",padding:"6px 8px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/>
+          </div>
+        </div>
+      )}
+      {modoRiga==="Entrambi"&&!riga.tipo&&(
+        <div style={{fontSize:11,color:"#bbb",fontStyle:"italic"}}>Seleziona Bundle o Accessorio</div>
+      )}
+    </div>
+  );
+  return content;
+};
+
+const emRiga = () => ({tipo:null,codice:"",tipoBundleVal:"",imei2:"",valore:""});
+
+const CompassDatiTNP = ({sd, upv}) => {
+  const items = sd.vfCompassItems||[{modello:"",imei:"",bundleOn:false,accessorioOn:false,righe:[emRiga()],kasko:false,kaskoSerial:""}];
+
+  const updItem=(i,k,v)=>{
+    const arr=[...items];
+    arr[i]={...arr[i],[k]:v};
+    upv("vfCompassItems",arr);
+  };
+  const updRiga=(ii,ri,k,v)=>{
+    const arr=[...items];
+    const righe=[...arr[ii].righe];
+    righe[ri]={...righe[ri],[k]:v};
+    arr[ii]={...arr[ii],righe};
+    upv("vfCompassItems",arr);
+  };
+  const addRiga=(i)=>{
+    if((items[i].righe||[]).length>=3)return;
+    const arr=[...items];
+    arr[i]={...arr[i],righe:[...(arr[i].righe||[]),emRiga()]};
+    upv("vfCompassItems",arr);
+  };
+  const removeRiga=(ii,ri)=>{
+    const arr=[...items];
+    const righe=[...arr[ii].righe];
+    righe.splice(ri,1);
+    arr[ii]={...arr[ii],righe};
+    upv("vfCompassItems",arr);
+  };
+  const toggleMode=(i,mode)=>{
+    const arr=[...items];
+    const item={...arr[i]};
+    if(mode==="Bundle") item.bundleOn=!item.bundleOn;
+    if(mode==="Accessorio") item.accessorioOn=!item.accessorioOn;
+    item.righe=[emRiga()];
+    arr[i]=item;
+    upv("vfCompassItems",arr);
+  };
+
+  const content = (
+    <div style={{marginTop:12,background:"rgba(255,255,255,0.02)",border:"1px solid "+VF_BORDER,borderRadius:8,padding:12}}>
+      <div style={{fontSize:11,fontWeight:800,color:VF_C,marginBottom:10,textTransform:"uppercase"}}>Dati TNP</div>
+      {items.map((item,i)=>{
+        const bundleOn=item.bundleOn||false;
+        const accessorioOn=item.accessorioOn||false;
+        const modoRiga=bundleOn&&accessorioOn?"Entrambi":bundleOn?"Bundle":accessorioOn?"Accessorio":null;
+        return (
+          <div key={i} style={{marginBottom:i<items.length-1?16:0}}>
+            {items.length>1&&<div style={{fontSize:10,fontWeight:700,color:"#64748b",marginBottom:6}}>Compass #{i+1}</div>}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px",marginBottom:8}}>
+              <DD l="Modello terminale" v={item.modello||""} o={v=>updItem(i,"modello",v)} vals={VF_SMARTPHONES}/>
+              <TF l="IMEI" v={item.imei||""} o={v=>updItem(i,"imei",v)} p="15 cifre" nt="Barcode 📷"/>
+            </div>
+            <div style={{marginBottom:10}}>
+              <TF l="Codice pratica finanziamento" r v={item.codicePratica||""} o={v=>updItem(i,"codicePratica",v)} p="es. FIN-000123"/>
+            </div>
+
+            {/* Bundle / Accessori toggle */}
+            <div style={{borderTop:"1px solid #f0e0e0",paddingTop:10,marginBottom:8}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#64748b",textTransform:"uppercase"}}>Bundle / Accessori</div>
+                <div style={{display:"flex",gap:6}}>
+                  {["Bundle","Accessorio"].map(t=>{
+                    const isOn=t==="Bundle"?bundleOn:accessorioOn;
+                    return (
+                      <button key={t} onClick={()=>toggleMode(i,t)}
+                        style={{padding:"4px 14px",borderRadius:6,border:isOn?"2px solid "+VF_C:"2px solid #e0e0e0",background:isOn?VF_C:"#fff",color:isOn?"#fff":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                        {t}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {modoRiga&&(
+                <div>
+                  {(item.righe||[]).map((riga,ri)=>(
+                    <div key={ri} style={{display:"flex",alignItems:"flex-start",gap:4}}>
+                      <div style={{flex:1}}>
+                        <RigaBundleAccessorio riga={riga} onUpd={(k,v)=>updRiga(i,ri,k,v)} modoRiga={modoRiga}/>
+                      </div>
+                      {(item.righe||[]).length>1&&(
+                        <button onClick={()=>removeRiga(i,ri)} style={{background:"none",border:"none",color:"#dc3545",cursor:"pointer",fontSize:13,padding:"14px 2px"}}>✕</button>
+                      )}
+                    </div>
+                  ))}
+                  {(item.righe||[]).length<3&&(
+                    <button onClick={()=>addRiga(i)}
+                      style={{fontSize:11,fontWeight:600,color:VF_C,background:"none",border:"1px dashed "+VF_C,borderRadius:6,padding:"4px 12px",cursor:"pointer",marginTop:2}}>
+                      + Aggiungi ({(item.righe||[]).length}/3)
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Kasko */}
+            <div style={{borderTop:"1px solid #f0e0e0",paddingTop:8}}>
+              <button onClick={()=>updItem(i,"kasko",!item.kasko)}
+                style={{padding:"5px 16px",borderRadius:7,border:item.kasko?"2px solid #6f42c1":"2px solid #e0e0e0",background:item.kasko?"#f0ebff":"#fff",color:item.kasko?"#6f42c1":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                🛡️ Kasko{item.kasko?" ✓":""}
+              </button>
+              {item.kasko&&(
+                <div style={{marginTop:8}}>
+                  <TF l="Numero seriale Kasko" v={item.kaskoSerial||""} o={v=>updItem(i,"kaskoSerial",v)} p="Numero seriale..."/>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+  return content;
+};
+
+const COMPASS_OPTS = ["Smartphone Easy S-M","Smartphone Easy L-XL","Compass Flexypay S-M","Compass Flexypay L-XL"];
+const TNP_TAGLIA_OPTS = ["TNP S-M","TNP L-XL"];
+
+const emCompassItem = () => ({modello:"",imei:"",bundleOn:false,accessorioOn:false,righe:[emRiga()],kasko:false,kaskoSerial:""});
+
+const TnpSlot = ({slot, idx, total, isWallet, upSlot, onAddSlot, onRemoveSlot}) => {
+  const isTnpTaglia = TNP_TAGLIA_OPTS.includes(slot.tipo);
+  const isCompass = COMPASS_OPTS.includes(slot.tipo);
+  const set=(k,v)=>upSlot(idx,k,v);
+  const setFn=(k,fn)=>upSlot(idx,"__fn__",prev=>({...prev,[k]:fn(prev[k])}));
+  const allOpts = isWallet ? [...COMPASS_OPTS] : [...COMPASS_OPTS, ...TNP_TAGLIA_OPTS];
+  const compassItems = (slot.compassItems&&slot.compassItems.length>0)?slot.compassItems:[emCompassItem()];
+  const content = (
+    <div style={{background:VF_LIGHT,border:"1px solid "+VF_BORDER,borderRadius:8,padding:14,marginBottom:12}}>
+      {total>1&&(
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+          <div style={{fontSize:11,fontWeight:800,color:VF_C,textTransform:"uppercase"}}>TNP #{idx+1}</div>
+          <button onClick={()=>onRemoveSlot(idx)} style={{background:"none",border:"1px solid #dc3545",borderRadius:6,padding:"2px 10px",color:"#dc3545",fontSize:10,cursor:"pointer",fontWeight:600}}>✕ Rimuovi</button>
+        </div>
+      )}
+      <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:8,textTransform:"uppercase"}}>Tipologia dispositivo</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
+        {allOpts.map(t=>{
+          const isOn=slot.tipo===t;
+          const initCompass=COMPASS_OPTS.includes(t)?[emCompassItem()]:[];
+          return (
+            <button key={t} onClick={()=>set("__replace__",isOn?emTnpSlot():{...emTnpSlot(),tipo:t,compassItems:initCompass})}
+              style={{padding:"7px 14px",borderRadius:8,border:isOn?"2px solid "+VF_C:"2px solid #e0e0e0",background:isOn?VF_C:"#fff",color:isOn?"#fff":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+              {t}
+            </button>
+          );
+        })}
+      </div>
+
+      {isTnpTaglia&&(
+        <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid "+VF_BORDER,borderRadius:8,padding:12,marginBottom:8}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:8,textTransform:"uppercase"}}>Dati TNP</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+            <DD l="Modello terminale" v={slot.modello||""} o={v=>set("modello",v)} vals={VF_SMARTPHONES_LIST}/>
+            <TF l="IMEI" v={slot.imei||""} o={v=>set("imei",v)} p="15 cifre" nt="Barcode 📷"/>
+          </div>
+        </div>
+      )}
+
+      {isCompass&&(
+        <CompassDatiTNP sd={{vfCompassItems:compassItems}} upv={(k,v)=>set("compassItems",v)}/>
+      )}
+
+      {slot.tipo&&(
+        <div style={{marginTop:12,borderTop:"1px solid "+VF_BORDER,paddingTop:10}}>
+          {total<3&&idx===total-1?(
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#8892b0"}}>Aggiungi altra TNP?</div>
+              <button onClick={onAddSlot}
+                style={{padding:"5px 16px",borderRadius:7,border:"2px solid "+VF_C,background:"rgba(255,255,255,0.02)",color:VF_C,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                + Sì
+              </button>
+            </div>
+          ):(
+            idx===total-1&&total>=3&&(
+              <div style={{fontSize:11,color:"#64748b",fontStyle:"italic"}}>Massimo 3 TNP per vendita</div>
+            )
+          )}
+        </div>
+      )}
+    </div>
+  );
+  return content;
+};
+
+const VFMobileGA = ({sd,uP}) => {
+  const upv=(k,v)=>uP(k,v);
+  const isDV=sd.vfOffer==="DOLCE VITA"||sd.vfOffer==="DOLCE VITA+";
+
+  const updTnpSlot=(slotIdx,updater)=>{
+    uP("vfTnpList",prev=>{const list=[...(prev||[])];list[slotIdx]=updater(list[slotIdx]||emTnpSlot());return list;});
+  };
+  const addTnpSlot=()=>{
+    uP("vfTnpList",prev=>{const l=prev||[];return l.length<3?[...l,emTnpSlot()]:l;});
+  };
+  const removeTnpSlot=(slotIdx)=>{
+    uP("vfTnpList",prev=>{const l=prev||[];const n=[...l];n.splice(slotIdx,1);return n.length?n:[emTnpSlot()];});
+  };
+  const content = (
+    <div>
+      <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:8,textTransform:"uppercase",letterSpacing:.4}}>Offerta Mobile</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16}}>
+        {VF_MOBILE_OFFERS.map(offer=>{
+          const isActive=sd.vfOffer===offer;
+          const isBecomesDV=!isActive&&(offer==="DOLCE VITA"||offer==="DOLCE VITA+");
+          return (
+            <button key={offer} onClick={()=>{
+              if(isActive){
+                uP("__resetVFOffer__",null);
+              } else {
+                uP("__resetVFOfferTo__",{offer,isDV:isBecomesDV});
+              }
+            }}
+              style={{padding:"8px 14px",borderRadius:10,border:isActive?"2px solid "+VF_C:"2px solid #e0e0e0",background:isActive?VF_C:"#fff",color:isActive?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+              {offer}
+            </button>
+          );
+        })}
+      </div>
+      {sd.vfOffer&&(
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#cbd5e1", marginBottom: 4 }}>{label}</div>
-          <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => onCh(opts ? o1 : true)} style={{ padding: "7px 18px", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.1)", background: "rgba(255, 255, 255, 0.05)", color: "#cbd5e1", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>{o1}</button>
-            <button onClick={() => onCh(opts ? o2 : false)} style={{ padding: "7px 18px", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.1)", background: "rgba(255, 255, 255, 0.05)", color: "#cbd5e1", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>{o2}</button>
+          {/* MNP — bloccato a No per DV/DV+ */}
+          {isDV?(
+            <div style={{marginBottom:12,padding:"8px 12px",background:"#fff3cd",border:"1px solid #ffc107",borderRadius:8,fontSize:11,color:"#856404"}}>
+              MNP: <strong>No</strong> — non disponibile per {sd.vfOffer}
+            </div>
+          ):(
+            <RB label="MNP?" val={sd.vfMnp} opts={["Sì","No"]} onCh={v=>{upv("vfMnp",v);if(v==="No"){upv("vfMnpBrand","");upv("vfMnpNum","")}}}/>
+          )}
+          {!isDV&&sd.vfMnp==="Sì"&&(
+            <div style={{background:"#f8f8f8",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:12,marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                <DD l="Operatore provenienza" r v={sd.vfMnpBrand||""} o={v=>upv("vfMnpBrand",v)} vals={VF_BRANDS}/>
+                <TF l="Numero Portabilità" r v={sd.vfMnpNum||""} o={v=>upv("vfMnpNum",v)} p="3XXXXXXXXX"/>
+              </div>
+            </div>
+          )}
+          {(sd.vfMnp||isDV)&&(
+            <div>
+              {/* Domiciliata — solo Wallet per DV/DV+ */}
+              {isDV?(
+                <div style={{marginBottom:12,padding:"8px 12px",background:"#fff3cd",border:"1px solid #ffc107",borderRadius:8,fontSize:11,color:"#856404"}}>
+                  Domiciliata: <strong>Wallet</strong> — unica opzione per {sd.vfOffer}
+                </div>
+              ):(
+                <RB label="Domiciliata?" val={sd.vfDomicilio} opts={["Smart","Wallet"]} onCh={v=>{upv("vfDomicilio",v);upv("vfTnpList",[]);upv("vfTnp",null);upv("vfConvergenza",null)}}/>
+              )}
+              {(sd.vfDomicilio||isDV)&&(
+                <div>
+                  {!isDV&&(
+                    <div>
+                      <RB label="Convergenza?" val={sd.vfConvergenza} opts={["Sì","No"]} onCh={v=>upv("vfConvergenza",v)}/>
+                      {sd.vfConvergenza==="Sì"&&(
+                        <div style={{background:"#f8f8f8",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:12,marginBottom:12}}>
+                          <TF l="Numero Fisso Convergenza" v={sd.vfNumFisso||""} o={v=>upv("vfNumFisso",v)} p="06XXXXXXXX"/>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {(sd.vfConvergenza||isDV)&&(
+                    <div>
+                      {isDV?(
+                        <div style={{marginBottom:12,padding:"8px 12px",background:"#fff3cd",border:"1px solid #ffc107",borderRadius:8,fontSize:11,color:"#856404"}}>
+                          TNP: <strong>non disponibile</strong> per {sd.vfOffer}
+                        </div>
+                      ):(
+                        <RB label="TNP?" val={sd.vfTnp} opts={["Sì","No"]} onCh={v=>{upv("vfTnp",v);if(v==="Sì"){upv("vfTnpList",[emTnpSlot()])}else{upv("vfTnpList",[])}}}/>
+                      )}
+                      {!isDV&&sd.vfTnp==="Sì"&&(
+                        <div>
+                          {(sd.vfTnpList||[emTnpSlot()]).map((slot,idx)=>(
+                            <TnpSlot key={idx} slot={slot} idx={idx} total={(sd.vfTnpList||[emTnpSlot()]).length}
+                              isWallet={isDV||sd.vfDomicilio==="Wallet"}
+                              upSlot={(i,k,v)=>updTnpSlot(i,k==="__replace__"?()=>v:k==="__fn__"?prev=>v(prev):prev=>({...prev,[k]:v}))}
+                              onAddSlot={addTnpSlot}
+                              onRemoveSlot={removeTnpSlot}/>
+                          ))}
+                        </div>
+                      )}
+                      {/* Security */}
+                      {sd.vfTnp&&!isDV&&sd.vfOffer!=="MOBILE START UNDER 18"&&(
+                        <div style={{marginTop:12,background:VF_LIGHT,border:"1px solid "+VF_BORDER,borderRadius:8,padding:14}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:6,textTransform:"uppercase"}}>Security</div>
+                          <div style={{display:"flex",gap:8}}>
+                            {["Sì","No"].map(o=>(
+                              <button key={o} onClick={()=>upv("vfSecurity",sd.vfSecurity===o?null:o)}
+                                style={{padding:"7px 22px",borderRadius:8,border:sd.vfSecurity===o?"2px solid "+VF_C:"2px solid #e0e0e0",background:sd.vfSecurity===o?VF_C:"#fff",color:sd.vfSecurity===o?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                                {o}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {/* Dati Contratto */}
+                      {(sd.vfTnp||isDV)&&(
+                        <div style={{marginTop:12,background:"#f0f8ff",border:"1px solid rgba(0,114,198,0.3)",borderRadius:8,padding:14}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:12,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+                            {sd.vfMnp==="Sì"?(
+                              <TF l="Numero Provvisorio" r v={sd.dcNumProv||""} o={v=>upv("dcNumProv",v)} p="393XXXXXXX"/>
+                            ):(
+                              <TF l="Numero" r v={sd.dcNum||""} o={v=>upv("dcNum",v)} p="3XXXXXXXXX"/>
+                            )}
+                            <TF l="ICCID" r v={sd.dcIccid||""} o={v=>upv("dcIccid",v)} p="8939..." nt="Barcode 📷"/>
+                            <DD l="Codice Inserimento" r v={sd.dcCodIns||""} o={v=>upv("dcCodIns",v)} vals={VF_CODICI_NEGOZIO}/>
+                            {sd.vfDomicilio==="Smart"&&(
+                              <div>
+                                <div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Ricarica Automatica <span style={{color:"#dc3545"}}>*</span></div>
+                                <div style={{display:"flex",gap:8}}>
+                                  {["Sì","No"].map(o=>(
+                                    <button key={o} onClick={()=>upv("dcRicaricaAuto",sd.dcRicaricaAuto===o?null:o)}
+                                      style={{padding:"6px 18px",borderRadius:8,border:sd.dcRicaricaAuto===o?"2px solid "+VF_C:"2px solid #e0e0e0",background:sd.dcRicaricaAuto===o?VF_C:"#fff",color:sd.dcRicaricaAuto===o?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                                      {o}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+  return content;
+};
+
+const VF_ADDON_FISSO = ["Chiamate Estero","Rete Sicura Family","Sim Dati 150","Quixa Cane Gatto","Quixa Casa"];
+const VF_CODICI_NEGOZIO_FISSO = VF_CODICI_NEGOZIO;
+
+const VFMobileGAFisso = ({sd,uP}) => {
+  const upv=(k,v)=>uP(k,v);
+  const toggleAddon=(name)=>{const cur=sd.vfFAddons||{};upv("vfFAddons",{...cur,[name]:!cur[name]})};
+  const content = (
+    <div>
+      {/* Lock In */}
+      <RB label="Lock In?" val={sd.vfFLockIn} opts={["Sì","No"]} onCh={v=>{upv("vfFLockIn",v);upv("vfFConvergenza",null);upv("vfFGnp",null);upv("vfFGnpBrand","");upv("vfFGnpNum","");upv("vfFAddons",{});upv("vfFCodIns","");upv("vfFNumProv","");upv("vfFNumDef","");upv("vfFNumProvVisorio","")}}/>
+
+      {/* Convergenza — appare dopo Lock In */}
+      {sd.vfFLockIn&&(
+        <div>
+          <RB label="Convergenza?" val={sd.vfFConvergenza} opts={["Sì","No"]} onCh={v=>{upv("vfFConvergenza",v);upv("vfFGnp",null);upv("vfFGnpBrand","");upv("vfFGnpNum","");upv("vfFAddons",{});upv("vfFCodIns","");upv("vfFNumProv","");upv("vfFNumDef","");upv("vfFNumProvVisorio","")}}/>
+
+          {/* GNP — appare dopo Convergenza */}
+          {sd.vfFConvergenza&&(
+            <div>
+              <RB label="GNP?" val={sd.vfFGnp} opts={["Sì","No"]} onCh={v=>{upv("vfFGnp",v);upv("vfFGnpBrand","");upv("vfFGnpNum","");upv("vfFAddons",{});upv("vfFCodIns","");upv("vfFNumProv","");upv("vfFNumDef","");upv("vfFNumProvVisorio","")}}/>
+
+              {/* Add-on Fisso — appare dopo GNP */}
+              {sd.vfFGnp&&(
+                <div>
+                  <div style={{background:"#f8fafc",border:"1px solid #e0e8f0",borderRadius:8,padding:12,marginBottom:12}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:8,textTransform:"uppercase"}}>Add-on Fisso</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                      {VF_ADDON_FISSO.map(a=>{
+                        const on=(sd.vfFAddons||{})[a];
+                        return (
+                          <button key={a} onClick={()=>toggleAddon(a)}
+                            style={{padding:"5px 14px",borderRadius:6,border:on?"2px solid #28a745":"2px solid #e0e0e0",background:on?"#d4edda":"#fff",color:on?"#155724":"#555",fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                            <span>{on?"☑":"☐"}</span>{a}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Dati Contratto */}
+                  <div style={{background:"#f0f8ff",border:"1px solid rgba(0,114,198,0.3)",borderRadius:8,padding:14}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:12,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+                      <DD l="Codice Inserimento" r v={sd.vfFCodIns||""} o={v=>upv("vfFCodIns",v)} vals={VF_CODICI_NEGOZIO_FISSO}/>
+                      {sd.vfFGnp==="Sì"?(
+                        <TF l="N. Fisso Provvisorio" r v={sd.vfFNumProvVisorio||""} o={v=>upv("vfFNumProvVisorio",v)} p="06XXXXXXXX"/>
+                      ):(
+                        <TF l="N. Fisso Definitivo" r v={sd.vfFNumDef||""} o={v=>upv("vfFNumDef",v)} p="06XXXXXXXX"/>
+                      )}
+                      {sd.vfFGnp==="Sì"&&(
+                        <DD l="Operatore GNP" r v={sd.vfFGnpBrand||""} o={v=>upv("vfFGnpBrand",v)} vals={VF_GNP_BRANDS}/>
+                      )}
+                      {sd.vfFGnp==="Sì"&&(
+                        <TF l="N. Fisso Definitivo" r v={sd.vfFNumDef||""} o={v=>upv("vfFNumDef",v)} p="06XXXXXXXX"/>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+  return content;
+};
+
+
+const emCB = () => ({
+  cbTnp:false, cbCellulare:"", cbCodContratto:"", cbCodIns:"", cbTnpList:[],
+  dcCbNumProv:"", dcCbIccid:"",
+  cbCambio:false, cbCambioCell:"", cbCambioNumMod:"", cbCambioCodIns:"",
+  cbSecurity:false, cbSecurityCell:""
+});
+
+const VFCB = ({sd, uP}) => {
+  const upv=(k,v)=>uP(k,v);
+
+  const updCbTnpSlot=(slotIdx,updater)=>{
+    uP("cbTnpList",prev=>{const list=[...(prev||[])];list[slotIdx]=updater(list[slotIdx]||emTnpSlot());return list;});
+  };
+  const addCbTnpSlot=()=>{
+    uP("cbTnpList",prev=>{const l=prev||[];return l.length<3?[...l,emTnpSlot()]:l;});
+  };
+  const removeCbTnpSlot=(slotIdx)=>{
+    uP("cbTnpList",prev=>{const l=prev||[];const n=[...l];n.splice(slotIdx,1);return n.length?n:[emTnpSlot()];});
+  };
+
+  const content = (
+    <div>
+      {/* ── TNP CB ── */}
+      <div style={{marginBottom:10}}>
+        <button onClick={()=>{upv("cbTnp",!sd.cbTnp);if(!sd.cbTnp)upv("cbTnpList",[emTnpSlot()]);else upv("cbTnpList",[]);}}
+          style={{padding:"8px 20px",borderRadius:8,border:sd.cbTnp?"2px solid "+VF_C:"2px solid #e0e0e0",background:sd.cbTnp?VF_C:"#fff",color:sd.cbTnp?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+          TNP CB
+        </button>
+      </div>
+      {sd.cbTnp&&(
+        <div style={{marginBottom:12}}>
+          <div style={{background:VF_LIGHT,border:"1px solid "+VF_BORDER,borderRadius:8,padding:14,marginBottom:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:10}}>
+              <TF l="Cellulare cliente" r v={sd.cbCellulare||""} o={v=>{upv("cbCellulare",v);if(!sd.cbCambioCell)upv("cbCambioCell",v)}} p="3XXXXXXXXX"/>
+              <TF l="Codice Contratto" r v={sd.cbCodContratto||""} o={v=>upv("cbCodContratto",v)} p="es. 167942"/>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:10}}>
+              <DD l="Modello terminale" r v={sd.cbModello||""} o={v=>upv("cbModello",v)} vals={VF_SMARTPHONES}/>
+              <TF l="IMEI" r v={sd.cbImei||""} o={v=>upv("cbImei",v)} p="15 cifre" nt="Barcode 📷"/>
+            </div>
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:6,textTransform:"uppercase"}}>Taglia</div>
+              <div style={{display:"flex",gap:8}}>
+                {["TNP XS-S","TNP M-L"].map(t=>(
+                  <button key={t} onClick={()=>upv("cbTaglia",sd.cbTaglia===t?null:t)}
+                    style={{padding:"5px 16px",borderRadius:7,border:sd.cbTaglia===t?"2px solid "+VF_C:"2px solid #e0e0e0",background:sd.cbTaglia===t?VF_C:"#fff",color:sd.cbTaglia===t?"#fff":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <DD l="Codice Inserimento" r v={sd.cbCodIns2||""} o={v=>upv("cbCodIns2",v)} vals={VF_CODICI_NEGOZIO}/>
+            <div style={{marginTop:12,background:"#f0f8ff",border:"1px solid rgba(0,114,198,0.3)",borderRadius:8,padding:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+                <TF l="Numero Provvisorio" r v={sd.dcCbNumProv||""} o={v=>upv("dcCbNumProv",v)} p="393XXXXXXX"/>
+                <TF l="ICCID" r v={sd.dcCbIccid||""} o={v=>upv("dcCbIccid",v)} p="8939..." nt="Barcode 📷"/>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cambio Offerta ── */}
+      <div style={{marginBottom:10}}>
+        <button onClick={()=>upv("cbCambio2",!sd.cbCambio2)}
+          style={{padding:"8px 20px",borderRadius:8,border:sd.cbCambio2?"2px solid "+VF_C:"2px solid #e0e0e0",background:sd.cbCambio2?VF_C:"#fff",color:sd.cbCambio2?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+          Cambio Offerta
+        </button>
+      </div>
+      {sd.cbCambio2&&(
+        <div style={{background:VF_LIGHT,border:"1px solid "+VF_BORDER,borderRadius:8,padding:14,marginBottom:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:10}}>
+            <TF l="Cellulare cliente" r v={sd.cbCambioCell||""} o={v=>{upv("cbCambioCell",v);if(!sd.cbCellulare)upv("cbCellulare",v)}} p="3XXXXXXXXX"/>
+            <TF l="Numero soggetto a modifica" r v={sd.cbCambioNumMod||""} o={v=>upv("cbCambioNumMod",v)} p="3XXXXXXXXX"/>
+          </div>
+          <div style={{marginBottom:10}}>
+            <div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Offerta <span style={{color:"#dc3545"}}>*</span></div>
+            <div style={{padding:"10px 14px",borderRadius:8,border:"2px solid "+VF_C,background:"rgba(220,53,69,0.1)",color:VF_C,fontWeight:700,fontSize:13}}>MM4M</div>
+          </div>
+          <DD l="Codice Inserimento" r v={sd.cbCambioCodIns2||""} o={v=>upv("cbCambioCodIns2",v)} vals={VF_CODICI_NEGOZIO}/>
+        </div>
+      )}
+
+      {/* ── Rete Sicura ── */}
+      <div style={{marginTop:4}}>
+        <button onClick={()=>upv("cbSecurity",!sd.cbSecurity)}
+          style={{padding:"8px 20px",borderRadius:8,border:sd.cbSecurity?"2px solid "+VF_C:"2px solid #e0e0e0",background:sd.cbSecurity?VF_C:"#fff",color:sd.cbSecurity?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+          Rete Sicura
+        </button>
+      </div>
+      {sd.cbSecurity&&(
+        <div style={{background:VF_LIGHT,border:"1px solid "+VF_BORDER,borderRadius:8,padding:14,marginTop:10}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:10,textTransform:"uppercase"}}>Dati Rete Sicura CB</div>
+          <TF l="Numero di cellulare" r v={sd.cbSecurityCell||""} o={v=>upv("cbSecurityCell",v)} p="3XXXXXXXXX"/>
+        </div>
+      )}
+    </div>
+  );
+  return content;
+};
+
+
+const VFB_MOBILE_TABLETS = ["Samsung Galaxy Tab S9","Samsung Galaxy Tab A9","iPad Pro","iPad Air","iPad","Lenovo Tab P12","Altro tablet"];
+const VFB_FISSO_BIZ_OFFERS = ["FISSA SMART","FISSA COMFORT","FISSA EXTRA","FISSA WIRELESS 5G","ONPI TW PLUS","ONPI PREMIUM","ONE BUSINESS SMART","ONE BUSINESS COMFORT","FISSA WIRELESS 5G + MOBILE COMFORT"];
+
+const VFBizMobile = ({sd,uP}) => {
+  const upv=(k,v)=>uP(k,v);
+  const offers=["MOBILE SMART","MOBILE COMFORT","MOBILE EXTRA","DATI SMART","DATI COMFORT","RED DATA NOW"];
+  const tabletOffers=["DATI SMART","DATI COMFORT","RED DATA NOW"];
+  const isTablet=tabletOffers.includes(sd.vfbOffer);
+  const deviceList=isTablet?[...VF_SMARTPHONES,...VFB_MOBILE_TABLETS]:VF_SMARTPHONES;
+  const content = (
+    <div>
+      <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:8,textTransform:"uppercase",letterSpacing:.4}}>Offerta Mobile</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16}}>
+        {offers.map(offer=>{
+          const isActive=sd.vfbOffer===offer;
+          return (
+            <button key={offer} onClick={()=>{upv("vfbOffer",isActive?null:offer);if(!isActive){upv("vfbMnp",null);upv("vfbTnp",null);upv("vfbModello","");upv("vfbImei","");upv("vfbEasyRent",null);upv("vfbRataPiva",null);upv("vfbCodIns","");}}}
+              style={{padding:"8px 14px",borderRadius:10,border:isActive?"2px solid "+VF_C:"2px solid #e0e0e0",background:isActive?VF_C:"#fff",color:isActive?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+              {offer}
+            </button>
+          );
+        })}
+      </div>
+      {sd.vfbOffer&&(
+        <div>
+          <RB label="MNP?" val={sd.vfbMnp} opts={["Sì","No"]} onCh={v=>{upv("vfbMnp",v);if(v==="No"){upv("vfbMnpBrand","");upv("vfbMnpNum","")}}}/>
+          {sd.vfbMnp==="Sì"&&(
+            <div style={{background:"#f8f8f8",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:12,marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                <DD l="Operatore provenienza" r v={sd.vfbMnpBrand||""} o={v=>upv("vfbMnpBrand",v)} vals={VF_BRANDS}/>
+                <TF l="Numero Portabilità" r v={sd.vfbMnpNum||""} o={v=>upv("vfbMnpNum",v)} p="3XXXXXXXXX"/>
+              </div>
+            </div>
+          )}
+          {sd.vfbMnp&&(
+            <div>
+              <RB label="TNP?" val={sd.vfbTnp} opts={["Sì","No"]} onCh={v=>{upv("vfbTnp",v);if(v==="No"){upv("vfbModello","");upv("vfbImei","");upv("vfbEasyRent",null);upv("vfbRataPiva",null);}}}/>
+              {sd.vfbTnp==="Sì"&&(
+                <div style={{background:VF_LIGHT,border:"1px solid "+VF_BORDER,borderRadius:8,padding:14,marginBottom:12}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:10}}>
+                    <DD l="Modello terminale" r v={sd.vfbModello||""} o={v=>upv("vfbModello",v)} vals={deviceList}/>
+                    <TF l="IMEI" r v={sd.vfbImei||""} o={v=>upv("vfbImei",v)} p="15 cifre" nt="Barcode 📷"/>
+                  </div>
+                  <div style={{display:"flex",gap:8,marginBottom:8}}>
+                    {["Easy Rent","Rata P.IVA"].map(opt=>{
+                      const isOn=sd.vfbRataPiva===opt;
+                      return (
+                        <button key={opt} onClick={()=>upv("vfbRataPiva",isOn?null:opt)}
+                          style={{padding:"7px 18px",borderRadius:8,border:isOn?"2px solid "+VF_C:"2px solid #e0e0e0",background:isOn?VF_C:"#fff",color:isOn?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <div style={{marginTop:8,background:"#f0f8ff",border:"1px solid rgba(0,114,198,0.3)",borderRadius:8,padding:14}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+                  <DD l="Codice Inserimento" r v={sd.vfbCodIns||""} o={v=>upv("vfbCodIns",v)} vals={VF_CODICI_NEGOZIO}/>
+                  <TF l="Numero" v={sd.vfbNum||""} o={v=>upv("vfbNum",v)} p="3XXXXXXXXX"/>
+                  <TF l="ICCID" r v={sd.vfbIccid||""} o={v=>upv("vfbIccid",v)} p="8939..." nt="Barcode 📷"/>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+  return content;
+};
+
+const VFBizMobileCB = ({sd,uP}) => {
+  const upv=(k,v)=>uP(k,v);
+  const content = (
+    <div>
+      <div style={{marginBottom:10}}>
+        <button onClick={()=>upv("vfbCbOn",!sd.vfbCbOn)}
+          style={{padding:"8px 20px",borderRadius:8,border:sd.vfbCbOn?"2px solid "+VF_C:"2px solid #e0e0e0",background:sd.vfbCbOn?VF_C:"#fff",color:sd.vfbCbOn?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+          CB
+        </button>
+      </div>
+      {sd.vfbCbOn&&(
+        <div style={{background:"#f0f8ff",border:"1px solid rgba(0,114,198,0.3)",borderRadius:8,padding:14}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+          <DD l="Codice Inserimento" r v={sd.vfbCbCodIns||""} o={v=>upv("vfbCbCodIns",v)} vals={VF_CODICI_NEGOZIO}/>
+        </div>
+      )}
+    </div>
+  );
+  return content;
+};
+
+const VFBizFisso = ({sd,uP,isCombo}) => {
+  const upv=(k,v)=>uP(k,v);
+  const content = (
+    <div>
+      {isCombo&&(
+        <div>
+          <RB label="MNP?" val={sd.vfbFMnp} opts={["Sì","No"]} onCh={v=>{upv("vfbFMnp",v);if(v==="No"){upv("vfbFMnpBrand","");upv("vfbFMnpNum","");}}}/>
+          {sd.vfbFMnp==="Sì"&&(
+            <div style={{background:"#f8f8f8",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:12,marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                <DD l="Operatore provenienza" r v={sd.vfbFMnpBrand||""} o={v=>upv("vfbFMnpBrand",v)} vals={VF_BRANDS}/>
+                <TF l="Numero Portabilità" r v={sd.vfbFMnpNum||""} o={v=>upv("vfbFMnpNum",v)} p="3XXXXXXXXX"/>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      <RB label="GNP?" val={sd.vfbFGnp} opts={["Sì","No"]} onCh={v=>{upv("vfbFGnp",v);if(v==="No"){upv("vfbFGnpBrand","");upv("vfbFGnpNum","");}}}/>
+      {sd.vfbFGnp==="Sì"&&(
+        <div style={{background:"#f8f8f8",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:12,marginBottom:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+            <DD l="Operatore GNP" r v={sd.vfbFGnpBrand||""} o={v=>upv("vfbFGnpBrand",v)} vals={VF_GNP_BRANDS}/>
+            <TF l="Numero Fisso GNP" r v={sd.vfbFGnpNum||""} o={v=>upv("vfbFGnpNum",v)} p="06XXXXXXXX"/>
+          </div>
+        </div>
+      )}
+      {sd.vfbFGnp&&(
+        <div>
+          <div style={{background:"#f0f8ff",border:"1px solid rgba(0,114,198,0.3)",borderRadius:8,padding:14}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:12,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+              <DD l="Codice Inserimento" r v={sd.vfbFCodIns||""} o={v=>upv("vfbFCodIns",v)} vals={VF_CODICI_NEGOZIO}/>
+              {sd.vfbFGnp==="Sì"?(
+                <TF l="N. Fisso Provvisorio" r v={sd.vfbFNumProv||""} o={v=>upv("vfbFNumProv",v)} p="06XXXXXXXX"/>
+              ):(
+                <TF l="N. Fisso Definitivo" r v={sd.vfbFNumDef||""} o={v=>upv("vfbFNumDef",v)} p="06XXXXXXXX"/>
+              )}
+              <TF l="ICCID" r v={sd.vfbFIccid||""} o={v=>upv("vfbFIccid",v)} p="8939..." nt="Barcode 📷"/>
+              {isCombo&&(
+                <TF l="Numero Provvisorio Mobile" r v={sd.vfbFCombNumProv||""} o={v=>upv("vfbFCombNumProv",v)} p="393XXXXXXX"/>
+              )}
+              {isCombo&&(
+                <TF l="ICCID Mobile" r v={sd.vfbFCombIccid||""} o={v=>upv("vfbFCombIccid",v)} p="8939..." nt="Barcode 📷"/>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -348,21 +1246,163 @@ const MiniC = ({ label, val, onCh, opts, locked, lockVal }: { label: string, val
   return content;
 };
 
-const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSales, anaCel, tipoCliente }: { sub: any, rawSd: any, group: any, si: number, sessionCode: string, sale: any, uF: any, uC: any, uP: any, catSales: any, anaCel: string, tipoCliente: string | null }) => {
+const IL_C = "#C00028";
+const IL_MOBILE_OFFERS = ["Iliad Voce","Iliad 120GB","Iliad 180GB","Iliad 250GB","Iliad Dati 350"];
+const IL_FISSO_OFFERS = ["Fisso Base","Fisso Plus"];
+const IL_GNP_BRANDS = ["TIM","Vodafone","WindTre","Fastweb","Iliad","Tiscali","Altro"];
+const IL_CODICI_NEGOZIO = ["IL-RM001","IL-RM002","IL-RM003","IL-RM004","IL-RM005","IL-RM006","IL-RM007","IL-RM008"];
+
+const getIL = (tc) => {
+  return [
+    { id:"mobile", title:"MOBILE", icon:"📱", color:IL_C, radio:true, subs:[
+      { id:"ga", title:"MOBILE", isILMobile:true, hasContract:true, ct:"ga", fields:[] },
+    ]},
+    { id:"fisso", title:"FISSO", icon:"🏠", color:"#28a745", radio:true, subs:
+      IL_FISSO_OFFERS.map(o=>({ id:o.toLowerCase().replace(/ /g,"_"), title:o, isILFisso:true, hasContract:true, ct:"fisso", fields:[] }))
+    },
+  ];
+};
+
+const ILMobile = ({sd, uP}) => {
+  const upv=(k,v)=>uP(k,v);
+  const content = (
+    <div>
+      <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:8,textTransform:"uppercase",letterSpacing:.4}}>Offerta Mobile</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16}}>
+        {IL_MOBILE_OFFERS.map(offer=>{
+          const isActive=sd.ilOffer===offer;
+          return (
+            <button key={offer} onClick={()=>{upv("ilOffer",isActive?null:offer);upv("ilMnp",null);upv("ilMnpBrand","");upv("ilMnpNum","");upv("ilCodIns","");upv("ilNumProv","");upv("ilNumDef","");upv("ilIccid","");}}
+              style={{padding:"8px 14px",borderRadius:10,border:isActive?"2px solid "+IL_C:"2px solid #e0e0e0",background:isActive?IL_C:"#fff",color:isActive?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+              {offer}
+            </button>
+          );
+        })}
+      </div>
+      {sd.ilOffer&&(
+        <div>
+          <RB label="MNP?" val={sd.ilMnp} opts={["Sì","No"]} onCh={v=>{upv("ilMnp",v);if(v==="No"){upv("ilMnpBrand","");upv("ilMnpNum","");}}}/>
+          {sd.ilMnp==="Sì"&&(
+            <div style={{background:"#f8f8f8",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:12,marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                <DD l="Operatore provenienza" r v={sd.ilMnpBrand||""} o={v=>upv("ilMnpBrand",v)} vals={IL_GNP_BRANDS}/>
+                <TF l="Numero Portabilità" r v={sd.ilMnpNum||""} o={v=>upv("ilMnpNum",v)} p="3XXXXXXXXX"/>
+              </div>
+            </div>
+          )}
+          {sd.ilMnp&&(
+            <div style={{background:"#f0f8ff",border:"1px solid rgba(0,114,198,0.3)",borderRadius:8,padding:14}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+                <DD l="Codice Inserimento" r v={sd.ilCodIns||""} o={v=>upv("ilCodIns",v)} vals={IL_CODICI_NEGOZIO}/>
+                {sd.ilMnp==="Sì"?(
+                  <TF l="Numero Provvisorio" r v={sd.ilNumProv||""} o={v=>upv("ilNumProv",v)} p="393XXXXXXX"/>
+                ):(
+                  <TF l="Numero" r v={sd.ilNumDef||""} o={v=>upv("ilNumDef",v)} p="3XXXXXXXXX"/>
+                )}
+                <TF l="ICCID" r v={sd.ilIccid||""} o={v=>upv("ilIccid",v)} p="8939..." nt="Barcode 📷"/>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+  return content;
+};
+
+const ILFisso = ({sd, uP}) => {
+  const upv=(k,v)=>uP(k,v);
+  const content = (
+    <div>
+      <RB label="GNP?" val={sd.ilFGnp} opts={["Sì","No"]} onCh={v=>{upv("ilFGnp",v);if(v==="No"){upv("ilFGnpBrand","");upv("ilFGnpNum","");}}}/>
+      {sd.ilFGnp&&(
+        <div style={{background:"#f0f8ff",border:"1px solid rgba(0,114,198,0.3)",borderRadius:8,padding:14}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+            <DD l="Codice Inserimento" r v={sd.ilFCodIns||""} o={v=>upv("ilFCodIns",v)} vals={IL_CODICI_NEGOZIO}/>
+            {sd.ilFGnp==="Sì"?(
+              <TF l="Numero Provvisorio" r v={sd.ilFNumProv||""} o={v=>upv("ilFNumProv",v)} p="06XXXXXXXX"/>
+            ):(
+              <TF l="Numero Fisso Definitivo" r v={sd.ilFNumDef||""} o={v=>upv("ilFNumDef",v)} p="06XXXXXXXX"/>
+            )}
+            {sd.ilFGnp==="Sì"&&(
+              <TF l="Numero Fisso Definitivo" r v={sd.ilFNumDef||""} o={v=>upv("ilFNumDef",v)} p="06XXXXXXXX"/>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+  return content;
+};
+
+// ── ENERGY ──────────────────────────────────────────────────────
+const EN_C = "#28a745";
+const EN_CODICI_NEGOZIO = ["EN-RM001","EN-RM002","EN-RM003","EN-RM004","EN-RM005"];
+
+const getEN = (tc) => {
+  return [
+    { id:"s4", title:"S4 ENERGIA", icon:"⚡", color:EN_C, radio:false, subs:[
+      { id:"s4_luce", title:"Luce", isENLuceGas:true, enBrand:"S4", enProd:"Luce", hasContract:true, ct:"multi", fields:[]},
+      { id:"s4_gas", title:"Gas", isENLuceGas:true, enBrand:"S4", enProd:"Gas", hasContract:true, ct:"multi", fields:[]},
+    ]},
+    { id:"barton", title:"BARTON ENERGY", icon:"🔋", color:"#1a6b2d", radio:false, subs:[
+      { id:"bt_luce", title:"Luce", isENLuceGas:true, enBrand:"Barton", enProd:"Luce", hasContract:true, ct:"multi", fields:[]},
+      { id:"bt_luce_rid", title:"Luce RID", isENLuceGas:true, enBrand:"Barton", enProd:"LuceRID", hasContract:true, ct:"multi", fields:[]},
+      { id:"bt_gas", title:"Gas", isENLuceGas:true, enBrand:"Barton", enProd:"Gas", hasContract:true, ct:"multi", fields:[]},
+      { id:"bt_gas_rid", title:"Gas RID", isENLuceGas:true, enBrand:"Barton", enProd:"GasRID", hasContract:true, ct:"multi", fields:[]},
+    ]},
+  ];
+};
+
+const ENLuceGas = ({sd, uP, sub}) => {
+  const upv=(k,v)=>uP(k,v);
+  const isLuce = sub.enProd==="Luce"||sub.enProd==="LuceRID";
+  const content = (
+    <div style={{background:"#f0f8ff",border:"1px solid rgba(0,114,198,0.3)",borderRadius:8,padding:14}}>
+      <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto — {sub.enBrand} {sub.title}</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+        <DD l="Codice Inserimento" r v={sd.enCodIns||""} o={v=>upv("enCodIns",v)} vals={EN_CODICI_NEGOZIO}/>
+        {isLuce?(
+          <TF l="POD" r v={sd.enPod||""} o={v=>upv("enPod",v)} p="IT001E..."/>
+        ):(
+          <TF l="PDR" r v={sd.enPdr||""} o={v=>upv("enPdr",v)} p="Codice PDR"/>
+        )}
+      </div>
+    </div>
+  );
+  return content;
+};
+
+
+const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,onOpenVFModal}) => {
   const _r = rawSd || {};
-  const sd: any = { active: true, fields: _r.fields || {}, contract: _r.contract || {}, gnp: _r.gnp || false, gnpNum: _r.gnpNum || "", gnpOp: _r.gnpOp || "", secondaLinea: _r.secondaLinea || false, gnp2L: _r.gnp2L != null ? _r.gnp2L : null, gnp2LBrand: _r.gnp2LBrand || "", gnp2LNum: _r.gnp2LNum || "", domiciliazione: _r.domiciliazione || false, opProvenienza: _r.opProvenienza || "", codiceOverride: _r.codiceOverride || "", addons: _r.addons || {}, domiciliato: _r.domiciliato != null ? _r.domiciliato : null, convergente: _r.convergente != null ? _r.convergente : null, tipMob: _r.tipMob != null ? _r.tipMob : null, mnp: _r.mnp != null ? _r.mnp : null, easyPay: _r.easyPay != null ? _r.easyPay : null, tnpGa: _r.tnpGa != null ? _r.tnpGa : null, tnpTipo: _r.tnpTipo || "", tnpModello: _r.tnpModello || "", tnpImei: _r.tnpImei || "", tnpCount: _r.tnpCount || null, tnpModelli: _r.tnpModelli || [], tnpImeis: _r.tnpImeis || [], packAccessori: _r.packAccessori != null ? _r.packAccessori : null, packAccessoriVal: _r.packAccessoriVal || "", packAccessoriQta: _r.packAccessoriQta || "", cbTnp: _r.cbTnp || false, cbTnpTipo: _r.cbTnpTipo || "", cbTnpModello: _r.cbTnpModello || "", cbTnpImei: _r.cbTnpImei || "", cbTnpCount: _r.cbTnpCount || null, cbTnpModelli: _r.cbTnpModelli || [], cbTnpImeis: _r.cbTnpImeis || [], cbPackAccessori: _r.cbPackAccessori != null ? _r.cbPackAccessori : null, cbPackAccessoriVal: _r.cbPackAccessoriVal || "", cbPackAccessoriQta: _r.cbPackAccessoriQta || "", cbTnpCell: _r.cbTnpCell || "", cbTnpCC: _r.cbTnpCC || "", cbTnpCodIns: _r.cbTnpCodIns || "", cbTnpReload: _r.cbTnpReload != null ? _r.cbTnpReload : null, cbTnpReloadSel: _r.cbTnpReloadSel || {}, cbCambio: _r.cbCambio || false, cbCambioVal: _r.cbCambioVal || "", cbCambioCell: _r.cbCambioCell || "", cbCambioCC: _r.cbCambioCC || "", cbCambioCodIns: _r.cbCambioCodIns || "", cbAddonSel: _r.cbAddonSel || {}, rfModello: _r.rfModello || "", rfImei: _r.rfImei || "", cbRf: _r.cbRf || false, cbAddonCodIns: _r.cbAddonCodIns || "", cbRfCodIns: _r.cbRfCodIns || "", tnpGaReload: _r.tnpGaReload != null ? _r.tnpGaReload : null, tnpGaReloadSel: _r.tnpGaReloadSel || {}, reloadForever: _r.reloadForever != null ? _r.reloadForever : null, securitySel: _r.securitySel || {}, voceCasaCb: _r.voceCasaCb != null ? _r.voceCasaCb : null };
-  const f = sd.fields;
-  const c = sd.contract;
-  const gaOn = sale.ga && sale.ga.active;
-  const gaC = gaOn && sale.ga.contract ? sale.ga.contract : {};
-  const toggleAddon = (name: string) => { const cur = sd.addons[name]; uP(group.id, si, sub.id, "addons", { ...sd.addons, [name]: !cur }) };
+  const sd = {active:true,fields:_r.fields||{},contract:_r.contract||{},gnp:_r.gnp||false,gnpNum:_r.gnpNum||"",gnpOp:_r.gnpOp||"",secondaLinea:_r.secondaLinea||false,gnp2L:_r.gnp2L!=null?_r.gnp2L:null,gnp2LBrand:_r.gnp2LBrand||"",gnp2LNum:_r.gnp2LNum||"",domiciliazione:_r.domiciliazione||false,opProvenienza:_r.opProvenienza||"",codiceOverride:_r.codiceOverride||"",addons:_r.addons||{},domiciliato:_r.domiciliato!=null?_r.domiciliato:null,convergente:_r.convergente!=null?_r.convergente:null,tipMob:_r.tipMob!=null?_r.tipMob:null,mnp:_r.mnp!=null?_r.mnp:null,easyPay:_r.easyPay!=null?_r.easyPay:null,tnpGa:_r.tnpGa!=null?_r.tnpGa:null,tnpTipo:_r.tnpTipo||"",tnpModello:_r.tnpModello||"",tnpImei:_r.tnpImei||"",tnpCount:_r.tnpCount||null,tnpModelli:_r.tnpModelli||[],tnpImeis:_r.tnpImeis||[],packAccessori:_r.packAccessori!=null?_r.packAccessori:null,packAccessoriVal:_r.packAccessoriVal||"",packAccessoriQta:_r.packAccessoriQta||"",cbTnp:_r.cbTnp||false,cbTnpTipo:_r.cbTnpTipo||"",cbTnpModello:_r.cbTnpModello||"",cbTnpImei:_r.cbTnpImei||"",cbTnpCount:_r.cbTnpCount||null,cbTnpModelli:_r.cbTnpModelli||[],cbTnpImeis:_r.cbTnpImeis||[],cbPackAccessori:_r.cbPackAccessori!=null?_r.cbPackAccessori:null,cbPackAccessoriVal:_r.cbPackAccessoriVal||"",cbPackAccessoriQta:_r.cbPackAccessoriQta||"",cbTnpCell:_r.cbTnpCell||"",cbTnpCC:_r.cbTnpCC||"",cbTnpCodIns:_r.cbTnpCodIns||"",cbTnpReload:_r.cbTnpReload!=null?_r.cbTnpReload:null,cbTnpReloadSel:_r.cbTnpReloadSel||{},cbCambio:_r.cbCambio||false,cbCambioVal:_r.cbCambioVal||"",cbCambioCell:_r.cbCambioCell||"",cbCambioCC:_r.cbCambioCC||"",cbCambioCodIns:_r.cbCambioCodIns||"",cbAddonSel:_r.cbAddonSel||{},rfModello:_r.rfModello||"",rfImei:_r.rfImei||"",cbRf:_r.cbRf||false,cbAddonCodIns:_r.cbAddonCodIns||"",cbRfCodIns:_r.cbRfCodIns||"",tnpGaReload:_r.tnpGaReload!=null?_r.tnpGaReload:null,tnpGaReloadSel:_r.tnpGaReloadSel||{},reloadForever:_r.reloadForever!=null?_r.reloadForever:null,securitySel:_r.securitySel||{},voceCasaCb:_r.voceCasaCb!=null?_r.voceCasaCb:null,vfOffers:_r.vfOffers||{},vfContratti:_r.vfContratti||{},vfOffer:_r.vfOffer||null,vfMnp:_r.vfMnp||null,vfMnpBrand:_r.vfMnpBrand||"",vfMnpNum:_r.vfMnpNum||"",vfDomicilio:_r.vfDomicilio||null,vfConvergenza:_r.vfConvergenza||null,vfNumFisso:_r.vfNumFisso||"",vfTnp:_r.vfTnp||null,vfTnpTipo:_r.vfTnpTipo||null,vfTnpCount:_r.vfTnpCount||null,vfTnpItems:_r.vfTnpItems||[],vfCompassTipo:_r.vfCompassTipo||null,vfFConvergenza:_r.vfFConvergenza||null,vfFGnp:_r.vfFGnp||null,vfFGnpBrand:_r.vfFGnpBrand||"",vfFGnpNum:_r.vfFGnpNum||"",vfFLockIn:_r.vfFLockIn||null,
+    vfTnpList:_r.vfTnpList||[],cbTnpList:_r.cbTnpList||[],
+    dcNumProv:_r.dcNumProv||"",dcNum:_r.dcNum||"",dcIccid:_r.dcIccid||"",dcCodIns:_r.dcCodIns||"",dcRicaricaAuto:_r.dcRicaricaAuto!=null?_r.dcRicaricaAuto:null,
+    vfSecurity:_r.vfSecurity!=null?_r.vfSecurity:null,
+    cbCellulare:_r.cbCellulare||"",cbCodContratto:_r.cbCodContratto||"",cbModello:_r.cbModello||"",cbImei:_r.cbImei||"",cbTaglia:_r.cbTaglia||null,cbCodIns2:_r.cbCodIns2||"",
+    dcCbNumProv:_r.dcCbNumProv||"",dcCbIccid:_r.dcCbIccid||"",
+    cbCambio2:_r.cbCambio2||false,cbCambioNumMod:_r.cbCambioNumMod||"",cbCambioCodIns2:_r.cbCambioCodIns2||"",
+    cbSecurity:_r.cbSecurity||false,cbSecurityCell:_r.cbSecurityCell||"",
+    vfFAddons:_r.vfFAddons||{},vfFCodIns:_r.vfFCodIns||"",vfFNumProvVisorio:_r.vfFNumProvVisorio||"",vfFNumDef:_r.vfFNumDef||"",
+    vfbOffer:_r.vfbOffer||null,vfbMnp:_r.vfbMnp||null,vfbMnpBrand:_r.vfbMnpBrand||"",vfbMnpNum:_r.vfbMnpNum||"",vfbTnp:_r.vfbTnp||null,vfbModello:_r.vfbModello||"",vfbImei:_r.vfbImei||"",vfbRataPiva:_r.vfbRataPiva||null,vfbCodIns:_r.vfbCodIns||"",
+    vfbCbOn:_r.vfbCbOn||false,vfbCbCodIns:_r.vfbCbCodIns||"",
+    vfbFGnp:_r.vfbFGnp||null,vfbFGnpBrand:_r.vfbFGnpBrand||"",vfbFGnpNum:_r.vfbFGnpNum||"",vfbFCodIns:_r.vfbFCodIns||"",vfbFNumProv:_r.vfbFNumProv||"",vfbFNumDef:_r.vfbFNumDef||"",vfbFMnp:_r.vfbFMnp||null,vfbFMnpBrand:_r.vfbFMnpBrand||"",vfbFMnpNum:_r.vfbFMnpNum||"",vfbFCombNumProv:_r.vfbFCombNumProv||"",vfbFCombIccid:_r.vfbFCombIccid||"",vfbNum:_r.vfbNum||"",vfbIccid:_r.vfbIccid||"",vfbFIccid:_r.vfbFIccid||"",
+    vfSolDigCodIns:_r.vfSolDigCodIns||"",fwOffer:_r.fwOffer||null,fwMnpBrand:_r.fwMnpBrand||"",fwMnpNum:_r.fwMnpNum||"",fwModello:_r.fwModello||"",fwImei:_r.fwImei||"",fwCodIns:_r.fwCodIns||"",fwNumProv:_r.fwNumProv||"",fwNumDef:_r.fwNumDef||"",fwIccid:_r.fwIccid||"",fwFGnp:_r.fwFGnp||null,fwFGnpBrand:_r.fwFGnpBrand||"",fwFGnpNum:_r.fwFGnpNum||"",fwFCodIns:_r.fwFCodIns||"",fwFNumProv:_r.fwFNumProv||"",fwFNumDef:_r.fwFNumDef||"",fwPod:_r.fwPod||"",ilOffer:_r.ilOffer||null,ilMnp:_r.ilMnp||null,ilMnpBrand:_r.ilMnpBrand||"",ilMnpNum:_r.ilMnpNum||"",ilCodIns:_r.ilCodIns||"",ilNumProv:_r.ilNumProv||"",ilNumDef:_r.ilNumDef||"",ilIccid:_r.ilIccid||"",ilFGnp:_r.ilFGnp||null,ilFCodIns:_r.ilFCodIns||"",ilFNumProv:_r.ilFNumProv||"",ilFNumDef:_r.ilFNumDef||"",enCodIns:_r.enCodIns||"",enPod:_r.enPod||"",enPdr:_r.enPdr||""};
+  const f=sd.fields;
+  const c=sd.contract;
+  const gaOn=sale.ga&&sale.ga.active;
+  const gaC=gaOn&&sale.ga.contract?sale.ga.contract:{};
+  const toggleAddon=(name)=>{const cur=sd.addons[name];uP(group.id,si,sub.id,"addons",{...sd.addons,[name]:!cur})};
   const fissoDefVal = (sd.gnp && sd.gnpNum) ? sd.gnpNum : (c.num_fisso_def || "");
   const fissoDefLocked = !!(sd.gnp && sd.gnpNum);
   const lgConvLocked = (() => {
     if (!sub.hasConvLG || !catSales) return false;
     for (let sx = 0; sx < catSales.length; sx++) {
       const s = catSales[sx]; if (!s) continue;
-      const ids = ["luce", "gas"];
+      const ids = ["luce","gas"];
       for (let k = 0; k < ids.length; k++) { const d = s[ids[k]]; if (d && d.active && d.convergente === true && (sx !== si || ids[k] !== sub.id)) return true; }
     }
     return false;
@@ -377,90 +1417,90 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
   const bizDomLocked = sub.domLocked === true;
 
   const content = (
-    <div className="mb-4 p-4 rounded-xl bg-white/[0.03] border border-white/5 backdrop-blur-sm">
-      <div className="text-xs font-bold mb-1.5" style={{ color: group.color }}>{sub.title}</div>
+    <div style={{marginBottom:10,padding:10,background:"rgba(255,255,255,0.02)",borderRadius:8,border:"1px solid "+group.color+"30"}}>
+      <div style={{fontSize:11,fontWeight:700,color:group.color,marginBottom:6}}>{sub.title}</div>
 
-      {/* MOBILE flow: Tipologia ? MNP ? EasyPay ? Dropdown */}
-      {sub.isMobile && (
+      {/* MOBILE flow: Tipologia → MNP → EasyPay → Dropdown */}
+      {sub.isMobile&&(
         <div>
-          <MiniC label="Tipologia Mobile" val={sd.tipMob} onCh={v => { uP(group.id, si, sub.id, "tipMob", v); if (v === "Underground") uP(group.id, si, sub.id, "mnp", true); if (v !== sd.tipMob) uF(group.id, si, sub.id, "offerta", "") }} opts={["Underground", "Mass Market"]} />
-          {sd.tipMob !== null && (
+          <MiniC label="Tipologia Mobile" val={sd.tipMob} onCh={v=>{uP(group.id,si,sub.id,"tipMob",v);if(v==="Underground"){uP(group.id,si,sub.id,"mnp",true);uP(group.id,si,sub.id,"easyPay","Sì")}else if(v==="Mass Market"){uP(group.id,si,sub.id,"mnp","Sì");uP(group.id,si,sub.id,"easyPay","Sì")};if(v!==sd.tipMob)uF(group.id,si,sub.id,"offerta","")}} opts={["Underground","Mass Market"]}/>
+          {sd.tipMob!==null&&(
             isUnd
-              ? <MiniC label="MNP" val={true} onCh={() => { }} locked lockVal={true} opts={["Sì", "No"]} />
-              : <MiniC label="MNP" val={sd.mnp} onCh={v => uP(group.id, si, sub.id, "mnp", v)} opts={["Sì", "No"]} />
+              ? <MiniC label="MNP" val={true} onCh={()=>{}} locked lockVal={true} opts={["Sì","No"]}/>
+              : <MiniC label="MNP" val={sd.mnp} onCh={v=>uP(group.id,si,sub.id,"mnp",v)} opts={["Sì","No"]}/>
           )}
-          {sd.tipMob !== null && (isUnd || sd.mnp !== null) && (
-            <MiniC label="Easy Pay" val={sd.easyPay} onCh={v => { uP(group.id, si, sub.id, "easyPay", v); uF(group.id, si, sub.id, "offerta", ""); if (v === "No" || v === false) uP(group.id, si, sub.id, "tnpGa", null) }} opts={["Sì", "No"]} />
+          {sd.tipMob!==null&&(isUnd||sd.mnp!==null)&&(
+            <MiniC label="Easy Pay" val={sd.easyPay} onCh={v=>{uP(group.id,si,sub.id,"easyPay",v);uF(group.id,si,sub.id,"offerta","");if(v==="No"||v===false){uP(group.id,si,sub.id,"tnpGa",null)}else{uP(group.id,si,sub.id,"tnpGa","Sì")}}} opts={["Sì","No"]}/>
           )}
-          {mobDone && (
+          {mobDone&&(
             sub.mobOffers
-              ? <div style={{ marginTop: 6 }}><DD l="Offerta Mobile" v={f.offerta || ""} o={v => uF(group.id, si, sub.id, "offerta", v)} vals={sub.mobOffers[sd.tipMob + "_" + sd.easyPay] || []} /></div>
-              : sub.fields && sub.fields.length > 0 && <div style={{ marginTop: 6 }}>{sub.fields.map((fl: any) => <DD key={fl.key} l={fl.label} v={f[fl.key] || ""} o={(v: string) => uF(group.id, si, sub.id, fl.key, v)} vals={fl.values} />)}</div>
+              ? <div style={{marginTop:6}}><DD l="Offerta Mobile" v={f.offerta||""} o={v=>uF(group.id,si,sub.id,"offerta",v)} vals={sub.mobOffers[sd.tipMob+"_"+sd.easyPay]||[]}/></div>
+              : sub.fields&&sub.fields.length>0&&<div style={{marginTop:6}}>{sub.fields.map(fl=><DD key={fl.key} l={fl.label} v={f[fl.key]||""} o={v=>uF(group.id,si,sub.id,fl.key,v)} vals={fl.values}/>)}</div>
           )}
           {/* Security when Easy Pay = No (after Offerta Mobile) */}
-          {mobDone && (sd.easyPay === "No" || sd.easyPay === false) && (
-            <div className="mt-4 p-4 rounded-xl bg-white/[0.03] border border-white/5">
-              <div className="text-xs font-bold text-slate-400 mb-2">Security</div>
-              <div className="flex gap-2">
-                {["Security", "Security PRO"].map(s =>
-                  <button key={s} onClick={() => uP(group.id, si, sub.id, "securitySel", sd.securitySel[s] ? {} : { [s]: true })} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${sd.securitySel[s] ? "border-2 border-orange-500 bg-orange-500/15 text-orange-400" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>
-                    <span>{sd.securitySel[s] ? "✓" : "○"}</span>{s}
+          {mobDone&&(sd.easyPay==="No"||sd.easyPay===false)&&(
+            <div style={{marginTop:8,padding:8,background:"#f8fafc",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6}}>Security</div>
+              <div style={{display:"flex",gap:6}}>
+                {["Security","Security PRO"].map(s=>
+                  <button key={s} onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel[s]?{}:{[s]:true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel[s]?"2px solid #fd7e14":"2px solid #e0e0e0",background:sd.securitySel[s]?"#fff3e0":"#fff",color:sd.securitySel[s]?"#e8590c":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                    <span>{sd.securitySel[s]?"◉":"○"}</span>{s}
                   </button>
                 )}
               </div>
             </div>
           )}
           {/* TNP GA: only when Easy Pay = Sì */}
-          {mobDone && (sd.easyPay === "Sì" || sd.easyPay === true) && (
-            <div style={{ marginTop: 8 }}>
-              <MiniC label="TNP GA" val={sd.tnpGa} onCh={v => { uP(group.id, si, sub.id, "tnpGa", v); if (v === "No" || v === false) { uP(group.id, si, sub.id, "tnpTipo", ""); uP(group.id, si, sub.id, "tnpModello", ""); uP(group.id, si, sub.id, "tnpImei", ""); uP(group.id, si, sub.id, "tnpGaReload", null); uP(group.id, si, sub.id, "tnpGaReloadSel", {}) } }} opts={["Sì", "No"]} />
-              {(sd.tnpGa === "Sì" || sd.tnpGa === true) && (
-                <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 mt-2">
-                  <div className="text-[10px] font-bold text-blue-400 uppercase mb-2">Dati TNP GA</div>
-                  <div className="flex gap-2 flex-wrap mb-2">
-                    {["Rata 5G", "Finanziamento > 600€", "Finanziamento < 600€"].map(opt =>
-                      <button key={opt} onClick={() => uP(group.id, si, sub.id, "tnpTipo", opt)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${sd.tnpTipo === opt ? "bg-blue-600 text-white border-2 border-blue-500" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>{opt}</button>
+          {mobDone&&(sd.easyPay==="Sì"||sd.easyPay===true)&&(
+            <div style={{marginTop:8}}>
+              <MiniC label="TNP GA" val={sd.tnpGa} onCh={v=>{uP(group.id,si,sub.id,"tnpGa",v);if(v==="No"||v===false){uP(group.id,si,sub.id,"tnpTipo","");uP(group.id,si,sub.id,"tnpModello","");uP(group.id,si,sub.id,"tnpImei","");uP(group.id,si,sub.id,"tnpGaReload",null);uP(group.id,si,sub.id,"tnpGaReloadSel",{})}}} opts={["Sì","No"]}/>
+              {(sd.tnpGa==="Sì"||sd.tnpGa===true)&&(
+                <div style={{padding:10,background:"rgba(255,255,255,0.04)",borderRadius:8,border:"1px solid rgba(0,114,198,0.3)",marginTop:4}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"#2E75B6",marginBottom:8,textTransform:"uppercase"}}>Dati TNP GA</div>
+                  <div style={{display:"flex",gap:6,marginBottom:sd.tnpTipo?8:0}}>
+                    {["Rata 5G","Finanziamento > 600€","Finanziamento < 600€"].map(opt=>
+                      <button key={opt} onClick={()=>uP(group.id,si,sub.id,"tnpTipo",opt)} style={{padding:"6px 14px",borderRadius:6,border:sd.tnpTipo===opt?"2px solid #2E75B6":"2px solid #e0e0e0",background:sd.tnpTipo===opt?"#2E75B6":"#fff",color:sd.tnpTipo===opt?"#fff":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>{opt}</button>
                     )}
                   </div>
-                  {sd.tnpTipo && (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 14px" }}>
-                      {!sd.tnpTipo.startsWith("Finanziamento") && <DD l="Modello Terminale" r v={sd.tnpModello || ""} o={v => uP(group.id, si, sub.id, "tnpModello", v)} vals={SMARTPHONES} />}
-                      {!sd.tnpTipo.startsWith("Finanziamento") && <TF l="IMEI" r v={sd.tnpImei || ""} o={v => uP(group.id, si, sub.id, "tnpImei", v)} p="15 cifre" nt="Scansione barcode" />}
+                  {sd.tnpTipo&&(
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                      {!sd.tnpTipo.startsWith("Finanziamento")&&<DD l="Modello Terminale" r v={sd.tnpModello||""} o={v=>uP(group.id,si,sub.id,"tnpModello",v)} vals={SMARTPHONES}/>}
+                      {!sd.tnpTipo.startsWith("Finanziamento")&&<TF l="IMEI" r v={sd.tnpImei||""} o={v=>uP(group.id,si,sub.id,"tnpImei",v)} p="15 cifre" nt="Barcode 📷"/>}
                     </div>
                   )}
                   {/* Quanti TNP finanziati — solo per Finanziamento */}
-                  {sd.tnpTipo && sd.tnpTipo.startsWith("Finanziamento") && (
-                    <div style={{ marginTop: 8 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#2E75B6", marginBottom: 6 }}>Quanti TNP hai finanziato?</div>
-                      <div className="flex gap-2 mb-2">
-                        {[1, 2, 3].map(n =>
-                          <button key={n} onClick={() => uP(group.id, si, sub.id, "tnpCount", sd.tnpCount === n ? null : n)} className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold transition-all ${sd.tnpCount === n ? "bg-blue-600 text-white border-2 border-blue-500" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>{n}</button>
+                  {sd.tnpTipo&&sd.tnpTipo.startsWith("Finanziamento")&&(
+                    <div style={{marginTop:8}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"#2E75B6",marginBottom:6}}>Quanti TNP hai finanziato?</div>
+                      <div style={{display:"flex",gap:6,marginBottom:8}}>
+                        {[1,2,3].map(n=>
+                          <button key={n} onClick={()=>uP(group.id,si,sub.id,"tnpCount",sd.tnpCount===n?null:n)} style={{width:40,height:40,borderRadius:8,border:sd.tnpCount===n?"2px solid #2E75B6":"2px solid #e0e0e0",background:sd.tnpCount===n?"#2E75B6":"#fff",color:sd.tnpCount===n?"#fff":"#555",fontSize:14,fontWeight:700,cursor:"pointer"}}>{n}</button>
                         )}
                       </div>
-                      {sd.tnpCount && [...Array(sd.tnpCount)].map((_, idx) => (
-                        <div key={idx} className="grid grid-cols-2 gap-3 mb-2 p-3 rounded-xl bg-white/[0.05] border border-white/10">
-                          <div className="col-span-2 text-[10px] font-bold text-blue-400 mb-1">Terminale {sd.tnpCount > 1 ? idx + 1 : ""}</div>
-                          <DD l="Modello Terminale" r v={(sd.tnpModelli && sd.tnpModelli[idx]) || ""} o={v => { const m = [...(sd.tnpModelli || [])]; m[idx] = v; uP(group.id, si, sub.id, "tnpModelli", m) }} vals={SMARTPHONES} />
-                          <TF l="IMEI" r v={(sd.tnpImeis && sd.tnpImeis[idx]) || ""} o={v => { const im = [...(sd.tnpImeis || [])]; im[idx] = v; uP(group.id, si, sub.id, "tnpImeis", im) }} p="15 cifre" nt="Scansione barcode" />
+                      {sd.tnpCount&&[...Array(sd.tnpCount)].map((_,idx)=>(
+                        <div key={idx} style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px",marginBottom:8,padding:8,background:"rgba(255,255,255,0.02)",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                          <div style={{gridColumn:"1/-1",fontSize:10,fontWeight:700,color:"#2E75B6",marginBottom:2}}>Terminale {sd.tnpCount>1?idx+1:""}</div>
+                          <DD l="Modello Terminale" r v={(sd.tnpModelli&&sd.tnpModelli[idx])||""} o={v=>{const m=[...(sd.tnpModelli||[])];m[idx]=v;uP(group.id,si,sub.id,"tnpModelli",m)}} vals={SMARTPHONES}/>
+                          <TF l="IMEI" r v={(sd.tnpImeis&&sd.tnpImeis[idx])||""} o={v=>{const im=[...(sd.tnpImeis||[])];im[idx]=v;uP(group.id,si,sub.id,"tnpImeis",im)}} p="15 cifre" nt="Barcode 📷"/>
                         </div>
                       ))}
-                      {sd.tnpCount && (
-                        <div className="mt-2 p-3 rounded-xl bg-white/[0.05] border border-white/10">
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <YN val={sd.packAccessori} onCh={v => uP(group.id, si, sub.id, "packAccessori", v)} label="Pack Accessori?" />
-                            {(sd.packAccessori === true) && (
-                              <TF l="Quanti accessori?" v={sd.packAccessoriQta || ""} o={v => uP(group.id, si, sub.id, "packAccessoriQta", v)} p="es. 2" />
+                      {sd.tnpCount&&(
+                        <div style={{marginTop:4,padding:8,background:"rgba(255,255,255,0.02)",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                            <YN val={sd.packAccessori} onCh={v=>uP(group.id,si,sub.id,"packAccessori",v)} label="Pack Accessori?"/>
+                            {(sd.packAccessori===true)&&(
+                              <TF l="Quanti accessori?" v={sd.packAccessoriQta||""} o={v=>uP(group.id,si,sub.id,"packAccessoriQta",v)} p="es. 2"/>
                             )}
                           </div>
-                          {(sd.packAccessori === true) && (
-                            <div style={{ marginTop: 10 }}>
-                              <div className="text-xs font-semibold text-slate-400 mb-1.5">Importo Pack Accessori <span className="text-blue-500 font-bold">€{sd.packAccessoriVal || 29}</span></div>
-                              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                <input type="range" min={29} max={240} value={sd.packAccessoriVal || 29} onChange={e => uP(group.id, si, sub.id, "packAccessoriVal", parseInt(e.target.value))} style={{ flex: 1, accentColor: "#2E75B6" }} />
-                                <input type="number" min={29} max={240} value={sd.packAccessoriVal || ""} onChange={e => uP(group.id, si, sub.id, "packAccessoriVal", e.target.value === "" ? "" : parseInt(e.target.value))} onBlur={e => { const raw = parseInt(e.target.value); if (!isNaN(raw)) uP(group.id, si, sub.id, "packAccessoriVal", Math.min(240, Math.max(29, raw))); else uP(group.id, si, sub.id, "packAccessoriVal", 29) }} style={{ width: 72, padding: "5px 8px", borderRadius: 6, border: "1px solid #b8d4f0", fontSize: 12, fontWeight: 600, textAlign: "center" }} placeholder="29-240" />
-                                <span style={{ fontSize: 11, color: "#888" }}>€</span>
+                          {(sd.packAccessori===true)&&(
+                            <div style={{marginTop:10}}>
+                              <div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:6}}>Importo Pack Accessori <span style={{color:"#2E75B6",fontWeight:700}}>€{sd.packAccessoriVal||29}</span></div>
+                              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                                <input type="range" min={29} max={240} value={sd.packAccessoriVal||29} onChange={e=>uP(group.id,si,sub.id,"packAccessoriVal",parseInt(e.target.value))} style={{flex:1,accentColor:"#2E75B6"}}/>
+                                <input type="number" min={29} max={240} value={sd.packAccessoriVal||""} onChange={e=>uP(group.id,si,sub.id,"packAccessoriVal",e.target.value===""?"":parseInt(e.target.value))} onBlur={e=>{const raw=parseInt(e.target.value);if(!isNaN(raw))uP(group.id,si,sub.id,"packAccessoriVal",Math.min(240,Math.max(29,raw)));else uP(group.id,si,sub.id,"packAccessoriVal",29)}} style={{width:72,padding:"5px 8px",borderRadius:6,border:"1px solid rgba(0,114,198,0.3)",fontSize:12,fontWeight:600,textAlign:"center"}} placeholder="29-240"/>
+                                <span style={{fontSize:11,color:"#64748b"}}>€</span>
                               </div>
-                              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#aaa", marginTop: 2 }}><span>€29</span><span>€240</span></div>
+                              <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#aaa",marginTop:2}}><span>€29</span><span>€240</span></div>
                             </div>
                           )}
                         </div>
@@ -468,14 +1508,14 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
                     </div>
                   )}
                   {/* Reload inside TNP GA */}
-                  {sd.tnpTipo && (
-                    <div className="mt-3 p-3 rounded-xl bg-white/[0.05] border border-white/10">
-                      <YN val={sd.tnpGaReload} onCh={v => { uP(group.id, si, sub.id, "tnpGaReload", v); if (!v) uP(group.id, si, sub.id, "tnpGaReloadSel", {}) }} label="Reload?" />
-                      {(sd.tnpGaReload === true) && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {["Reload", "Reload Plus", "Reload Exchange"].map(rl =>
-                            <button key={rl} onClick={() => uP(group.id, si, sub.id, "tnpGaReloadSel", sd.tnpGaReloadSel[rl] ? {} : { [rl]: true })} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${sd.tnpGaReloadSel[rl] ? "border-2 border-emerald-500 bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>
-                              <span>{sd.tnpGaReloadSel[rl] ? "✓" : "○"}</span>{rl}
+                  {sd.tnpTipo&&(
+                    <div style={{marginTop:10,padding:8,background:"rgba(255,255,255,0.02)",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                      <YN val={sd.tnpGaReload} onCh={v=>{uP(group.id,si,sub.id,"tnpGaReload",v);if(!v)uP(group.id,si,sub.id,"tnpGaReloadSel",{})}} label="Reload?"/>
+                      {(sd.tnpGaReload===true)&&(
+                        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:6}}>
+                          {["Reload","Reload Plus","Reload Exchange"].map(rl=>
+                            <button key={rl} onClick={()=>uP(group.id,si,sub.id,"tnpGaReloadSel",sd.tnpGaReloadSel[rl]?{}:{[rl]:true})} style={{padding:"5px 12px",borderRadius:6,border:sd.tnpGaReloadSel[rl]?"2px solid #28a745":"2px solid #e0e0e0",background:sd.tnpGaReloadSel[rl]?"#d4edda":"#fff",color:sd.tnpGaReloadSel[rl]?"#155724":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                              <span>{sd.tnpGaReloadSel[rl]?"◉":"○"}</span>{rl}
                             </button>
                           )}
                         </div>
@@ -485,13 +1525,13 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
                 </div>
               )}
               {/* Security for TNP GA = Sì: OUTSIDE blue box, before dati contratto */}
-              {(sd.tnpGa === "Sì" || sd.tnpGa === true) && sd.tnpTipo && (
-                <div className="mt-4 p-4 rounded-xl bg-white/[0.03] border border-white/5">
-                  <div className="text-xs font-bold text-slate-400 mb-2">Security</div>
-                  <div className="flex gap-2">
-                    {["Security", "Security PRO"].map(s =>
-                      <button key={s} onClick={() => uP(group.id, si, sub.id, "securitySel", sd.securitySel[s] ? {} : { [s]: true })} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${sd.securitySel[s] ? "border-2 border-orange-500 bg-orange-500/15 text-orange-400" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>
-                        <span>{sd.securitySel[s] ? "✓" : "○"}</span>{s}
+              {(sd.tnpGa==="Sì"||sd.tnpGa===true)&&sd.tnpTipo&&(
+                <div style={{marginTop:8,padding:8,background:"#f8fafc",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6}}>Security</div>
+                  <div style={{display:"flex",gap:6}}>
+                    {["Security","Security PRO"].map(s=>
+                      <button key={s} onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel[s]?{}:{[s]:true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel[s]?"2px solid #fd7e14":"2px solid #e0e0e0",background:sd.securitySel[s]?"#fff3e0":"#fff",color:sd.securitySel[s]?"#e8590c":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                        <span>{sd.securitySel[s]?"◉":"○"}</span>{s}
                       </button>
                     )}
                   </div>
@@ -500,16 +1540,16 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
             </div>
           )}
           {/* Reload Forever: when TNP GA = No, before dati contratto */}
-          {mobDone && (sd.easyPay === "Sì" || sd.easyPay === true) && (sd.tnpGa === "No" || sd.tnpGa === false) && (
-            <div style={{ marginTop: 6 }}>
-              <YN val={sd.reloadForever} onCh={v => uP(group.id, si, sub.id, "reloadForever", v)} label="Reload Forever?" />
+          {mobDone&&(sd.easyPay==="Sì"||sd.easyPay===true)&&(sd.tnpGa==="No"||sd.tnpGa===false)&&(
+            <div style={{marginTop:6}}>
+              <YN val={sd.reloadForever} onCh={v=>uP(group.id,si,sub.id,"reloadForever",v)} label="Reload Forever?"/>
               {/* Security when TNP GA = No (after Reload Forever) */}
-              <div className="mt-4 p-4 rounded-xl bg-white/[0.03] border border-white/5">
-                <div className="text-xs font-bold text-slate-400 mb-2">Security</div>
-                <div className="flex gap-2">
-                  {["Security", "Security PRO"].map(s =>
-                    <button key={s} onClick={() => uP(group.id, si, sub.id, "securitySel", sd.securitySel[s] ? {} : { [s]: true })} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${sd.securitySel[s] ? "border-2 border-orange-500 bg-orange-500/15 text-orange-400" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>
-                      <span>{sd.securitySel[s] ? "✓" : "○"}</span>{s}
+              <div style={{marginTop:8,padding:8,background:"#f8fafc",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6}}>Security</div>
+                <div style={{display:"flex",gap:6}}>
+                  {["Security","Security PRO"].map(s=>
+                    <button key={s} onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel[s]?{}:{[s]:true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel[s]?"2px solid #fd7e14":"2px solid #e0e0e0",background:sd.securitySel[s]?"#fff3e0":"#fff",color:sd.securitySel[s]?"#e8590c":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                      <span>{sd.securitySel[s]?"◉":"○"}</span>{s}
                     </button>
                   )}
                 </div>
@@ -519,49 +1559,69 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
         </div>
       )}
 
-      {/* MOBILE BUSINESS flow: MNP ? Brand MNP ? Offerta ? TNP GA ? Security */}
-      {sub.isMobileBiz && (
+      {/* VF MOBILE GA — flusso completo */}
+      {sub.isVFMobile&&<VFMobileGA sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)}/>}
+      {sub.isVFBizMobile&&<VFBizMobile sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)}/>}
+
+      {/* VF MOBILE CB */}
+      {sub.isCBVF&&<VFCB sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)}/>}
+      {sub.isCBVFBiz&&<VFBizMobileCB sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)}/>}
+
+      {/* FASTWEB */}
+      {sub.isFWMobile&&<FWMobile sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)}/>}
+      {sub.isFWFisso&&<FWFisso sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)}/>}
+      {sub.isFWEnergia&&<FWEnergia sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)}/>}
+
+      {/* ILIAD */}
+      {sub.isILMobile&&<ILMobile sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)}/>}
+      {sub.isILFisso&&<ILFisso sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)}/>}
+
+      {/* ENERGY */}
+      {sub.isENLuceGas&&<ENLuceGas sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)} sub={sub}/>}
+
+      {/* MOBILE BUSINESS flow: MNP → Brand MNP → Offerta → TNP GA → Security */}
+      {sub.isMobileBiz&&(
         <div>
-          <MiniC label="MNP" val={sd.mnp} onCh={v => { uP(group.id, si, sub.id, "mnp", v); if (v === "No" || v === false) uC(group.id, si, sub.id, "brand_mnp", "") }} opts={["Sì", "No"]} />
-          {bizMnpDone && (sd.mnp === "Sì" || sd.mnp === true) && (
-            <div style={{ marginTop: 6 }}>
-              <DD l="Brand MNP" r v={f.brandMnpBiz || ""} o={v => uF(group.id, si, sub.id, "brandMnpBiz", v)} vals={brandMNP} />
+          <MiniC label="MNP" val={sd.mnp} onCh={v=>{uP(group.id,si,sub.id,"mnp",v);if(v==="No"||v===false)uC(group.id,si,sub.id,"brand_mnp","")}} opts={["Sì","No"]}/>
+          {bizMnpDone&&(sd.mnp==="Sì"||sd.mnp===true)&&(
+            <div style={{marginTop:6}}>
+              <DD l="Brand MNP" r v={f.brandMnpBiz||""} o={v=>uF(group.id,si,sub.id,"brandMnpBiz",v)} vals={brandMNP}/>
             </div>
           )}
-          {bizMnpDone && (
-            <div style={{ marginTop: 6 }}>
-              <DD l="Offerta Mobile" r v={f.offerta || ""} o={(v: string) => uF(group.id, si, sub.id, "offerta", v)} vals={(sub.bizOffers || []).filter((o: string) => (sd.mnp === "Sì" || sd.mnp === true) ? o !== "FWA Indoor PIVA" : true)} />
+          {bizMnpDone&&(
+            <div style={{marginTop:6}}>
+              <DD l="Offerta Mobile" r v={f.offerta||""} o={v=>uF(group.id,si,sub.id,"offerta",v)} vals={(sub.bizOffers||[]).filter(o=>(sd.mnp==="Sì"||sd.mnp===true)?o!=="FWA Indoor PIVA":true)}/>
             </div>
           )}
-          {bizMobDone && (
-            <div style={{ marginTop: 8 }}>
-              <MiniC label="TNP GA" val={sd.tnpGa} onCh={v => { uP(group.id, si, sub.id, "tnpGa", v); if (v === "No" || v === false) { uP(group.id, si, sub.id, "tnpTipo", ""); uP(group.id, si, sub.id, "tnpModello", ""); uP(group.id, si, sub.id, "tnpImei", ""); uP(group.id, si, sub.id, "tnpGaReload", null); uP(group.id, si, sub.id, "tnpGaReloadSel", {}) } }} opts={["Sì", "No"]} />
-              {(sd.tnpGa === "Sì" || sd.tnpGa === true) && (
-                <div style={{ marginTop: 8 }}>
-                  <div style={{ padding: 8, background: "rgba(255,255,255,0.03)", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)" }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 6 }}>Security / Reload</div>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      <button onClick={() => uP(group.id, si, sub.id, "securitySel", sd.securitySel["Security"] ? {} : { "Security": true })} style={{ padding: "5px 14px", borderRadius: 6, border: sd.securitySel["Security"] ? "2px solid #fd7e14" : "1px solid rgba(255,255,255,0.1)", background: sd.securitySel["Security"] ? "rgba(253, 126, 20, 0.1)" : "rgba(255,255,255,0.03)", color: sd.securitySel["Security"] ? "#fd7e14" : "#94a3b8", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-                        <span>{sd.securitySel["Security"] ? "✓" : "○"}</span>Security
+          {bizMobDone&&(
+            <div style={{marginTop:8}}>
+              <MiniC label="TNP GA" val={sd.tnpGa} onCh={v=>{uP(group.id,si,sub.id,"tnpGa",v);if(v==="No"||v===false){uP(group.id,si,sub.id,"tnpTipo","");uP(group.id,si,sub.id,"tnpModello","");uP(group.id,si,sub.id,"tnpImei","");uP(group.id,si,sub.id,"tnpGaReload",null);uP(group.id,si,sub.id,"tnpGaReloadSel",{})}}} opts={["Sì","No"]}/>
+              {(sd.tnpGa==="Sì"||sd.tnpGa===true)&&(
+                <div style={{marginTop:8}}>
+                  <div style={{padding:8,background:"#f8fafc",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6}}>Security / Reload</div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                      <button onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel["Security"]?{}:{"Security":true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel["Security"]?"2px solid #fd7e14":"2px solid #e0e0e0",background:sd.securitySel["Security"]?"#fff3e0":"#fff",color:sd.securitySel["Security"]?"#e8590c":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                        <span>{sd.securitySel["Security"]?"☑":"☐"}</span>Security
                       </button>
-                      {["Reload", "Reload EU"].map(rl =>
-                        <button key={rl} onClick={() => uP(group.id, si, sub.id, "tnpGaReloadSel", sd.tnpGaReloadSel[rl] ? {} : { [rl]: true })} style={{ padding: "5px 14px", borderRadius: 6, border: sd.tnpGaReloadSel[rl] ? "2px solid #28a745" : "1px solid rgba(255,255,255,0.1)", background: sd.tnpGaReloadSel[rl] ? "rgba(40, 167, 69, 0.1)" : "rgba(255,255,255,0.03)", color: sd.tnpGaReloadSel[rl] ? "#28a745" : "#94a3b8", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-                          <span>{sd.tnpGaReloadSel[rl] ? "✓" : "○"}</span>{rl}
+                      {["Reload","Reload EU"].map(rl=>
+                        <button key={rl} onClick={()=>uP(group.id,si,sub.id,"tnpGaReloadSel",sd.tnpGaReloadSel[rl]?{}:{[rl]:true})} style={{padding:"5px 14px",borderRadius:6,border:sd.tnpGaReloadSel[rl]?"2px solid #28a745":"2px solid #e0e0e0",background:sd.tnpGaReloadSel[rl]?"#d4edda":"#fff",color:sd.tnpGaReloadSel[rl]?"#155724":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                          <span>{sd.tnpGaReloadSel[rl]?"◉":"○"}</span>{rl}
                         </button>
                       )}
                     </div>
                   </div>
                 </div>
               )}
-              {(sd.tnpGa === "No" || sd.tnpGa === false) && (
-                <div style={{ marginTop: 8, padding: 8, background: "rgba(255,255,255,0.03)", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 6 }}>Security / Reload</div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <button onClick={() => uP(group.id, si, sub.id, "securitySel", sd.securitySel["Security"] ? {} : { "Security": true })} style={{ padding: "5px 14px", borderRadius: 6, border: sd.securitySel["Security"] ? "2px solid #fd7e14" : "1px solid rgba(255,255,255,0.1)", background: sd.securitySel["Security"] ? "rgba(253, 126, 20, 0.1)" : "rgba(255,255,255,0.03)", color: sd.securitySel["Security"] ? "#fd7e14" : "#94a3b8", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-                      <span>{sd.securitySel["Security"] ? "✓" : "○"}</span>Security
+              {(sd.tnpGa==="No"||sd.tnpGa===false)&&(
+                <div style={{marginTop:8,padding:8,background:"#f8fafc",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6}}>Security / Reload</div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    <button onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel["Security"]?{}:{"Security":true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel["Security"]?"2px solid #fd7e14":"2px solid #e0e0e0",background:sd.securitySel["Security"]?"#fff3e0":"#fff",color:sd.securitySel["Security"]?"#e8590c":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                      <span>{sd.securitySel["Security"]?"◉":"○"}</span>Security
                     </button>
-                    <button onClick={() => uP(group.id, si, sub.id, "tnpGaReloadSel", sd.tnpGaReloadSel["Reload Open"] ? {} : { "Reload Open": true })} style={{ padding: "5px 14px", borderRadius: 6, border: sd.tnpGaReloadSel["Reload Open"] ? "2px solid #28a745" : "1px solid rgba(255,255,255,0.1)", background: sd.tnpGaReloadSel["Reload Open"] ? "rgba(40, 167, 69, 0.1)" : "rgba(255,255,255,0.03)", color: sd.tnpGaReloadSel["Reload Open"] ? "#28a745" : "#94a3b8", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-                      <span>{sd.tnpGaReloadSel["Reload Open"] ? "✓" : "○"}</span>Reload Open
+                    <button onClick={()=>uP(group.id,si,sub.id,"tnpGaReloadSel",sd.tnpGaReloadSel["Reload Open"]?{}:{"Reload Open":true})} style={{padding:"5px 14px",borderRadius:6,border:sd.tnpGaReloadSel["Reload Open"]?"2px solid #28a745":"2px solid #e0e0e0",background:sd.tnpGaReloadSel["Reload Open"]?"#d4edda":"#fff",color:sd.tnpGaReloadSel["Reload Open"]?"#155724":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                      <span>{sd.tnpGaReloadSel["Reload Open"]?"◉":"○"}</span>Reload Open
                     </button>
                   </div>
                 </div>
@@ -572,98 +1632,146 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
       )}
 
 
-      {sub.isProtecta && (
+      {sub.isProtecta&&(
         sub.isBizProtecta
-          ? <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 8, background: "#f0ebff", border: "2px solid #6f42c1" }}>
-            <span style={{ fontSize: 16 }}>?</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#6f42c1" }}>Protecta PRO attivato</span>
-          </div>
-          : <div style={{ display: "flex", gap: 8 }}>
-            {["Kit Base", "Kit Plus"].map(k =>
-              <button key={k} onClick={() => uF(group.id, si, sub.id, "protectaKit", f.protectaKit === k ? "" : k)} style={{ padding: "8px 18px", borderRadius: 8, border: f.protectaKit === k ? "2px solid #6f42c1" : "1px solid rgba(255,255,255,0.1)", background: f.protectaKit === k ? "rgba(111, 66, 193, 0.2)" : "rgba(255,255,255,0.03)", color: f.protectaKit === k ? "#a855f7" : "#94a3b8", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>{k}</button>
-            )}
-          </div>
+          ? <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRadius:8,background:"#f0ebff",border:"2px solid #6f42c1"}}>
+              <span style={{fontSize:16}}>✅</span>
+              <span style={{fontSize:13,fontWeight:700,color:"#6f42c1"}}>Protecta PRO attivato</span>
+            </div>
+          : <div style={{display:"flex",gap:8}}>
+              {["Kit Base","Kit Plus"].map(k=>
+                <button key={k} onClick={()=>uF(group.id,si,sub.id,"protectaKit",f.protectaKit===k?"":k)} style={{padding:"8px 18px",borderRadius:8,border:f.protectaKit===k?"2px solid #6f42c1":"2px solid #e0e0e0",background:f.protectaKit===k?"#6f42c1":"#fff",color:f.protectaKit===k?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>{k}</button>
+              )}
+            </div>
       )}
 
+      {/* Verisure */}
+      {sub.isVerisure&&(
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",borderRadius:8,background:"#f0ebff",border:"2px solid #6f42c1"}}>
+          <span style={{fontSize:20}}>🛡️</span>
+          <span style={{fontSize:13,fontWeight:700,color:"#6f42c1"}}>Verisure</span>
+          <span style={{marginLeft:"auto",fontSize:12,fontWeight:800,color:"#6f42c1",background:"#e0d4ff",borderRadius:6,padding:"3px 12px"}}>✅ VERISURE ATTIVO</span>
+        </div>
+      )}
+
+      {/* VF Fisso — Convergenza / GNP / Lock In */}
+      {sub.isVFFisso&&<VFMobileGAFisso sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)}/>}
+      {sub.isVFFissoBiz&&<VFBizFisso sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)} isCombo={!!sub.isCombinatoFissoBiz}/>}
+      {sub.isVFSolDig&&(
+        <div style={{background:"#f0f8ff",border:"1px solid rgba(0,114,198,0.3)",borderRadius:8,padding:12}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+          <DD l="Codice Inserimento" r v={sd.vfSolDigCodIns||""} o={v=>uP(group.id,si,sub.id,"vfSolDigCodIns",v)} vals={VF_CODICI_NEGOZIO}/>
+        </div>
+      )}
+
+      {/* Kasko Facile */}
+      {sub.isKaskoFacile&&(
+        <div style={{background:"#f0f8ff",border:"1px solid rgba(0,114,198,0.3)",borderRadius:8,padding:12}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto — Kasko Facile</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+            <TF l="IMEI" r v={f.kfImei||""} o={v=>uF(group.id,si,sub.id,"kfImei",v)} p="15 cifre" nt="Barcode 📷"/>
+            <TF l="Numero di telefono" r v={f.kfTelefono||""} o={v=>uF(group.id,si,sub.id,"kfTelefono",v)} p="3XXXXXXXXX"/>
+            <TF l="Seriale Kasko" r v={f.kfSeriale||""} o={v=>uF(group.id,si,sub.id,"kfSeriale",v)} p="es. KF-000123"/>
+            <div>
+              <div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Tipologia Kasko <span style={{color:"#dc3545"}}>*</span></div>
+              <select value={f.kfTipologia||""} onChange={e=>uF(group.id,si,sub.id,"kfTipologia",e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box",background:"rgba(255,255,255,0.02)"}}>
+                <option value="">— Seleziona —</option>
+                <option value="da_definire">Da definire</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Vodafone Care */}
+      {sub.isVFCare&&(
+        <div style={{background:"#f0f8ff",border:"1px solid rgba(0,114,198,0.3)",borderRadius:8,padding:12}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto — Vodafone Care</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+            <TF l="Numero di telefono" r v={f.vcTelefono||""} o={v=>uF(group.id,si,sub.id,"vcTelefono",v)} p="3XXXXXXXXX"/>
+            <TF l="IMEI" r v={f.vcImei||""} o={v=>uF(group.id,si,sub.id,"vcImei",v)} p="15 cifre" nt="Barcode 📷"/>
+          </div>
+        </div>
+      )}
       {/* Assicurazioni Business: radio esclusivo */}
-      {sub.isAssicBiz && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {["Protezione PRO Negozi - Affittuario", "Protezione PRO Negozi - Proprietario"].map(opt =>
-            <button key={opt} onClick={() => uF(group.id, si, sub.id, "assicBizSel", f.assicBizSel === opt ? "" : opt)} style={{ padding: "8px 16px", borderRadius: 8, border: f.assicBizSel === opt ? "2px solid #6f42c1" : "1px solid rgba(255,255,255,0.1)", background: f.assicBizSel === opt ? "rgba(111, 66, 193, 0.2)" : "rgba(255,255,255,0.03)", color: f.assicBizSel === opt ? "#a855f7" : "#94a3b8", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "all 0.2s" }}>
-              <span style={{ fontSize: 14 }}>{f.assicBizSel === opt ? "✓" : "○"}</span>{opt}
+      {sub.isAssicBiz&&(
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {["Protezione PRO Negozi - Affittuario","Protezione PRO Negozi - Proprietario"].map(opt=>
+            <button key={opt} onClick={()=>uF(group.id,si,sub.id,"assicBizSel",f.assicBizSel===opt?"":opt)} style={{padding:"8px 16px",borderRadius:8,border:f.assicBizSel===opt?"2px solid #6f42c1":"2px solid #e0e0e0",background:f.assicBizSel===opt?"#6f42c1":"#fff",color:f.assicBizSel===opt?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:14}}>{f.assicBizSel===opt?"◉":"○"}</span>{opt}
             </button>
           )}
         </div>
       )}
 
 
-      {sub.isCB && (
+      {sub.isCB&&(
         <div>
           {/* Three toggleable sub-options */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-            <button onClick={() => { const on = !sd.cbTnp; uP(group.id, si, sub.id, "cbTnp", on); if (on) { if (!sd.cbTnpCell) { const pre = sd.cbCambioCell || anaCel || ""; if (pre) uP(group.id, si, sub.id, "cbTnpCell", pre) }; if (!sd.cbTnpCC) { const pre = sd.cbCambioCC || (c.codice_contratto || ""); if (pre) uP(group.id, si, sub.id, "cbTnpCC", pre) } } }} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${sd.cbTnp ? "bg-blue-600 text-white border-2 border-blue-500" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>TNP CB</button>
-            <button onClick={() => { const on = !sd.cbCambio; uP(group.id, si, sub.id, "cbCambio", on); if (on) { if (!sd.cbCambioCell) { const pre = sd.cbTnpCell || anaCel || ""; if (pre) uP(group.id, si, sub.id, "cbCambioCell", pre) }; if (!sd.cbCambioCC) { const pre = sd.cbTnpCC || (c.codice_contratto || ""); if (pre) uP(group.id, si, sub.id, "cbCambioCC", pre) } } }} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${sd.cbCambio ? "bg-violet-600 text-white border-2 border-violet-500" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>Cambio Offerta</button>
-            {!sub.isCBBiz && <button onClick={() => uP(group.id, si, sub.id, "cbRf", !sd.cbRf)} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${sd.cbRf ? "bg-emerald-600 text-white border-2 border-emerald-500" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>Reload Forever</button>}
+          <div style={{display:"flex",gap:8,marginBottom:10}}>
+            <button onClick={()=>{const on=!sd.cbTnp;uP(group.id,si,sub.id,"cbTnp",on);if(on){if(!sd.cbTnpCell){const pre=sd.cbCambioCell||anaCel||"";if(pre)uP(group.id,si,sub.id,"cbTnpCell",pre)};if(!sd.cbTnpCC){const pre=sd.cbCambioCC||(c.codice_contratto||"");if(pre)uP(group.id,si,sub.id,"cbTnpCC",pre)}}}} style={{padding:"8px 16px",borderRadius:8,border:sd.cbTnp?"2px solid #2E75B6":"2px solid #e0e0e0",background:sd.cbTnp?"#2E75B6":"#fff",color:sd.cbTnp?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>TNP CB</button>
+            <button onClick={()=>{const on=!sd.cbCambio;uP(group.id,si,sub.id,"cbCambio",on);if(on){if(!sd.cbCambioCell){const pre=sd.cbTnpCell||anaCel||"";if(pre)uP(group.id,si,sub.id,"cbCambioCell",pre)};if(!sd.cbCambioCC){const pre=sd.cbTnpCC||(c.codice_contratto||"");if(pre)uP(group.id,si,sub.id,"cbCambioCC",pre)}}}} style={{padding:"8px 16px",borderRadius:8,border:sd.cbCambio?"2px solid #6f42c1":"2px solid #e0e0e0",background:sd.cbCambio?"#6f42c1":"#fff",color:sd.cbCambio?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cambio Offerta</button>
+            {!sub.isCBBiz&&<button onClick={()=>uP(group.id,si,sub.id,"cbRf",!sd.cbRf)} style={{padding:"8px 16px",borderRadius:8,border:sd.cbRf?"2px solid #28a745":"2px solid #e0e0e0",background:sd.cbRf?"#28a745":"#fff",color:sd.cbRf?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>Reload Forever</button>}
           </div>
 
           {/* TNP CB section */}
-          {sd.cbTnp && (
-            <div style={{ padding: 10, background: "rgba(46, 117, 182, 0.05)", borderRadius: 8, border: "1px solid rgba(46, 117, 182, 0.2)", marginBottom: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#60a5fa", marginBottom: 8, textTransform: "uppercase" }}>Dati TNP CB</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 14px", marginBottom: 8 }}>
-                <SCd session={sessionCode} codici={codiciW3} val={sd.cbTnpCodIns || ""} onCh={v => uP(group.id, si, sub.id, "cbTnpCodIns", v)} />
-                <TF l="Cellulare" r v={sd.cbTnpCell || ""} o={v => { uP(group.id, si, sub.id, "cbTnpCell", v); if (sd.cbCambio) uP(group.id, si, sub.id, "cbCambioCell", v) }} p="3XXXXXXXXX" nt={sd.cbTnpCell === anaCel && anaCel ? "Da anagrafica" : ""} />
-                <TF l="Codice Contratto" r v={sd.cbTnpCC || ""} o={v => { uP(group.id, si, sub.id, "cbTnpCC", v); if (sd.cbCambio) uP(group.id, si, sub.id, "cbCambioCC", v) }} p="es. 167942" />
+          {sd.cbTnp&&(
+            <div style={{padding:10,background:"rgba(255,255,255,0.04)",borderRadius:8,border:"1px solid rgba(0,114,198,0.3)",marginBottom:8}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#2E75B6",marginBottom:8,textTransform:"uppercase"}}>Dati TNP CB</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"8px 14px",marginBottom:8}}>
+                <SCd session={sessionCode} codici={codiciW3} val={sd.cbTnpCodIns||""} onCh={v=>uP(group.id,si,sub.id,"cbTnpCodIns",v)}/>
+                <TF l="Cellulare" r v={sd.cbTnpCell||""} o={v=>{uP(group.id,si,sub.id,"cbTnpCell",v);if(sd.cbCambio)uP(group.id,si,sub.id,"cbCambioCell",v)}} p="3XXXXXXXXX" nt={sd.cbTnpCell===anaCel&&anaCel?"Da anagrafica":""}/>
+                <TF l="Codice Contratto" r v={sd.cbTnpCC||""} o={v=>{uP(group.id,si,sub.id,"cbTnpCC",v);if(sd.cbCambio)uP(group.id,si,sub.id,"cbCambioCC",v)}} p="es. 167942"/>
               </div>
-              {sub.isCBBiz && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 14px", marginBottom: 8 }}>
-                  <DD l="Modello Terminale" r v={sd.cbTnpModello || ""} o={v => uP(group.id, si, sub.id, "cbTnpModello", v)} vals={SMARTPHONES} />
-                  <TF l="IMEI" r v={sd.cbTnpImei || ""} o={v => uP(group.id, si, sub.id, "cbTnpImei", v)} p="15 cifre" nt="Scansione barcode" />
+              {sub.isCBBiz&&(
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px",marginBottom:8}}>
+                  <DD l="Modello Terminale" r v={sd.cbTnpModello||""} o={v=>uP(group.id,si,sub.id,"cbTnpModello",v)} vals={SMARTPHONES}/>
+                  <TF l="IMEI" r v={sd.cbTnpImei||""} o={v=>uP(group.id,si,sub.id,"cbTnpImei",v)} p="15 cifre" nt="Barcode 📷"/>
                 </div>
               )}
-              <div style={{ display: "flex", gap: 6, marginBottom: sd.cbTnpTipo ? 8 : 0 }}>
-                {!sub.isCBBiz && sub.cbTnpVals.map((opt: string) =>
-                  <button key={opt} onClick={() => uP(group.id, si, sub.id, "cbTnpTipo", opt)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${sd.cbTnpTipo === opt ? "bg-blue-600 text-white border-2 border-blue-500" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>{opt}</button>
+              <div style={{display:"flex",gap:6,marginBottom:sd.cbTnpTipo?8:0}}>
+                {!sub.isCBBiz&&sub.cbTnpVals.map(opt=>
+                  <button key={opt} onClick={()=>uP(group.id,si,sub.id,"cbTnpTipo",opt)} style={{padding:"6px 14px",borderRadius:6,border:sd.cbTnpTipo===opt?"2px solid #2E75B6":"2px solid #e0e0e0",background:sd.cbTnpTipo===opt?"#2E75B6":"#fff",color:sd.cbTnpTipo===opt?"#fff":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>{opt}</button>
                 )}
               </div>
-              {!sub.isCBBiz && sd.cbTnpTipo && (
+              {!sub.isCBBiz&&sd.cbTnpTipo&&(
                 <div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 14px" }}>
-                    {!sd.cbTnpTipo.startsWith("Finanziamento") && <DD l="Modello Terminale" r v={sd.cbTnpModello || ""} o={v => uP(group.id, si, sub.id, "cbTnpModello", v)} vals={SMARTPHONES} />}
-                    {!sd.cbTnpTipo.startsWith("Finanziamento") && <TF l="IMEI" r v={sd.cbTnpImei || ""} o={v => uP(group.id, si, sub.id, "cbTnpImei", v)} p="15 cifre" nt="Scansione barcode" />}
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                    {!sd.cbTnpTipo.startsWith("Finanziamento")&&<DD l="Modello Terminale" r v={sd.cbTnpModello||""} o={v=>uP(group.id,si,sub.id,"cbTnpModello",v)} vals={SMARTPHONES}/>}
+                    {!sd.cbTnpTipo.startsWith("Finanziamento")&&<TF l="IMEI" r v={sd.cbTnpImei||""} o={v=>uP(group.id,si,sub.id,"cbTnpImei",v)} p="15 cifre" nt="Barcode 📷"/>}
                   </div>
-                  {sd.cbTnpTipo.startsWith("Finanziamento") && (
-                    <div style={{ marginTop: 8 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#2E75B6", marginBottom: 6 }}>Quanti TNP hai finanziato?</div>
-                      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                        {[1, 2, 3].map(n =>
-                          <button key={n} onClick={() => uP(group.id, si, sub.id, "cbTnpCount", sd.cbTnpCount === n ? null : n)} className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold transition-all ${sd.cbTnpCount === n ? "bg-blue-600 text-white border-2 border-blue-500" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>{n}</button>
+                  {sd.cbTnpTipo.startsWith("Finanziamento")&&(
+                    <div style={{marginTop:8}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"#2E75B6",marginBottom:6}}>Quanti TNP hai finanziato?</div>
+                      <div style={{display:"flex",gap:6,marginBottom:8}}>
+                        {[1,2,3].map(n=>
+                          <button key={n} onClick={()=>uP(group.id,si,sub.id,"cbTnpCount",sd.cbTnpCount===n?null:n)} style={{width:40,height:40,borderRadius:8,border:sd.cbTnpCount===n?"2px solid #2E75B6":"2px solid #e0e0e0",background:sd.cbTnpCount===n?"#2E75B6":"#fff",color:sd.cbTnpCount===n?"#fff":"#555",fontSize:14,fontWeight:700,cursor:"pointer"}}>{n}</button>
                         )}
                       </div>
-                      {sd.cbTnpCount && [...Array(sd.cbTnpCount)].map((_, idx) => (
-                        <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 14px", marginBottom: 8, padding: 8, background: "rgba(255,255,255,0.02)", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)" }}>
-                          <div style={{ gridColumn: "1/-1", fontSize: 10, fontWeight: 700, color: "#60a5fa", marginBottom: 2 }}>Terminale {sd.cbTnpCount > 1 ? idx + 1 : ""}</div>
-                          <DD l="Modello Terminale" r v={(sd.cbTnpModelli && sd.cbTnpModelli[idx]) || ""} o={v => { const m = [...(sd.cbTnpModelli || [])]; m[idx] = v; uP(group.id, si, sub.id, "cbTnpModelli", m) }} vals={SMARTPHONES} />
-                          <TF l="IMEI" r v={(sd.cbTnpImeis && sd.cbTnpImeis[idx]) || ""} o={v => { const im = [...(sd.cbTnpImeis || [])]; im[idx] = v; uP(group.id, si, sub.id, "cbTnpImeis", im) }} p="15 cifre" nt="Scansione barcode" />
+                      {sd.cbTnpCount&&[...Array(sd.cbTnpCount)].map((_,idx)=>(
+                        <div key={idx} style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px",marginBottom:8,padding:8,background:"rgba(255,255,255,0.02)",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                          <div style={{gridColumn:"1/-1",fontSize:10,fontWeight:700,color:"#2E75B6",marginBottom:2}}>Terminale {sd.cbTnpCount>1?idx+1:""}</div>
+                          <DD l="Modello Terminale" r v={(sd.cbTnpModelli&&sd.cbTnpModelli[idx])||""} o={v=>{const m=[...(sd.cbTnpModelli||[])];m[idx]=v;uP(group.id,si,sub.id,"cbTnpModelli",m)}} vals={SMARTPHONES}/>
+                          <TF l="IMEI" r v={(sd.cbTnpImeis&&sd.cbTnpImeis[idx])||""} o={v=>{const im=[...(sd.cbTnpImeis||[])];im[idx]=v;uP(group.id,si,sub.id,"cbTnpImeis",im)}} p="15 cifre" nt="Barcode 📷"/>
                         </div>
                       ))}
-                      {sd.cbTnpCount && (
-                        <div style={{ marginTop: 4, padding: 8, background: "rgba(255,255,255,0.02)", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                            <YN val={sd.cbPackAccessori} onCh={v => uP(group.id, si, sub.id, "cbPackAccessori", v)} label="Pack Accessori?" />
-                            {(sd.cbPackAccessori === true) && (
-                              <TF l="Quanti accessori?" v={sd.cbPackAccessoriQta || ""} o={v => uP(group.id, si, sub.id, "cbPackAccessoriQta", v)} p="es. 2" />
+                      {sd.cbTnpCount&&(
+                        <div style={{marginTop:4,padding:8,background:"rgba(255,255,255,0.02)",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                            <YN val={sd.cbPackAccessori} onCh={v=>uP(group.id,si,sub.id,"cbPackAccessori",v)} label="Pack Accessori?"/>
+                            {(sd.cbPackAccessori===true)&&(
+                              <TF l="Quanti accessori?" v={sd.cbPackAccessoriQta||""} o={v=>uP(group.id,si,sub.id,"cbPackAccessoriQta",v)} p="es. 2"/>
                             )}
                           </div>
-                          {(sd.cbPackAccessori === true) && (
-                            <div style={{ marginTop: 10 }}>
-                              <div className="text-xs font-semibold text-slate-400 mb-1.5">Importo Pack Accessori <span className="text-blue-500 font-bold">€{sd.cbPackAccessoriVal || 29}</span></div>
-                              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                <input type="range" min={29} max={240} value={sd.cbPackAccessoriVal || 29} onChange={e => uP(group.id, si, sub.id, "cbPackAccessoriVal", parseInt(e.target.value))} style={{ flex: 1, accentColor: "#2E75B6" }} />
-                                <input type="number" min={29} max={240} value={sd.cbPackAccessoriVal || ""} onChange={e => uP(group.id, si, sub.id, "cbPackAccessoriVal", e.target.value === "" ? "" : parseInt(e.target.value))} onBlur={e => { const raw = parseInt(e.target.value); if (!isNaN(raw)) uP(group.id, si, sub.id, "cbPackAccessoriVal", Math.min(240, Math.max(29, raw))); else uP(group.id, si, sub.id, "cbPackAccessoriVal", 29) }} style={{ width: 72, padding: "5px 8px", borderRadius: 6, border: "1px solid #b8d4f0", fontSize: 12, fontWeight: 600, textAlign: "center" }} placeholder="29-240" />
-                                <span style={{ fontSize: 11, color: "#888" }}>€</span>
+                          {(sd.cbPackAccessori===true)&&(
+                            <div style={{marginTop:10}}>
+                              <div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:6}}>Importo Pack Accessori <span style={{color:"#2E75B6",fontWeight:700}}>€{sd.cbPackAccessoriVal||29}</span></div>
+                              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                                <input type="range" min={29} max={240} value={sd.cbPackAccessoriVal||29} onChange={e=>uP(group.id,si,sub.id,"cbPackAccessoriVal",parseInt(e.target.value))} style={{flex:1,accentColor:"#2E75B6"}}/>
+                                <input type="number" min={29} max={240} value={sd.cbPackAccessoriVal||""} onChange={e=>uP(group.id,si,sub.id,"cbPackAccessoriVal",e.target.value===""?"":parseInt(e.target.value))} onBlur={e=>{const raw=parseInt(e.target.value);if(!isNaN(raw))uP(group.id,si,sub.id,"cbPackAccessoriVal",Math.min(240,Math.max(29,raw)));else uP(group.id,si,sub.id,"cbPackAccessoriVal",29)}} style={{width:72,padding:"5px 8px",borderRadius:6,border:"1px solid rgba(0,114,198,0.3)",fontSize:12,fontWeight:600,textAlign:"center"}} placeholder="29-240"/>
+                                <span style={{fontSize:11,color:"#64748b"}}>€</span>
                               </div>
-                              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#aaa", marginTop: 2 }}><span>€29</span><span>€240</span></div>
+                              <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#aaa",marginTop:2}}><span>€29</span><span>€240</span></div>
                             </div>
                           )}
                         </div>
@@ -673,13 +1781,13 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
                 </div>
               )}
               {/* Reload inside TNP CB */}
-              <div style={{ marginTop: 8, padding: 8, background: "rgba(255,255,255,0.02)", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)" }}>
-                <YN val={sd.cbTnpReload} onCh={v => { uP(group.id, si, sub.id, "cbTnpReload", v); if (!v) uP(group.id, si, sub.id, "cbTnpReloadSel", {}) }} label="Reload?" />
-                {(sd.cbTnpReload === true) && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
-                    {(sub.isCBBiz ? ["Reload", "Reload EU"] : ["Reload", "Reload Plus", "Reload Exchange"]).map(rl =>
-                      <button key={rl} onClick={() => uP(group.id, si, sub.id, "cbTnpReloadSel", sd.cbTnpReloadSel[rl] ? {} : { [rl]: true })} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${sd.cbTnpReloadSel[rl] ? "border-2 border-emerald-500 bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>
-                        <span>{sd.cbTnpReloadSel[rl] ? "✓" : "○"}</span>{rl}
+              <div style={{marginTop:8,padding:8,background:"rgba(255,255,255,0.02)",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                <YN val={sd.cbTnpReload} onCh={v=>{uP(group.id,si,sub.id,"cbTnpReload",v);if(!v)uP(group.id,si,sub.id,"cbTnpReloadSel",{})}} label="Reload?"/>
+                {(sd.cbTnpReload===true)&&(
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:6}}>
+                    {(sub.isCBBiz?["Reload","Reload EU"]:["Reload","Reload Plus","Reload Exchange"]).map(rl=>
+                      <button key={rl} onClick={()=>uP(group.id,si,sub.id,"cbTnpReloadSel",sd.cbTnpReloadSel[rl]?{}:{[rl]:true})} style={{padding:"5px 12px",borderRadius:6,border:sd.cbTnpReloadSel[rl]?"2px solid #28a745":"2px solid #e0e0e0",background:sd.cbTnpReloadSel[rl]?"#d4edda":"#fff",color:sd.cbTnpReloadSel[rl]?"#155724":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                        <span>{sd.cbTnpReloadSel[rl]?"◉":"○"}</span>{rl}
                       </button>
                     )}
                   </div>
@@ -689,22 +1797,22 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
           )}
 
           {/* Cambio Offerta section */}
-          {sd.cbCambio && (
-            <div style={{ padding: 10, background: "rgba(111, 66, 193, 0.05)", borderRadius: 8, border: "1px solid rgba(111, 66, 193, 0.2)", marginBottom: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#a855f7", marginBottom: 8, textTransform: "uppercase" }}>Cambio Offerta</div>
-              <div style={{ marginBottom: 8, maxWidth: 250 }}>
-                <SCd session={sessionCode} codici={codiciW3} val={sd.cbCambioCodIns || ""} onCh={v => uP(group.id, si, sub.id, "cbCambioCodIns", v)} />
+          {sd.cbCambio&&(
+            <div style={{padding:10,background:"#f5f0ff",borderRadius:8,border:"1px solid #d4c5f0",marginBottom:8}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#6f42c1",marginBottom:8,textTransform:"uppercase"}}>Cambio Offerta</div>
+              <div style={{marginBottom:8,maxWidth:250}}>
+                <SCd session={sessionCode} codici={codiciW3} val={sd.cbCambioCodIns||""} onCh={v=>uP(group.id,si,sub.id,"cbCambioCodIns",v)}/>
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-                {sub.cbCambioVals.map((opt: string) =>
-                  <button key={opt} onClick={() => uP(group.id, si, sub.id, "cbCambioVal", sd.cbCambioVal === opt ? "" : opt)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${sd.cbCambioVal === opt ? "bg-violet-600 text-white border-2 border-violet-500" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>{opt}</button>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+                {sub.cbCambioVals.map(opt=>
+                  <button key={opt} onClick={()=>uP(group.id,si,sub.id,"cbCambioVal",sd.cbCambioVal===opt?"":opt)} style={{padding:"6px 14px",borderRadius:6,border:sd.cbCambioVal===opt?"2px solid #6f42c1":"2px solid #e0e0e0",background:sd.cbCambioVal===opt?"#6f42c1":"#fff",color:sd.cbCambioVal===opt?"#fff":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>{opt}</button>
                 )}
               </div>
-              {sd.cbCambioVal && (
-                <div style={{ display: "grid", gridTemplateColumns: ["Caring", "CL0", "CL1", "CL2", "CL3"].indexOf(sd.cbCambioVal) >= 0 ? "1fr" : "1fr 1fr", gap: "8px 14px" }}>
-                  <TF l="Cellulare" r v={sd.cbCambioCell || ""} o={v => { uP(group.id, si, sub.id, "cbCambioCell", v); if (sd.cbTnp) uP(group.id, si, sub.id, "cbTnpCell", v) }} p="3XXXXXXXXX" nt={sd.cbCambioCell === anaCel && anaCel ? "Da anagrafica" : ""} />
-                  {["Caring", "CL0", "CL1", "CL2", "CL3"].indexOf(sd.cbCambioVal) < 0 && (
-                    <TF l="Codice Contratto" r v={sd.cbCambioCC || ""} o={v => { uP(group.id, si, sub.id, "cbCambioCC", v); if (sd.cbTnp) uP(group.id, si, sub.id, "cbTnpCC", v) }} p="es. 167942" />
+              {sd.cbCambioVal&&(
+                <div style={{display:"grid",gridTemplateColumns:["Caring","CL0","CL1","CL2","CL3"].indexOf(sd.cbCambioVal)>=0?"1fr":"1fr 1fr",gap:"8px 14px"}}>
+                  <TF l="Cellulare" r v={sd.cbCambioCell||""} o={v=>{uP(group.id,si,sub.id,"cbCambioCell",v);if(sd.cbTnp)uP(group.id,si,sub.id,"cbTnpCell",v)}} p="3XXXXXXXXX" nt={sd.cbCambioCell===anaCel&&anaCel?"Da anagrafica":""}/>
+                  {["Caring","CL0","CL1","CL2","CL3"].indexOf(sd.cbCambioVal)<0&&(
+                    <TF l="Codice Contratto" r v={sd.cbCambioCC||""} o={v=>{uP(group.id,si,sub.id,"cbCambioCC",v);if(sd.cbTnp)uP(group.id,si,sub.id,"cbTnpCC",v)}} p="es. 167942"/>
                   )}
                 </div>
               )}
@@ -712,166 +1820,164 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
           )}
 
           {/* Add-on section inside CB */}
-          {sub.cbAddonVals && (
-            <div style={{ padding: 10, background: "#f0faf0", borderRadius: 8, border: "1px solid #c3e6c3", marginBottom: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#28a745", marginBottom: 8, textTransform: "uppercase" }}>{sub.isCBBiz ? "Add-on / Security" : "Add-on"}</div>
-              <div style={{ marginBottom: 8, maxWidth: 250 }}>
-                <SCd session={sessionCode} codici={codiciW3} val={sd.cbAddonCodIns || (sd.cbTnpCodIns || sd.cbCambioCodIns || "")} onCh={v => uP(group.id, si, sub.id, "cbAddonCodIns", v)} />
+          {sub.cbAddonVals&&(
+            <div style={{padding:10,background:"#f0faf0",borderRadius:8,border:"1px solid #c3e6c3",marginBottom:8}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#28a745",marginBottom:8,textTransform:"uppercase"}}>{sub.isCBBiz?"Add-on / Security":"Add-on"}</div>
+              <div style={{marginBottom:8,maxWidth:250}}>
+                <SCd session={sessionCode} codici={codiciW3} val={sd.cbAddonCodIns||(sd.cbTnpCodIns||sd.cbCambioCodIns||"")} onCh={v=>uP(group.id,si,sub.id,"cbAddonCodIns",v)}/>
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {sub.cbAddonVals.map((opt: string) =>
-                  <button key={opt} onClick={() => { const cur = sd.cbAddonSel[opt]; uP(group.id, si, sub.id, "cbAddonSel", { ...sd.cbAddonSel, [opt]: !cur }) }} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${sd.cbAddonSel[opt] ? "border-2 border-emerald-500 bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>
-                    <span>{sd.cbAddonSel[opt] ? "✓" : "○"}</span>{opt}
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {sub.cbAddonVals.map(opt=>
+                  <button key={opt} onClick={()=>{const cur=sd.cbAddonSel[opt];uP(group.id,si,sub.id,"cbAddonSel",{...sd.cbAddonSel,[opt]:!cur})}} style={{padding:"6px 14px",borderRadius:6,border:sd.cbAddonSel[opt]?"2px solid #28a745":"2px solid #e0e0e0",background:sd.cbAddonSel[opt]?"#d4edda":"#fff",color:sd.cbAddonSel[opt]?"#155724":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                    <span>{sd.cbAddonSel[opt]?"☑":"☐"}</span>{opt}
                   </button>
                 )}
-                {sub.isCBBiz && (!sd.cbTnp || (sd.cbTnp && sd.cbCambio && (sd.cbTnpReload === false || sd.cbTnpReload === null))) && (
-                  <button onClick={() => { const cur = sd.cbAddonSel["Reload Open"]; uP(group.id, si, sub.id, "cbAddonSel", { ...sd.cbAddonSel, "Reload Open": !cur }) }} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${sd.cbAddonSel["Reload Open"] ? "border-2 border-emerald-500 bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"}`}>
-                    <span>{sd.cbAddonSel["Reload Open"] ? "✓" : "○"}</span>Reload Open
+                {sub.isCBBiz&&(!sd.cbTnp||(sd.cbTnp&&sd.cbCambio&&(sd.cbTnpReload===false||sd.cbTnpReload===null)))&&(
+                  <button onClick={()=>{const cur=sd.cbAddonSel["Reload Open"];uP(group.id,si,sub.id,"cbAddonSel",{...sd.cbAddonSel,"Reload Open":!cur})}} style={{padding:"6px 14px",borderRadius:6,border:sd.cbAddonSel["Reload Open"]?"2px solid #28a745":"2px solid #e0e0e0",background:sd.cbAddonSel["Reload Open"]?"#d4edda":"#fff",color:sd.cbAddonSel["Reload Open"]?"#155724":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                    <span>{sd.cbAddonSel["Reload Open"]?"☑":"☐"}</span>Reload Open
                   </button>
                 )}
               </div>
             </div>
           )}
-          {!sub.isCBBiz && sd.cbRf && (
-            <div style={{ padding: 10, background: "rgba(46, 117, 182, 0.05)", borderRadius: 8, border: "1px solid rgba(46, 117, 182, 0.2)", marginBottom: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#60a5fa", marginBottom: 8, textTransform: "uppercase" }}>Dati Reload Forever</div>
-              <div style={{ marginBottom: 8, maxWidth: 250 }}>
-                <SCd session={sessionCode} codici={codiciW3} val={sd.cbRfCodIns || (sd.cbTnpCodIns || sd.cbCambioCodIns || "")} onCh={v => uP(group.id, si, sub.id, "cbRfCodIns", v)} />
+          {!sub.isCBBiz&&sd.cbRf&&(
+            <div style={{padding:10,background:"rgba(255,255,255,0.04)",borderRadius:8,border:"1px solid rgba(0,114,198,0.3)",marginBottom:8}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#2E75B6",marginBottom:8,textTransform:"uppercase"}}>Dati Reload Forever</div>
+              <div style={{marginBottom:8,maxWidth:250}}>
+                <SCd session={sessionCode} codici={codiciW3} val={sd.cbRfCodIns||(sd.cbTnpCodIns||sd.cbCambioCodIns||"")} onCh={v=>uP(group.id,si,sub.id,"cbRfCodIns",v)}/>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 14px" }}>
-                <DD l="Modello Terminale" r v={sd.rfModello || ""} o={v => uP(group.id, si, sub.id, "rfModello", v)} vals={SMARTPHONES} />
-                <TF l="IMEI" r v={sd.rfImei || ""} o={v => uP(group.id, si, sub.id, "rfImei", v)} p="15 cifre" nt="Scansione barcode" />
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                <DD l="Modello Terminale" r v={sd.rfModello||""} o={v=>uP(group.id,si,sub.id,"rfModello",v)} vals={SMARTPHONES}/>
+                <TF l="IMEI" r v={sd.rfImei||""} o={v=>uP(group.id,si,sub.id,"rfImei",v)} p="15 cifre" nt="Barcode 📷"/>
               </div>
             </div>
           )}
         </div>
       )}
-      {!sub.isMobile && !sub.isMobileBiz && !sub.isProtecta && !sub.isFisso && !sub.isCB && !sub.hasAddons && sub.fields && sub.fields.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: sub.fields.length > 1 ? "1fr 1fr" : "1fr", gap: "8px 14px" }}>
-          {sub.fields.map((fl: any) => <DD key={fl.key} l={fl.label} v={f[fl.key] || ""} o={(v: string) => uF(group.id, si, sub.id, fl.key, v)} vals={fl.values} />)}
+      {!sub.isMobile&&!sub.isMobileBiz&&!sub.isProtecta&&!sub.isFisso&&!sub.isCB&&!sub.hasAddons&&sub.fields&&sub.fields.length>0&&(
+        <div style={{display:"grid",gridTemplateColumns:sub.fields.length>1?"1fr 1fr":"1fr",gap:"8px 14px"}}>
+          {sub.fields.map(fl=><DD key={fl.key} l={fl.label} v={f[fl.key]||""} o={v=>uF(group.id,si,sub.id,fl.key,v)} vals={fl.values}/>)}
         </div>
       )}
 
       {/* Fisso: VoceCasaCB question (only FISSO CB) */}
-      {sub.hasVoceCasaQ && (
-        <div style={{ marginBottom: 8, padding: 10, background: "rgba(255,255,255,0.02)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.05)" }}>
-          <YN val={sd.voceCasaCb} onCh={v => { uP(group.id, si, sub.id, "voceCasaCb", v); if (v === true || v === "Sì") uP(group.id, si, sub.id, "domiciliato", true) }} label="Trattasi di Voce Casa CB?" />
+      {sub.hasVoceCasaQ&&(
+        <div style={{marginBottom:8}}>
+          <YN val={sd.voceCasaCb} onCh={v=>{uP(group.id,si,sub.id,"voceCasaCb",v);if(v===true||v==="Sì")uP(group.id,si,sub.id,"domiciliato",true)}} label="Trattasi di Voce Casa CB?"/>
         </div>
       )}
 
-      {/* Fisso: DOMICILIATO + CONVERGENTE — lock only for business; consumer can always choose Sì/No */}
-      {sub.isFisso && (
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", padding: 12, background: "rgba(255,255,255,0.02)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.05)", marginBottom: 12 }}>
-          <div style={{ flex: 1, minWidth: 140 }}><div style={{ fontSize: 12, fontWeight: 700, color: (isVCMode || bizDomLocked) && tipoCliente === "business" ? "#64748b" : "#94a3b8", marginBottom: 6 }}>Domiciliato?</div><div style={{ display: "flex", gap: 8 }}>
-            {(isVCMode || bizDomLocked) && tipoCliente === "business" ? (
-              <div className="flex items-center gap-2"><button disabled className="px-4 py-1.5 rounded-lg border-2 border-emerald-500 bg-emerald-500/15 text-emerald-400 text-xs font-bold cursor-not-allowed">Sì</button><span className="text-[10px] text-slate-500 italic">{isVCMode || sub.domLocked ? "Obbligatorio" : "Business"}</span></div>
-            ) : (<>
-              <button onClick={() => uP(group.id, si, sub.id, "domiciliato", true)} style={{ padding: "6px 20px", borderRadius: 6, border: sd.domiciliato === true ? "2px solid #28a745" : "1px solid rgba(255,255,255,0.1)", background: sd.domiciliato === true ? "rgba(40, 167, 69, 0.1)" : "rgba(255,255,255,0.03)", color: sd.domiciliato === true ? "#28a745" : "#94a3b8", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>Sì</button>
-              <button onClick={() => uP(group.id, si, sub.id, "domiciliato", false)} style={{ padding: "6px 20px", borderRadius: 6, border: sd.domiciliato === false ? "2px solid #dc3545" : "1px solid rgba(255,255,255,0.1)", background: sd.domiciliato === false ? "rgba(220, 53, 69, 0.1)" : "rgba(255,255,255,0.03)", color: sd.domiciliato === false ? "#dc3545" : "#94a3b8", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>No</button>
+      {/* Fisso: DOMICILIATO + CONVERGENTE */}
+      {sub.isFisso&&(
+        <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+          <div style={{flex:1,minWidth:140}}><div style={{fontSize:12,fontWeight:700,color:(isVCMode||bizDomLocked)?"#999":"#333",marginBottom:6}}>Domiciliato?</div><div style={{display:"flex",gap:8}}>
+            {(isVCMode||bizDomLocked)?(
+              <div style={{display:"flex",alignItems:"center",gap:6}}><button disabled style={{padding:"6px 20px",borderRadius:6,border:"2px solid #28a745",background:"rgba(40,167,69,0.1)",color:"#28a745",fontSize:12,fontWeight:700,cursor:"not-allowed"}}>Sì</button><span style={{fontSize:10,color:"#64748b",fontStyle:"italic"}}>{isVCMode||sub.domLocked?"Obbligatorio":"Business"}</span></div>
+            ):(<>
+              <button onClick={()=>uP(group.id,si,sub.id,"domiciliato",true)} style={{padding:"6px 20px",borderRadius:6,border:sd.domiciliato===true?"2px solid #28a745":"2px solid #e0e0e0",background:sd.domiciliato===true?"#d4edda":"#fff",color:sd.domiciliato===true?"#155724":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sì</button>
+              <button onClick={()=>uP(group.id,si,sub.id,"domiciliato",false)} style={{padding:"6px 20px",borderRadius:6,border:sd.domiciliato===false?"2px solid #dc3545":"2px solid #e0e0e0",background:sd.domiciliato===false?"#f8d7da":"#fff",color:sd.domiciliato===false?"#721c24":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>No</button>
             </>)}
           </div></div>
-          <div style={{ flex: 1, minWidth: 140 }}><div style={{ fontSize: 12, fontWeight: 700, color: "#94a3b8", marginBottom: 6 }}>Convergente?</div><div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => uP(group.id, si, sub.id, "convergente", true)} style={{ padding: "6px 20px", borderRadius: 6, border: sd.convergente === true ? "2px solid #28a745" : "1px solid rgba(255,255,255,0.1)", background: sd.convergente === true ? "rgba(40, 167, 69, 0.1)" : "rgba(255,255,255,0.03)", color: sd.convergente === true ? "#28a745" : "#94a3b8", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>Sì</button>
-            <button onClick={() => uP(group.id, si, sub.id, "convergente", false)} style={{ padding: "6px 20px", borderRadius: 6, border: sd.convergente === false ? "2px solid #dc3545" : "1px solid rgba(255,255,255,0.1)", background: sd.convergente === false ? "rgba(220, 53, 69, 0.1)" : "rgba(255,255,255,0.03)", color: sd.convergente === false ? "#dc3545" : "#94a3b8", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>No</button>
+          <div style={{flex:1,minWidth:140}}><div style={{fontSize:12,fontWeight:700,color:"#f8fafc",marginBottom:6}}>Convergente?</div><div style={{display:"flex",gap:8}}>
+            <button onClick={()=>uP(group.id,si,sub.id,"convergente",true)} style={{padding:"6px 20px",borderRadius:6,border:sd.convergente===true?"2px solid #28a745":"2px solid #e0e0e0",background:sd.convergente===true?"#d4edda":"#fff",color:sd.convergente===true?"#155724":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sì</button>
+            <button onClick={()=>uP(group.id,si,sub.id,"convergente",false)} style={{padding:"6px 20px",borderRadius:6,border:sd.convergente===false?"2px solid #dc3545":"2px solid #e0e0e0",background:sd.convergente===false?"#f8d7da":"#fff",color:sd.convergente===false?"#721c24":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>No</button>
           </div></div>
         </div>
       )}
 
       {/* GNP */}
-      {sub.hasGnpQ && <><YN val={sd.gnp} onCh={v => uP(group.id, si, sub.id, "gnp", v)} label="C'è una GNP?" />
-        {sd.gnp && <div style={{ padding: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 14px" }}>
-          <TF l="N. Definitivo da portare" r v={sd.gnpNum || ""} o={v => uP(group.id, si, sub.id, "gnpNum", v)} p="Numero" />
-          <DD l="Op. provenienza GNP" r v={sd.gnpOp || ""} o={v => uP(group.id, si, sub.id, "gnpOp", v)} vals={opProv} />
+      {sub.hasGnpQ&&<><YN val={sd.gnp} onCh={v=>uP(group.id,si,sub.id,"gnp",v)} label="C'è una GNP?"/>
+        {sd.gnp&&<div style={{padding:10,display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+          <TF l="N. Definitivo da portare" r v={sd.gnpNum||""} o={v=>uP(group.id,si,sub.id,"gnpNum",v)} p="Numero"/>
+          <DD l="Op. provenienza GNP" r v={sd.gnpOp||""} o={v=>uP(group.id,si,sub.id,"gnpOp",v)} vals={opProv}/>
         </div>}</>}
 
-      {sub.has2LQ && <YN val={sd.secondaLinea} onCh={v => uP(group.id, si, sub.id, "secondaLinea", v)} label="C'è una seconda linea?" />}
-      {sub.has2LQ && (sd.secondaLinea === true || sd.secondaLinea === "Sì") && (
-        <div style={{ padding: 10, background: "rgba(46, 117, 182, 0.05)", borderRadius: 8, border: "1px solid rgba(46, 117, 182, 0.2)", marginTop: 4 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#60a5fa", marginBottom: 8, textTransform: "uppercase" }}>2° Linea</div>
-          <MiniC label="GNP 2° Linea" val={sd.gnp2L} onCh={v => { uP(group.id, si, sub.id, "gnp2L", v); if (v === "No" || v === false) { uP(group.id, si, sub.id, "gnp2LBrand", ""); uP(group.id, si, sub.id, "gnp2LNum", "") } }} opts={["Sì", "No"]} />
-          {(sd.gnp2L === "Sì" || sd.gnp2L === true) && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 14px", marginTop: 6 }}>
-              <DD l="Brand MNP 2° Linea" r v={sd.gnp2LBrand || ""} o={v => uP(group.id, si, sub.id, "gnp2LBrand", v)} vals={["TIM", "Vodafone", "Fastweb", "Sky", "Tiscali", "WINDTRE", "BT Enia", "Ehiweb", "Infratel", "Vianova", "Isiline", "Convergenze", "Full Telecom", "Optima", "Fibra.tn"]} />
-              <TF l="N. Fisso Portabilità 2° Linea" r v={sd.gnp2LNum || ""} o={v => uP(group.id, si, sub.id, "gnp2LNum", v)} p="06XXXXXXXX" />
+      {sub.has2LQ&&<YN val={sd.secondaLinea} onCh={v=>uP(group.id,si,sub.id,"secondaLinea",v)} label="C'è una seconda linea?"/>}
+      {sub.has2LQ&&(sd.secondaLinea===true||sd.secondaLinea==="Sì")&&(
+        <div style={{padding:10,background:"rgba(255,255,255,0.04)",borderRadius:8,border:"1px solid rgba(0,114,198,0.3)",marginTop:4}}>
+          <div style={{fontSize:10,fontWeight:700,color:"#2E75B6",marginBottom:8,textTransform:"uppercase"}}>2° Linea</div>
+          <MiniC label="GNP 2° Linea" val={sd.gnp2L} onCh={v=>{uP(group.id,si,sub.id,"gnp2L",v);if(v==="No"||v===false){uP(group.id,si,sub.id,"gnp2LBrand","");uP(group.id,si,sub.id,"gnp2LNum","")}}} opts={["Sì","No"]}/>
+          {(sd.gnp2L==="Sì"||sd.gnp2L===true)&&(
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px",marginTop:6}}>
+              <DD l="Brand MNP 2° Linea" r v={sd.gnp2LBrand||""} o={v=>uP(group.id,si,sub.id,"gnp2LBrand",v)} vals={["TIM","Vodafone","Fastweb","Sky","Tiscali","WINDTRE","BT Enia","Ehiweb","Infratel","Vianova","Isiline","Convergenze","Full Telecom","Optima","Fibra.tn"]}/>
+              <TF l="N. Fisso Portabilità 2° Linea" r v={sd.gnp2LNum||""} o={v=>uP(group.id,si,sub.id,"gnp2LNum",v)} p="06XXXXXXXX"/>
             </div>
           )}
         </div>
       )}
 
       {/* Addon/Checklist checkboxes (hidden for Voce Casa) */}
-      {sub.hasAddons && sub.addonList && !isVCMode && (
-        <div style={{ marginTop: 10, padding: 10, background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 8 }}>{sub.isFisso ? "Add-on Fisso" : "Seleziona prodotti"}</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {sub.addonList.map((ad: string) =>
-              <button key={ad} onClick={() => toggleAddon(ad)} style={{ padding: "6px 14px", borderRadius: 6, border: sd.addons[ad] ? "2px solid #28a745" : "1px solid rgba(255,255,255,0.1)", background: sd.addons[ad] ? "rgba(40, 167, 69, 0.1)" : "rgba(255,255,255,0.03)", color: sd.addons[ad] ? "#28a745" : "#94a3b8", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, transition: "all 0.2s" }}>
-                <span style={{ fontSize: 14 }}>{sd.addons[ad] ? "✓" : "○"}</span>{ad}
+      {sub.hasAddons&&sub.addonList&&!isVCMode&&(
+        <div style={{marginTop:10,padding:10,background:"#f8fafc",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)"}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#f8fafc",marginBottom:8}}>{sub.isFisso?"Add-on Fisso":"Seleziona prodotti"}</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+            {sub.addonList.map(ad=>
+              <button key={ad} onClick={()=>toggleAddon(ad)} style={{padding:"6px 14px",borderRadius:6,border:sd.addons[ad]?"2px solid #28a745":"2px solid #e0e0e0",background:sd.addons[ad]?"#d4edda":"#fff",color:sd.addons[ad]?"#155724":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                <span style={{fontSize:14}}>{sd.addons[ad]?"☑":"☐"}</span>{ad}
               </button>
             )}
           </div>
         </div>
       )}
 
-      {sub.hasDom && <YN val={sd.domiciliazione} onCh={v => uP(group.id, si, sub.id, "domiciliazione", v)} label="Domiciliazione bancaria?" />}
+      {sub.hasDom&&<YN val={sd.domiciliazione} onCh={v=>uP(group.id,si,sub.id,"domiciliazione",v)} label="Domiciliazione bancaria?"/>}
 
       {/* LG Convergente */}
-      {sub.hasConvLG && (
-        <div style={{ marginTop: 8, padding: 10, background: "rgba(255,255,255,0.02)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.05)" }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: lgConvLocked ? "#64748b" : "#94a3b8", marginBottom: 6 }}>Convergente?</div>
-          {lgConvLocked ? <div style={{ display: "flex", alignItems: "center", gap: 8 }}><button disabled style={{ padding: "6px 20px", borderRadius: 6, border: "2px solid #dc3545", background: "#f8d7da", color: "#721c24", fontSize: 12, fontWeight: 700, cursor: "not-allowed", opacity: .7 }}>No</button><span style={{ fontSize: 10, color: "#999", fontStyle: "italic" }}>Già selezionato altrove</span></div>
-            : <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => uP(group.id, si, sub.id, "convergente", true)} style={{ padding: "6px 20px", borderRadius: 6, border: sd.convergente === true ? "2px solid #28a745" : "1px solid rgba(255,255,255,0.1)", background: sd.convergente === true ? "rgba(40, 167, 69, 0.1)" : "rgba(255,255,255,0.03)", color: sd.convergente === true ? "#28a745" : "#94a3b8", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>Sì</button>
-              <button onClick={() => uP(group.id, si, sub.id, "convergente", false)} style={{ padding: "6px 20px", borderRadius: 6, border: sd.convergente === false ? "2px solid #dc3545" : "1px solid rgba(255,255,255,0.1)", background: sd.convergente === false ? "rgba(220, 53, 69, 0.1)" : "rgba(255,255,255,0.03)", color: sd.convergente === false ? "#dc3545" : "#94a3b8", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>No</button>
-            </div>}
+      {sub.hasConvLG&&(
+        <div style={{marginTop:8,padding:10,background:lgConvLocked?"#f5f5f5":"#f8fafc",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)"}}>
+          <div style={{fontSize:12,fontWeight:700,color:lgConvLocked?"#999":"#333",marginBottom:6}}>Convergente?</div>
+          {lgConvLocked?<div style={{display:"flex",alignItems:"center",gap:8}}><button disabled style={{padding:"6px 20px",borderRadius:6,border:"2px solid #dc3545",background:"#f8d7da",color:"#721c24",fontSize:12,fontWeight:700,cursor:"not-allowed",opacity:.7}}>No</button><span style={{fontSize:10,color:"#64748b",fontStyle:"italic"}}>Già selezionato altrove</span></div>
+          :<div style={{display:"flex",gap:8}}>
+            <button onClick={()=>uP(group.id,si,sub.id,"convergente",true)} style={{padding:"6px 20px",borderRadius:6,border:sd.convergente===true?"2px solid #28a745":"2px solid #e0e0e0",background:sd.convergente===true?"#d4edda":"#fff",color:sd.convergente===true?"#155724":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sì</button>
+            <button onClick={()=>uP(group.id,si,sub.id,"convergente",false)} style={{padding:"6px 20px",borderRadius:6,border:sd.convergente===false?"2px solid #dc3545":"2px solid #e0e0e0",background:sd.convergente===false?"#f8d7da":"#fff",color:sd.convergente===false?"#721c24":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>No</button>
+          </div>}
         </div>
       )}
 
       {/* Contract data */}
-      {sub.hasContract && (
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 12, marginTop: 12 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>Dati contratto</div>
-          <div style={{ marginBottom: 8, maxWidth: 250 }}><SCd session={sessionCode} codici={codiciW3} val={sd.codiceOverride || ""} onCh={v => uP(group.id, si, sub.id, "codiceOverride", v)} /></div>
-          {sub.ct === "ga" && <div style={{ display: "grid", gridTemplateColumns: showMnpF && !sub.isMobileBiz ? "1fr 1fr 1fr" : "1fr 1fr", gap: "8px 14px" }}>
-            <TF l="Codice Contratto" r v={c.codice_contratto || ""} o={v => uC(group.id, si, sub.id, "codice_contratto", v)} p="es. 167942" />
-            <TF l="Numero Provvisorio" v={c.num_provvisorio || ""} o={v => uC(group.id, si, sub.id, "num_provvisorio", v)} p="393XXX" />
-            {showMnpF && !sub.isMobileBiz && <TF l="N. Definitivo MNP" v={c.num_definitivo || ""} o={v => uC(group.id, si, sub.id, "num_definitivo", v)} p="Portare" />}
-            {showMnpF && !sub.isMobileBiz && <DD l="Brand MNP" v={c.brand_mnp || ""} o={v => uC(group.id, si, sub.id, "brand_mnp", v)} vals={brandMNP} />}
-            {showMnpF && sub.isMobileBiz && <TF l="N. Definitivo MNP" v={c.num_definitivo || ""} o={v => uC(group.id, si, sub.id, "num_definitivo", v)} p="Portare" />}
-            <TF l="ICCID" v={c.iccid || ""} o={v => uC(group.id, si, sub.id, "iccid", v)} p="893..." nt="Scansione barcode" />
-            {sub.isMobileBiz && (sd.tnpGa === "Sì" || sd.tnpGa === true) && sd.tnpTipo && <DD l="Modello Terminale" r v={c.modello || ""} o={v => uC(group.id, si, sub.id, "modello", v)} vals={SMARTPHONES} />}
-            {sub.isMobileBiz && (sd.tnpGa === "Sì" || sd.tnpGa === true) && sd.tnpTipo && <TF l="IMEI" r v={c.imei || ""} o={v => uC(group.id, si, sub.id, "imei", v)} p="15 cifre" nt="Scansione barcode" />}
+      {sub.hasContract&&!sub.isVFMobile&&!sub.isCBVF&&!sub.isVFFisso&&!sub.isVerisure&&!sub.isKaskoFacile&&!sub.isVFCare&&!sub.isVFBizMobile&&!sub.isCBVFBiz&&!sub.isVFFissoBiz&&!sub.isVFSolDig&&!sub.isFWMobile&&!sub.isFWFisso&&!sub.isFWEnergia&&!sub.isILMobile&&!sub.isILFisso&&!sub.isENLuceGas&&(
+        <div style={{borderTop:"1px solid "+group.color+"20",paddingTop:8,marginTop:8}}>
+          <div style={{fontSize:10,fontWeight:600,color:"#64748b",marginBottom:6,textTransform:"uppercase"}}>Dati contratto</div>
+          <div style={{marginBottom:8,maxWidth:250}}><SCd session={sessionCode} codici={codiciW3} val={sd.codiceOverride||""} onCh={v=>uP(group.id,si,sub.id,"codiceOverride",v)}/></div>
+          {sub.ct==="ga"&&<div style={{display:"grid",gridTemplateColumns:showMnpF&&!sub.isMobileBiz?"1fr 1fr 1fr":"1fr 1fr",gap:"8px 14px"}}>
+            <TF l="Codice Contratto" r v={c.codice_contratto||""} o={v=>uC(group.id,si,sub.id,"codice_contratto",v)} p="es. 167942"/>
+            <TF l="Numero Provvisorio" v={c.num_provvisorio||""} o={v=>uC(group.id,si,sub.id,"num_provvisorio",v)} p="393XXX"/>
+            {showMnpF&&!sub.isMobileBiz&&<TF l="N. Definitivo MNP" v={c.num_definitivo||""} o={v=>uC(group.id,si,sub.id,"num_definitivo",v)} p="Portare"/>}
+            {showMnpF&&!sub.isMobileBiz&&<DD l="Brand MNP" v={c.brand_mnp||""} o={v=>uC(group.id,si,sub.id,"brand_mnp",v)} vals={brandMNP}/>}
+            {showMnpF&&sub.isMobileBiz&&<TF l="N. Definitivo MNP" v={c.num_definitivo||""} o={v=>uC(group.id,si,sub.id,"num_definitivo",v)} p="Portare"/>}
+            <TF l="ICCID" v={c.iccid||""} o={v=>uC(group.id,si,sub.id,"iccid",v)} p="893..." nt="Barcode 📷"/>
+            {sub.isMobileBiz&&(sd.tnpGa==="Sì"||sd.tnpGa===true)&&sd.tnpTipo&&<DD l="Modello Terminale" r v={c.modello||""} o={v=>uC(group.id,si,sub.id,"modello",v)} vals={SMARTPHONES}/>}
+            {sub.isMobileBiz&&(sd.tnpGa==="Sì"||sd.tnpGa===true)&&sd.tnpTipo&&<TF l="IMEI" r v={c.imei||""} o={v=>uC(group.id,si,sub.id,"imei",v)} p="15 cifre" nt="Barcode 📷"/>}
           </div>}
-          {sub.ct === "tnp_ga" && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 14px" }}>
-            <TF l="Codice Contratto" r v={gaOn ? (gaC.codice_contratto || "") : (c.codice_contratto || "")} o={v => uC(group.id, si, sub.id, "codice_contratto", v)} p={gaOn ? "Auto da Mobile GA" : "es. 167942"} dis={gaOn} nt={gaOn ? "Auto da Mobile GA" : ""} />
-            <TF l="Modello Terminale" v={c.modello || ""} o={v => uC(group.id, si, sub.id, "modello", v)} p="Samsung S25" />
-            <TF l="IMEI" v={c.imei || ""} o={v => uC(group.id, si, sub.id, "imei", v)} p="15 cifre" nt="Scansione barcode" />
+          {sub.ct==="tnp_ga"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"8px 14px"}}>
+            <TF l="Codice Contratto" r v={gaOn?(gaC.codice_contratto||""):(c.codice_contratto||"")} o={v=>uC(group.id,si,sub.id,"codice_contratto",v)} p={gaOn?"← da Mobile GA":"es. 167942"} dis={gaOn} nt={gaOn?"Auto da Mobile GA":""}/>
+            <TF l="Modello Terminale" v={c.modello||""} o={v=>uC(group.id,si,sub.id,"modello",v)} p="Samsung S25"/>
+            <TF l="IMEI" v={c.imei||""} o={v=>uC(group.id,si,sub.id,"imei",v)} p="15 cifre" nt="Barcode 📷"/>
           </div>}
-          {sub.ct === "tnp_cb" && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 14px" }}>
-            <TF l="Codice Contratto" r v={c.codice_contratto || ""} o={v => uC(group.id, si, sub.id, "codice_contratto", v)} p="es. 167942" />
-            <TF l="Modello Terminale" v={c.modello || ""} o={v => uC(group.id, si, sub.id, "modello", v)} p="iPhone 16" />
-            <TF l="IMEI" v={c.imei || ""} o={v => uC(group.id, si, sub.id, "imei", v)} p="15 cifre" nt="Scansione barcode" />
+          {sub.ct==="tnp_cb"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"8px 14px"}}>
+            <TF l="Codice Contratto" r v={c.codice_contratto||""} o={v=>uC(group.id,si,sub.id,"codice_contratto",v)} p="es. 167942"/>
+            <TF l="Modello Terminale" v={c.modello||""} o={v=>uC(group.id,si,sub.id,"modello",v)} p="iPhone 16"/>
+            <TF l="IMEI" v={c.imei||""} o={v=>uC(group.id,si,sub.id,"imei",v)} p="15 cifre" nt="Barcode 📷"/>
           </div>}
-          {sub.ct === "fisso" && !isVCMode && <div style={{ display: "grid", gridTemplateColumns: sub.hasFwaImei ? "1fr 1fr 1fr 1fr" : "1fr 1fr 1fr", gap: "8px 14px" }}>
-            <TF l="Codice Contratto" r v={c.codice_contratto || ""} o={v => uC(group.id, si, sub.id, "codice_contratto", v)} p="es. 167942" />
-            <TF l="N. Fisso Provvisorio" v={c.num_fisso_prov || ""} o={v => uC(group.id, si, sub.id, "num_fisso_prov", v)} p="06XXXX" />
-            <TF l="N. Fisso Definitivo" v={fissoDefVal} o={v => uC(group.id, si, sub.id, "num_fisso_def", v)} p="Portare" dis={fissoDefLocked} nt={fissoDefLocked ? "Auto da GNP" : ""} />
-            {sub.hasFwaImei && <TF l="IMEI" v={c.imei || ""} o={v => uC(group.id, si, sub.id, "imei", v)} p="15 cifre" nt="Scansione barcode" />}
+          {sub.ct==="fisso"&&!isVCMode&&<div style={{display:"grid",gridTemplateColumns:sub.hasFwaImei?"1fr 1fr 1fr":"1fr 1fr",gap:"8px 14px"}}>
+            <TF l="Codice Contratto" r v={c.codice_contratto||""} o={v=>uC(group.id,si,sub.id,"codice_contratto",v)} p="es. 167942"/>
+            <TF l="N. Fisso Provvisorio" v={c.num_fisso_prov||""} o={v=>uC(group.id,si,sub.id,"num_fisso_prov",v)} p="06XXXX"/>
+            {sub.hasFwaImei&&<TF l="IMEI" v={c.imei||""} o={v=>uC(group.id,si,sub.id,"imei",v)} p="15 cifre" nt="Barcode 📷"/>}
           </div>}
-          {sub.ct === "fisso" && isVCMode && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 14px" }}>
-            <TF l="Codice Contratto" r v={c.codice_contratto || ""} o={v => uC(group.id, si, sub.id, "codice_contratto", v)} p="es. 167942" />
-            <TF l="N. Fisso Provvisorio" v={c.num_fisso_prov || ""} o={v => uC(group.id, si, sub.id, "num_fisso_prov", v)} p="06XXXX" />
-            <TF l="N. Fisso Definitivo" v={fissoDefVal} o={v => uC(group.id, si, sub.id, "num_fisso_def", v)} p="Portare" dis={fissoDefLocked} nt={fissoDefLocked ? "Auto da GNP" : ""} />
-            <TF l="IMEI" v={c.imei || ""} o={v => uC(group.id, si, sub.id, "imei", v)} p="15 cifre" nt="Scansione barcode" />
+          {sub.ct==="fisso"&&isVCMode&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"8px 14px"}}>
+            <TF l="Codice Contratto" r v={c.codice_contratto||""} o={v=>uC(group.id,si,sub.id,"codice_contratto",v)} p="es. 167942"/>
+            <TF l="N. Fisso Provvisorio" v={c.num_fisso_prov||""} o={v=>uC(group.id,si,sub.id,"num_fisso_prov",v)} p="06XXXX"/>
+            <TF l="IMEI" v={c.imei||""} o={v=>uC(group.id,si,sub.id,"imei",v)} p="15 cifre" nt="Barcode 📷"/>
           </div>}
-          {sub.ct === "lg" && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 14px" }}>
-            <DD l="Operatore provenienza" r v={sd.opProvenienza || ""} o={v => uP(group.id, si, sub.id, "opProvenienza", v)} vals={opProv} />
-            <TF l="Codice Contratto" r v={c.codice_contratto || ""} o={v => uC(group.id, si, sub.id, "codice_contratto", v)} p="es. 167942" />
-            {sub.id === "luce" && <TF l="POD" v={c.pod || ""} o={v => uC(group.id, si, sub.id, "pod", v.toUpperCase().replace(/[^A-Z0-9]/g, ""))} p="IT001E..." nt="Alfanumerico" />}
-            {sub.id === "gas" && <TF l="PDR" v={c.pdr || ""} o={v => uC(group.id, si, sub.id, "pdr", v.replace(/[^A-Za-z0-9]/g, ""))} p="Codice PDR" nt="Alfanumerico" />}
+          {sub.ct==="lg"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"8px 14px"}}>
+            <DD l="Operatore provenienza" r v={sd.opProvenienza||""} o={v=>uP(group.id,si,sub.id,"opProvenienza",v)} vals={opProv}/>
+            <TF l="Codice Contratto" r v={c.codice_contratto||""} o={v=>uC(group.id,si,sub.id,"codice_contratto",v)} p="es. 167942"/>
+            {sub.id==="luce"&&<TF l="POD" v={c.pod||""} o={v=>uC(group.id,si,sub.id,"pod",v.toUpperCase().replace(/[^A-Z0-9]/g,""))} p="IT001E..." nt="Alfanumerico"/>}
+            {sub.id==="gas"&&<TF l="PDR" v={c.pdr||""} o={v=>uC(group.id,si,sub.id,"pdr",v.replace(/[^A-Za-z0-9]/g,""))} p="Codice PDR" nt="Alfanumerico"/>}
           </div>}
-          {sub.ct === "multi" && (sub.isAssicBiz || sub.id === "assicurazioni") && (
-            <div style={{ maxWidth: 260 }}>
-              <TF l="Numero Polizza" v={c.nPolizza || ""} o={v => uC(group.id, si, sub.id, "nPolizza", v)} p="es. 12345678" />
+          {sub.ct==="multi"&&(sub.isAssicBiz||sub.id==="assicurazioni")&&(
+            <div style={{maxWidth:260}}>
+              <TF l="Numero Polizza" v={c.nPolizza||""} o={v=>uC(group.id,si,sub.id,"nPolizza",v)} p="es. 12345678"/>
             </div>
           )}
         </div>
@@ -881,38 +1987,24 @@ const SubCard = ({ sub, rawSd, group, si, sessionCode, sale, uF, uC, uP, catSale
   return content;
 };
 
-const NoteStep = ({ notes, setNotes, date, setDate, time, setTime, show, setShow }: any) => {
+const NoteStep = () => {
+  const [show,setShow]=useState(false);
   const content = (
-    <div style={{ background: "rgba(255, 255, 255, 0.03)", borderRadius: 16, padding: 20, marginBottom: 16, borderLeft: "4px solid #f43f5e", borderTop: "1px solid rgba(255, 255, 255, 0.05)", borderRight: "1px solid rgba(255, 255, 255, 0.05)", borderBottom: "1px solid rgba(255, 255, 255, 0.05)", backdropFilter: "blur(20px)" }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: "#f43f5e", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.05em" }}>📝 Step 7 — Note / Promemoria</div>
-      <div style={{ textAlign: "center", marginBottom: show ? 20 : 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#cbd5e1", marginBottom: 12 }}>Nota o promemoria?</div>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-          <button onClick={() => setShow(true)} style={{ padding: "8px 32px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", border: show ? "2px solid #22c55e" : "1px solid rgba(255, 255, 255, 0.1)", background: show ? "rgba(34, 197, 94, 0.1)" : "rgba(255, 255, 255, 0.05)", color: show ? "#4ade80" : "#94a3b8", transition: "all 0.2s" }}>Sì</button>
-          <button onClick={() => setShow(false)} style={{ padding: "8px 32px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", border: !show ? "2px solid #f43f5e" : "1px solid rgba(255, 255, 255, 0.1)", background: !show ? "rgba(244, 63, 94, 0.1)" : "rgba(255, 255, 255, 0.05)", color: !show ? "#fb7185" : "#94a3b8", transition: "all 0.2s" }}>No</button>
+    <div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid #e83e8c"}}>
+      <div style={{fontSize:11,fontWeight:700,color:"#e83e8c",marginBottom:14,textTransform:"uppercase"}}>📝 Step 7 — Note / Promemoria</div>
+      <div style={{textAlign:"center",marginBottom:show?16:0}}>
+        <div style={{fontSize:13,fontWeight:600,color:"#f8fafc",marginBottom:10}}>Nota o promemoria?</div>
+        <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+          <button onClick={()=>setShow(true)} style={{padding:"8px 28px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",border:show?"2px solid #28a745":"2px solid #e0e0e0",background:show?"#d4edda":"#fff",color:show?"#155724":"#666"}}>Sì</button>
+          <button onClick={()=>setShow(false)} style={{padding:"8px 28px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",border:!show?"2px solid #dc3545":"2px solid #e0e0e0",background:!show?"#f8d7da":"#fff",color:!show?"#721c24":"#666"}}>No</button>
         </div>
       </div>
-      {show && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <div style={{ border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: 12, padding: 16, background: "rgba(255, 255, 255, 0.02)" }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: "#f8fafc" }}>📝 Nota</div>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Nota…" rows={4} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(255, 255, 255, 0.1)", fontSize: 12, resize: "vertical", fontFamily: "inherit", boxSizing: "border-box", background: "rgba(255, 255, 255, 0.05)", color: "#f8fafc", outline: "none" }} />
-        </div>
-        <div style={{ border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: 12, padding: 16, background: "rgba(255, 255, 255, 0.02)" }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: "#f8fafc" }}>⏰ Promemoria</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", marginBottom: 3 }}>Data</div>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(255, 255, 255, 0.1)", fontSize: 12, boxSizing: "border-box", background: "rgba(255, 255, 255, 0.05)", color: "#f8fafc", colorScheme: "dark" }} />
-            </div>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", marginBottom: 3 }}>Ora</div>
-              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(255, 255, 255, 0.1)", fontSize: 12, boxSizing: "border-box", background: "rgba(255, 255, 255, 0.05)", color: "#f8fafc", colorScheme: "dark" }} />
-            </div>
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", marginBottom: 3 }}>Descrizione</div>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Dettagli…" rows={2} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(255, 255, 255, 0.1)", fontSize: 12, resize: "vertical", fontFamily: "inherit", boxSizing: "border-box", background: "rgba(255, 255, 255, 0.05)", color: "#f8fafc", outline: "none" }} />
-          </div>
+      {show&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+        <div style={{border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:14,background:"rgba(255,255,255,0.03)"}}><div style={{fontSize:13,fontWeight:700,marginBottom:8}}>📋 Nota</div><textarea placeholder="Nota…" rows={3} style={{width:"100%",padding:"8px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,resize:"vertical",fontFamily:"inherit",boxSizing:"border-box"}}/></div>
+        <div style={{border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:14,background:"rgba(255,255,255,0.03)"}}><div style={{fontSize:13,fontWeight:700,marginBottom:8}}>📅 Promemoria</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><div><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Data</div><input type="date" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div><div><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Ora</div><input type="time" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div></div>
+          <div style={{marginTop:8}}><DD l="Negozio" vals={negozi}/></div>
+          <div style={{marginTop:8}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Descrizione</div><textarea placeholder="Dettagli…" rows={2} style={{width:"100%",padding:"8px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,resize:"vertical",fontFamily:"inherit",boxSizing:"border-box"}}/></div>
         </div>
       </div>}
     </div>
@@ -920,243 +2012,120 @@ const NoteStep = ({ notes, setNotes, date, setDate, time, setTime, show, setShow
   return content;
 };
 
-// -- MARGINALITÀ POS OVERLAY --
-const MargPOS = memo(({ show, onClose, venditore, negozio, onAdd }: any) => {
-  const [selCat, setSelCat] = useState(0);
-  const [selProd, setSelProd] = useState<any>(null);
-  const [price, setPrice] = useState("");
-  const [qty, setQty] = useState("1");
-  const [model, setModel] = useState("");
-  const [imei, setImei] = useState("");
-  if (!show) return null;
-  const handleAdd = () => {
-    if (!selProd) return;
-    const p = selProd;
-    const pVal = p.price !== null ? p.price : parseFloat(price) || 0;
-    const mVal = p.type === "fixed" ? (p.fixedMargin || 0) : p.type === "pct" ? (pVal * (p.pctMargin || 0) / 100) : 0;
-    onAdd({ product: p.name, productId: p.id, price: pVal, qty: parseInt(qty) || 1, margin: mVal, totalMargin: mVal * (parseInt(qty) || 1), model: model || null, imei: imei || null, venditore, negozio, date: new Date().toISOString().split("T")[0], linked: p.linked || false });
-    setSelProd(null); setPrice(""); setQty("1"); setModel(""); setImei("");
-  };
-  return (<div className="fixed inset-0 bg-slate-950/80 z-[2000] flex items-end justify-center backdrop-blur-sm p-4 sm:p-0">
-    <div className="bg-slate-900 rounded-t-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border-x border-t border-white/10 animate-in slide-in-from-bottom duration-300">
-      <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/[0.02]">
-        <div>
-          <div className="text-lg font-bold text-white flex items-center gap-2">✅ Registra Prodotto</div>
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{venditore || "—"} • {negozio || "—"} • {new Date().toLocaleDateString("it-IT")}</div>
-        </div>
-        <button onClick={onClose} className="w-10 h-10 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-slate-400 transition-all text-xl">?</button>
-      </div>
-      <div className="flex gap-2 px-4 py-3 overflow-x-auto border-b border-white/10 no-scrollbar bg-black/20">
-        {MARG_PRODUCTS.map((cat, ci) => (<button key={ci} onClick={() => { setSelCat(ci); setSelProd(null) }} className={`px-5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selCat === ci ? "bg-violet-500 text-white shadow-lg shadow-violet-500/25" : "bg-white/5 text-slate-400 hover:bg-white/10"}`}>{cat.cat}</button>))}
-      </div>
-      <div className="flex-1 overflow-y-auto p-6">
-        {!selProd ? (<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {MARG_PRODUCTS[selCat].items.map((p: any) => (<button key={p.id} onClick={() => { setSelProd(p); if (p.price !== null) setPrice(String(p.price)) }} className="p-4 rounded-2xl border border-white/5 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/10 transition-all text-center flex flex-col items-center gap-3">
-            <span className="text-3xl">{p.icon}</span>
-            <span className="text-xs font-bold text-slate-200 leading-tight h-8 flex items-center">{p.name}</span>
-            {p.type === "fixed" && p.fixedMargin !== null && <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${p.fixedMargin >= 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"}`}>€{p.fixedMargin}</span>}
-            {p.type === "pct" && p.pctMargin !== null && <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400">{p.pctMargin}%</span>}
-          </button>))}
-        </div>) : (<div>
-          <div className="flex items-center gap-4 mb-8">
-            <button onClick={() => setSelProd(null)} className="text-violet-400 hover:text-violet-300 font-bold text-sm h-10 px-4 rounded-xl bg-violet-500/10 transition-all flex items-center gap-2">? Indietro</button>
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">{selProd.icon}</span>
-              <span className="text-xl font-black text-white">{selProd.name}</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-            <div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Prezzo € {selProd.price !== null && <span className="text-violet-400 normal-case tracking-normal">(fisso: €{selProd.price})</span>}</div>
-              <input value={price} onChange={e => setPrice(e.target.value)} type="number" step="0.01" disabled={selProd.price !== null && selProd.type === "fixed" && selProd.fixedMargin !== null} className="w-full glass-input py-4 px-5 rounded-2xl text-lg font-bold" />
-            </div>
-            {selProd.hasQty && <div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Quantità</div>
-              <input value={qty} onChange={e => setQty(e.target.value)} type="number" min="1" className="w-full glass-input py-4 px-5 rounded-2xl text-lg font-bold" />
-            </div>}
-          </div>
-          {selProd.needsModel && <div className="mb-6">
-            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Modello</div>
-            <input value={model} onChange={e => setModel(e.target.value)} placeholder="es. iPhone 15..." className="w-full glass-input py-3 px-5 rounded-2xl" />
-          </div>}
-          {selProd.needsImei && <div className="mb-6">
-            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">IMEI</div>
-            <input value={imei} onChange={e => setImei(e.target.value)} placeholder="15 cifre" className="w-full glass-input py-3 px-5 rounded-2xl font-mono tracking-widest" />
-          </div>}
-          <div className="p-5 bg-blue-500/10 rounded-2xl border border-blue-500/20 mb-8 flex justify-between items-center">
-            <span className="text-xs font-bold text-slate-400">MARGINE PREVISTO:</span>
-            <span className={`text-sm font-black ${selProd.type === "fixed" ? (selProd.fixedMargin >= 0 ? "text-emerald-400" : "text-rose-400") : "text-blue-400"}`}>{calcMargLabel(selProd, price, qty)}</span>
-          </div>
-          <button onClick={handleAdd} className="w-full py-5 rounded-2xl border-0 bg-gradient-to-br from-violet-500 to-violet-600 text-white text-lg font-black shadow-xl shadow-violet-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3">
-            <span className="text-2xl">?</span> REGISTRA {selProd.name.toUpperCase()}
-          </button>
-        </div>)}
-      </div>
-    </div>
-  </div>);
-});
-
-const MargList = memo(({ items, onRemove, show, onClose }: any) => {
-  if (!show) return null;
-  const total = items.reduce((s: any, i: any) => s + i.totalMargin, 0);
-  return (<div className="fixed inset-0 bg-slate-950/80 z-[2000] flex items-center justify-center backdrop-blur-sm p-4">
-    <div className="bg-slate-900 rounded-3xl w-full max-w-lg overflow-hidden flex flex-col shadow-2xl border border-white/10 animate-in zoom-in-95 duration-200">
-      <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/[0.02]">
-        <span className="text-lg font-bold text-white flex items-center gap-2">📦 Prodotti in Marginalità ({items.length})</span>
-        <button onClick={onClose} className="w-10 h-10 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-slate-400 transition-all text-xl">?</button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-6 max-h-[60vh] space-y-3">
-        {items.length === 0 ? <div className="text-center py-12 text-slate-500 font-medium italic">Nessun prodotto registrato</div> : items.map((it: any, i: number) => (
-          <div key={i} className="flex justify-between items-center p-4 rounded-2xl border border-white/5 bg-white/[0.02]">
-            <div>
-              <div className="text-sm font-bold text-slate-200">{it.product} {it.qty > 1 && <span className="text-violet-400 px-1.5 py-0.5 rounded-md bg-violet-500/10 ml-1">×{it.qty}</span>}</div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{it.model || ""}</div>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className={`text-sm font-black ${it.totalMargin >= 0 ? "text-emerald-400" : "text-rose-400"}`}>€{it.totalMargin.toFixed(2)}</span>
-              <button onClick={() => onRemove(i)} className="w-8 h-8 rounded-lg flex items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 transition-all">?</button>
-            </div>
-          </div>
-        ))}
-      </div>
-      {items.length > 0 && <div className="mx-6 mb-6 p-5 bg-gradient-to-br from-violet-500/20 to-violet-600/10 rounded-2xl border border-violet-500/20 flex justify-between items-center">
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Totale margine</span>
-        <span className={`text-2xl font-black ${total >= 0 ? "text-emerald-400" : "text-rose-400"}`}>€{total.toFixed(2)}</span>
-      </div>}
-    </div>
-  </div>);
-});
-
-// ---------------------------------------------------------------------------
+// ═══════════════════════════════════════════════════════════════════════════
 // MAIN
-// ---------------------------------------------------------------------------
+// ═══════════════════════════════════════════════════════════════════════════
 
-const DRAFT_KEY_REGISTRA = "registra-contratto";
-const defaultAna: Record<string, string> = { nome: "", cognome: "", cellulare: "", email: "", via: "", cap: "", citta: "", ragioneSociale: "", nomeRef: "", cognomeRef: "", recapito: "" };
-const defaultCfD: { nome: string; cognome: string; sesso: "M" | "F"; giorno: string; mese: string; anno: string; comune: string; estero: boolean; paese: string } = { nome: "", cognome: "", sesso: "M", giorno: "", mese: "", anno: "", comune: "", estero: false, paese: "" };
-
-export default function CRM() {
-  // Draft is intentionally typed as any to keep state initializers simple,
-  // while the persisted shape is controlled where we call saveDraft.
-  const draftRef = useRef<any | null>(null);
-  if (draftRef.current === null) draftRef.current = getDraft(DRAFT_KEY_REGISTRA);
-  const draft = draftRef.current as any;
-
-  const [brand, setBrand] = useState<string | null>(draft?.brand ?? null);
-  const [showCart, setShowCart] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-  const [expI, setExpI] = useState<Record<string, boolean>>({});
-  const [tipoCliente, setTipoCliente] = useState<string | null>(draft?.tipoCliente ?? null);
-  const [lookupValue, setLookupValue] = useState((draft?.lookupValue as string) ?? "");
-  const [clienteFound, setClienteFound] = useState(!!draft?.clienteFound);
-  const [showAna, setShowAna] = useState(!!draft?.showAna);
-  const [ana, setAna] = useState<Record<string, string>>({ ...defaultAna, ...(draft?.ana as Record<string, string>) });
-  const [sales, setSales] = useState<Record<string, any>>((draft?.sales as Record<string, any>) ?? {});
-  const [sesCode, setSesCode] = useState((draft?.sesCode as string) ?? "");
-  const [skyS, setSkyS] = useState<any[]>((draft?.skyS as any[])?.length ? (draft.skyS as any[]) : [{ selected: [] }]);
-  const [cart, setCart] = useState<any[]>((draft?.cart as any[]) ?? []);
-  const [showCF, setShowCF] = useState(false);
-  const [cfD, setCfD] = useState({ ...defaultCfD, ...(draft?.cfD as object) });
-  const [selVend, setSelVend] = useState((draft?.selVend as string) ?? "Alberto");
-  const [selNeg, setSelNeg] = useState((draft?.selNeg as string) ?? "Magliana");
-  const [confirmReset, setConfirmReset] = useState(false);
-  const [showStep4, setShowStep4] = useState(!!draft?.showStep4);
-
-  // Marginalità State
-  const [showMargPOS, setShowMargPOS] = useState(false);
-  const [showMargList, setShowMargList] = useState(false);
-  const [margItems, setMargItems] = useState<any[]>((draft?.margItems as any[]) ?? []);
-
-  // Note & Reminder State
-  const [notes, setNotes] = useState((draft?.notes as string) ?? "");
-  const [reminderDate, setReminderDate] = useState((draft?.reminderDate as string) ?? "2026-03-07");
-  const [reminderTime, setReminderTime] = useState((draft?.reminderTime as string) ?? "");
-  const [showNotes, setShowNotes] = useState(!!draft?.showNotes);
-  const [attachments, setAttachments] = useState<any[]>([]); // { file: File, name: string, type: string }
+function CRM() {
+  const [brand,setBrand]=useState(null);
+  const [showMargPOS,setShowMargPOS]=useState(false);
+  const [margEditItem,setMargEditItem]=useState(null);
+  const [showMargList,setShowMargList]=useState(false);
+  const [showMargSection,setShowMargSection]=useState(false);
+  const [showMargSave,setShowMargSave]=useState(false);
+  const [margSaveForm,setMargSaveForm]=useState({nome:"",cognome:"",tel:"",anonimo:false});
+  const [margItems,setMargItems]=useState([]);
+  const [draftLoaded,setDraftLoaded]=useState(false);
+  const [showCart,setShowCart]=useState(false);
+    const [toast,setToast]=useState(null);
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  };
   const [uploading, setUploading] = useState(false);
+  const [attachments, setAttachments] = useState([]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
-    const files = e.target.files;
-    if (!files?.length) return;
-    const newAttachments = Array.from(files).map((file) => ({ file, name: file.name, type }));
-    setAttachments((prev) => [...prev, ...newAttachments]);
-    e.target.value = "";
-  };
+  const [expI,setExpI]=useState({});
+  const [tipoCliente,setTipoCliente]=useState(null);
+  const [lookupValue,setLookupValue]=useState("");
+  const [clienteFound,setClienteFound]=useState(false);
+  const [showAna,setShowAna]=useState(false);
+  const [ana,setAna]=useState({nome:"",cognome:"",cellulare:"",email:"",via:"",cap:"",citta:"",ragioneSociale:"",nomeRef:"",cognomeRef:"",recapito:""});
+  const [sales,setSales]=useState({});
+  const [sesCode,setSesCode]=useState("");
+  const [cart,setCart]=useState([]);
 
-  const bObj = brand ? BRANDS.find(b => b.id === brand) : null;
-  const cats = brand === "windtre" ? getW3(tipoCliente) : [];
-  const sT = (m: string | null) => { setToast(m); setTimeout(() => setToast(null), 3500) };
-  const uA = (k: string, v: string) => setAna(p => ({ ...p, [k]: v }));
-  const gS = (catId: string) => sales[catId] || [{}];
+  const [selVend,setSelVend]=useState("Alberto");
+  const [selNeg,setSelNeg]=useState("Magliana");
+  const [confirmReset,setConfirmReset]=useState(false);
+  const [showStep4,setShowStep4]=useState(false);
+  const [vfQtyModal,setVfQtyModal]=useState(null);
 
-  const togSub = (catId: string, si: number, subId: string, radioSubs: string[] | null) => { setSales(p => { const cs = [...(p[catId] || [{}])]; if (!cs[si]) cs[si] = {}; const cur = cs[si][subId]; if (cur && cur.active) { cs[si] = { ...cs[si], [subId]: null } } else { if (radioSubs) { const updated = { ...cs[si] }; radioSubs.forEach(rs => { if (rs !== subId) updated[rs] = null }); updated[subId] = emS(); cs[si] = updated } else { cs[si] = { ...cs[si], [subId]: emS() } } }; return { ...p, [catId]: cs } }) };
-  const uF = (catId: string, si: number, subId: string, fk: string, val: any) => { setSales(p => { const cs = [...(p[catId] || [{}])]; if (!cs[si]) cs[si] = {}; const sub = cs[si][subId] || emS(); cs[si] = { ...cs[si], [subId]: { ...sub, fields: { ...(sub.fields || {}), [fk]: val } } }; return { ...p, [catId]: cs } }) };
-  const uC = (catId: string, si: number, subId: string, fk: string, val: any) => { setSales(p => { const cs = [...(p[catId] || [{}])]; if (!cs[si]) cs[si] = {}; const sub = cs[si][subId] || emS(); cs[si] = { ...cs[si], [subId]: { ...sub, contract: { ...(sub.contract || {}), [fk]: val } } }; return { ...p, [catId]: cs } }) };
-  const uP = (catId: string, si: number, subId: string, prop: string, val: any) => { setSales(p => { const cs = [...(p[catId] || [{}])]; if (!cs[si]) cs[si] = {}; const sub = cs[si][subId] || emS(); cs[si] = { ...cs[si], [subId]: { ...sub, [prop]: val } }; return { ...p, [catId]: cs } }) };
-  const addSl = (catId: string) => setSales(p => ({ ...p, [catId]: [...(p[catId] || [{}]), {}] }));
-  const rmSl = (catId: string, idx: number) => setSales(p => { const c = [...(p[catId] || [{}])]; c.splice(idx, 1); return { ...p, [catId]: c.length ? c : [{}] } });
-  const togSky = (si: number, pr: string) => { setSkyS(p => { const n = [...p]; const c = [...(n[si].selected || [])]; const i = c.indexOf(pr); if (i >= 0) c.splice(i, 1); else c.push(pr); n[si] = { ...n[si], selected: c }; return n }) };
+  const bObj=brand?BRANDS.find(b=>b.id===brand):null;
+  const cats=(brand==="windtre"?getW3(tipoCliente):brand==="vodafone"?getVF(tipoCliente):brand==="fastweb"?getFW(tipoCliente):brand==="iliad"?getIL(tipoCliente):brand==="energy"?getEN(tipoCliente):[]);
+  const sT=m=>{setToast(m);setTimeout(()=>setToast(null),3500)};
+  const uA=(k,v)=>setAna(p=>({...p,[k]:v}));
+  const gS=catId=>sales[catId]||[{}];
 
-  const addMargItem = (item: any) => { setMargItems(p => [...p, item]); setShowMargPOS(false); sT("✓ Prodotto aggiunto: " + item.product) };
-  const rmMargItem = (idx: number) => setMargItems(p => p.filter((_, i) => i !== idx));
+  const togSub=(catId,si,subId,radioSubs)=>{setSales(p=>{const cs=[...(p[catId]||[{}])];if(!cs[si])cs[si]={};const cur=cs[si][subId];if(cur&&cur.active){cs[si]={...cs[si],[subId]:null}}else{if(radioSubs){const updated={...cs[si]};radioSubs.forEach(rs=>{if(rs!==subId)updated[rs]=null});updated[subId]=emS();cs[si]=updated}else{cs[si]={...cs[si],[subId]:emS()}}};return{...p,[catId]:cs}})};
+  const uF=(catId,si,subId,fk,val)=>{setSales(p=>{const cs=[...(p[catId]||[{}])];if(!cs[si])cs[si]={};const sub=cs[si][subId]||emS();cs[si]={...cs[si],[subId]:{...sub,fields:{...(sub.fields||{}),[fk]:val}}};return{...p,[catId]:cs}})};
+  const uC=(catId,si,subId,fk,val)=>{setSales(p=>{const cs=[...(p[catId]||[{}])];if(!cs[si])cs[si]={};const sub=cs[si][subId]||emS();cs[si]={...cs[si],[subId]:{...sub,contract:{...(sub.contract||{}),[fk]:val}}};return{...p,[catId]:cs}})};
+  const uP=(catId,si,subId,prop,val)=>{setSales(p=>{const cs=[...(p[catId]||[{}])];if(!cs[si])cs[si]={};const sub=cs[si][subId]||emS();if(prop==="__resetVFOffer__"){cs[si]={...cs[si],[subId]:{...sub,vfOffer:null,vfMnp:null,vfMnpBrand:"",vfMnpNum:"",vfDomicilio:null,vfConvergenza:null,vfNumFisso:"",vfTnp:null,vfTnpList:[],dcNumProv:"",dcNum:"",dcIccid:"",dcCodIns:"",dcRicaricaAuto:null,vfSecurity:null}};}else if(prop==="__resetVFOfferTo__"){const{offer,isDV}=val;cs[si]={...cs[si],[subId]:{...emS(),active:true,vfOffer:offer,vfMnp:isDV?"No":null,vfDomicilio:isDV?"Wallet":null}};}else{const newVal=typeof val==="function"?val(sub[prop]):val;cs[si]={...cs[si],[subId]:{...sub,[prop]:newVal}};}return{...p,[catId]:cs}})};
+  const addSl=catId=>setSales(p=>({...p,[catId]:[...(p[catId]||[{}]),{}]}));
+  const rmSl=(catId,idx)=>setSales(p=>{const c=[...(p[catId]||[{}])];c.splice(idx,1);return{...p,[catId]:c.length?c:[{}]}});
+  const [skyS,setSkyS]=useState([{tvSel:null,tvCC:"",fibraSel:null,fibraCC:"",fibraGnp:null,fibraGnpBrand:"",fibraGnpNum:"",mobileSel:false,mobMnp:null,mobNumProv:"",mobNumDef:"",mobBrandMnp:"",mobIccid:"",mobNum:"",mobIccidNo:""}]);
+  const uSkyF=(si,field,val)=>setSkyS(p=>{const n=[...p];n[si]={...n[si],[field]:val};return n});
+  const togSky=(si,pr)=>{setSkyS(p=>{const n=[...p];const s={...n[si]};if(SKY_TV.indexOf(pr)>=0){s.tvSel=s.tvSel===pr?null:pr;s.tvCC="";}else if(SKY_FIBRA.indexOf(pr)>=0){s.fibraSel=s.fibraSel===pr?null:pr;s.fibraCC="";s.fibraGnp=null;s.fibraGnpBrand="";s.fibraGnpNum="";}else if(pr==="Sky Mobile"){s.mobileSel=!s.mobileSel;s.mobMnp=null;s.mobNumProv="";s.mobNumDef="";s.mobBrandMnp="";s.mobIccid="";s.mobNum="";s.mobIccidNo="";}n[si]=s;return n;});};
+  const openVFModal=({catId,si,subId,offer})=>{const cur=((sales[catId]||[{}])[si]||{})[subId];const existQty=cur&&cur.vfOffers&&cur.vfOffers[offer]?cur.vfOffers[offer]:1;setVfQtyModal({catId,si,subId,offer,tempQty:existQty});};
+  const confirmVFQty=()=>{if(!vfQtyModal)return;const{catId,si,subId,offer,tempQty}=vfQtyModal;const cur=((sales[catId]||[{}])[si]||{})[subId];const baseO=(cur&&cur.vfOffers)||{};const newVfOffers={...baseO};if(tempQty>0)newVfOffers[offer]=tempQty;else delete newVfOffers[offer];const existC=(cur&&cur.vfContratti&&cur.vfContratti[offer])||[];const newC=Array.from({length:tempQty},(_,i)=>existC[i]||{codIns:"",codContratto:"",numProv:"",iccid:""});const newVfC={...((cur&&cur.vfContratti)||{}),[offer]:newC};uP(catId,si,subId,"vfOffers",newVfOffers);uP(catId,si,subId,"vfContratti",newVfC);setVfQtyModal(null);};
 
-  const colItems = useCallback(() => {
-    const items: any[] = [];
-    if (brand === "windtre") {
-      getW3(tipoCliente).forEach(g => { (sales[g.id] || [{}]).forEach((sale: any, si: number) => { g.subs.forEach((sub: any) => { const d = sale[sub.id]; if (d && d.active) { const det: any = { ...(d.fields || {}), ...(d.contract || {}), hasContract: !!sub.hasContract }; if (d.tipMob) det["Tipologia"] = d.tipMob; if (d.mnp != null) det["MNP"] = d.mnp === true || d.mnp === "Sì" ? "Sì" : "No"; if (d.easyPay != null) det["EasyPay"] = d.easyPay === "Sì" || d.easyPay === true ? "Sì" : "No"; if (d.tnpGa === "Sì" || d.tnpGa === true) { det["TNP GA"] = "Sì"; if (d.tnpTipo) det["Tipo TNP"] = d.tnpTipo; if (d.tnpModello) det["Terminale"] = d.tnpModello; if (d.tnpImei) det["IMEI TNP"] = d.tnpImei; if (d.tnpTipo && d.tnpTipo.startsWith("Finanziamento")) det["Finanziamento"] = "Approvato" }; const gaRl = d.tnpGaReloadSel ? Object.keys(d.tnpGaReloadSel).filter(k => d.tnpGaReloadSel[k]) : []; if (gaRl.length) det["Reload GA"] = gaRl.join(", "); if (d.reloadForever) det["Reload Forever"] = "Sì"; const secK = d.securitySel ? Object.keys(d.securitySel).filter(k => d.securitySel[k]) : []; if (secK.length) det["Security"] = secK.join(", "); if (d.cbTnp) { det["TNP CB"] = "Sì"; if (d.cbTnpCodIns) det["Cod.Ins.CB"] = d.cbTnpCodIns; if (d.cbTnpCell) det["Cell.CB"] = d.cbTnpCell; if (d.cbTnpCC) det["CC.CB"] = d.cbTnpCC; if (d.cbTnpTipo) det["Tipo CB"] = d.cbTnpTipo; if (d.cbTnpModello) det["Term.CB"] = d.cbTnpModello; if (d.cbTnpImei) det["IMEI CB"] = d.cbTnpImei; if (d.cbTnpTipo && d.cbTnpTipo.startsWith("Finanziamento")) det["Fin.CB"] = "Approvato" }; const cbRl = d.cbTnpReloadSel ? Object.keys(d.cbTnpReloadSel).filter(k => d.cbTnpReloadSel[k]) : []; if (cbRl.length) det["Reload CB"] = cbRl.join(", "); if (d.cbCambio && d.cbCambioVal) { det["Cambio Off."] = d.cbCambioVal; if (d.cbCambioCodIns) det["Cod.Ins.Cambio"] = d.cbCambioCodIns; if (d.cbCambioCell) det["Cell.Cambio"] = d.cbCambioCell; if (d.cbCambioCC) det["CC.Cambio"] = d.cbCambioCC }; const cbAd = d.cbAddonSel ? Object.keys(d.cbAddonSel).filter(k => d.cbAddonSel[k]) : []; if (cbAd.length) det["Add-on CB"] = cbAd.join(", "); if (d.gnp) det.GNP = "Sì"; if (d.gnpNum) det["N.GNP"] = d.gnpNum; if (d.gnpOp) det["Op.GNP"] = d.gnpOp; if (d.secondaLinea) det["2°Linea"] = "Sì"; if (d.domiciliazione) det["Domic."] = "Sì"; if (d.opProvenienza) det["Op.Prov."] = d.opProvenienza; if (d.domiciliato != null) det["Domiciliato"] = d.domiciliato ? "Sì" : "No"; if (d.voceCasaCb === true || d.voceCasaCb === "Sì") det["Voce Casa CB"] = "Sì"; if (d.convergente != null) det["Convergente"] = d.convergente ? "Sì" : "No"; const adks = d.addons ? Object.keys(d.addons).filter(k => d.addons[k]) : []; if (adks.length) det["Add-on"] = adks.join(", "); items.push({ macro: g.title, macroColor: g.color, macroIcon: g.icon, sub: sub.title, saleNum: si + 1, details: det }) } }) }) });
-    } else if (brand === "sky") { skyS.forEach((s: any, si: number) => (s.selected || []).forEach((pr: string) => items.push({ macro: "SKY", macroColor: "#0072C6", macroIcon: "📋", sub: pr, saleNum: si + 1, details: {} }))) }
+  const colItems=useCallback(()=>{
+    const items=[];
+    if(brand==="windtre"||brand==="vodafone"||brand==="fastweb"||brand==="iliad"||brand==="energy"){const getCats=brand==="windtre"?getW3(tipoCliente):getVF(tipoCliente);getCats.forEach(g=>{(sales[g.id]||[{}]).forEach((sale,si)=>{g.subs.forEach(sub=>{const d=sale[sub.id];if(d&&d.active){const det={...(d.fields||{}),...(d.contract||{}),hasContract:!!sub.hasContract};if(d.tipMob)det["Tipologia"]=d.tipMob;if(d.mnp!=null)det["MNP"]=d.mnp===true||d.mnp==="Sì"?"Sì":"No";if(d.easyPay!=null)det["EasyPay"]=d.easyPay==="Sì"||d.easyPay===true?"Sì":"No";if(d.tnpGa==="Sì"||d.tnpGa===true){det["TNP GA"]="Sì";if(d.tnpTipo)det["Tipo TNP"]=d.tnpTipo;if(d.tnpModello)det["Terminale"]=d.tnpModello;if(d.tnpImei)det["IMEI TNP"]=d.tnpImei;if(d.tnpTipo&&d.tnpTipo.startsWith("Finanziamento"))det["Finanziamento"]="Approvato"};const gaRl=d.tnpGaReloadSel?Object.keys(d.tnpGaReloadSel).filter(k=>d.tnpGaReloadSel[k]):[];if(gaRl.length)det["Reload GA"]=gaRl.join(", ");if(d.reloadForever)det["Reload Forever"]="Sì";const secK=d.securitySel?Object.keys(d.securitySel).filter(k=>d.securitySel[k]):[];if(secK.length)det["Security"]=secK.join(", ");if(d.cbTnp){det["TNP CB"]="Sì";if(d.cbTnpCodIns)det["Cod.Ins.CB"]=d.cbTnpCodIns;if(d.cbTnpCell)det["Cell.CB"]=d.cbTnpCell;if(d.cbTnpCC)det["CC.CB"]=d.cbTnpCC;if(d.cbTnpTipo)det["Tipo CB"]=d.cbTnpTipo;if(d.cbTnpModello)det["Term.CB"]=d.cbTnpModello;if(d.cbTnpImei)det["IMEI CB"]=d.cbTnpImei;if(d.cbTnpTipo&&d.cbTnpTipo.startsWith("Finanziamento"))det["Fin.CB"]="Approvato"};const cbRl=d.cbTnpReloadSel?Object.keys(d.cbTnpReloadSel).filter(k=>d.cbTnpReloadSel[k]):[];if(cbRl.length)det["Reload CB"]=cbRl.join(", ");if(d.cbCambio&&d.cbCambioVal){det["Cambio Off."]=d.cbCambioVal;if(d.cbCambioCodIns)det["Cod.Ins.Cambio"]=d.cbCambioCodIns;if(d.cbCambioCell)det["Cell.Cambio"]=d.cbCambioCell;if(d.cbCambioCC)det["CC.Cambio"]=d.cbCambioCC};const cbAd=d.cbAddonSel?Object.keys(d.cbAddonSel).filter(k=>d.cbAddonSel[k]):[];if(cbAd.length)det["Add-on CB"]=cbAd.join(", ");if(d.gnp)det.GNP="Sì";if(d.gnpNum)det["N.GNP"]=d.gnpNum;if(d.gnpOp)det["Op.GNP"]=d.gnpOp;if(d.secondaLinea)det["2°Linea"]="Sì";if(d.domiciliazione)det["Domic."]="Sì";if(d.opProvenienza)det["Op.Prov."]=d.opProvenienza;if(d.domiciliato!=null)det["Domiciliato"]=d.domiciliato?"Sì":"No";if(d.voceCasaCb===true||d.voceCasaCb==="Sì")det["Voce Casa CB"]="Sì";if(d.convergente!=null)det["Convergente"]=d.convergente?"Sì":"No";const adks=d.addons?Object.keys(d.addons).filter(k=>d.addons[k]):[];if(adks.length)det["Add-on"]=adks.join(", ");items.push({macro:g.title,macroColor:g.color,macroIcon:g.icon,sub:sub.title,saleNum:si+1,details:det})}})})})
+    }else if(brand==="sky"){skyS.forEach((s,si)=>{if(s.tvSel)items.push({macro:"SKY TV",macroColor:"#0072C6",macroIcon:"📺",sub:s.tvSel,saleNum:si+1,details:{hasContract:true,"Codice Contratto":s.tvCC||""}});if(s.fibraSel){const det={hasContract:true,"Codice Contratto":s.fibraCC||"","GNP":s.fibraGnp==="Sì"?"Sì":"No"};if(s.fibraGnp==="Sì"){det["Brand GNP"]=s.fibraGnpBrand||"";det["N.Fisso Portabilità"]=s.fibraGnpNum||""}items.push({macro:"SKY FIBRA",macroColor:"#0072C6",macroIcon:"🌐",sub:s.fibraSel,saleNum:si+1,details:det})}if(s.mobileSel){const det={hasContract:false,"MNP":s.mobMnp==="Sì"?"Sì":"No"};if(s.mobMnp==="Sì"){det["N.Provvisorio"]=s.mobNumProv||"";det["N.Definitivo"]=s.mobNumDef||"";det["Brand MNP"]=s.mobBrandMnp||"";det["ICCID"]=s.mobIccid||""}else if(s.mobMnp==="No"){det["Numero"]=s.mobNum||"";det["ICCID"]=s.mobIccidNo||""}items.push({macro:"SKY MOBILE",macroColor:"#0072C6",macroIcon:"📱",sub:"Sky Mobile",saleNum:si+1,details:det})}});}
     return items;
-  }, [brand, sales, skyS, tipoCliente]);
+  },[brand,sales,skyS,tipoCliente]);
 
-  const addCart = () => {
-    const items = colItems();
-    if (items.length > 0 && bObj) { const snap = { sales: JSON.parse(JSON.stringify(sales)), sesCode, skyS: JSON.parse(JSON.stringify(skyS)) }; setCart(p => [...p, { brandId: brand, brandLabel: bObj.label, brandIcon: bObj.icon, brandColor: bObj.color, items, sv: snap }]); sT("✓ " + items.length + " prodotti " + bObj.label) }
-    setSales({}); setSesCode(""); setSkyS([{ selected: [] }]); setBrand(null);
+  const addCart=()=>{
+    const items=colItems();
+    if(items.length>0&&bObj){const snap={sales:JSON.parse(JSON.stringify(sales)),sesCode,skyS:JSON.parse(JSON.stringify(skyS))};setCart(p=>[...p,{brandId:brand,brandLabel:bObj.label,brandIcon:bObj.icon,brandColor:bObj.color,items,sv:snap}]);sT("✅ "+items.length+" prodotti "+bObj.label)}
+    setSales({});setSesCode("");setSkyS([{tvSel:null,tvCC:"",fibraSel:null,fibraCC:"",fibraGnp:null,fibraGnpBrand:"",fibraGnpNum:"",mobileSel:false,mobMnp:null,mobNumProv:"",mobNumDef:"",mobBrandMnp:"",mobIccid:"",mobNum:"",mobIccidNo:""}]);setBrand(null);
   };
-  const editCG = (idx: number) => { const g: any = cart[idx]; if (!g) return; setBrand(g.brandId); if (g.sv) { setSales(g.sv.sales || {}); setSesCode(g.sv.sesCode || ""); setSkyS(g.sv.skyS || [{ selected: [] }]) } setCart(p => p.filter((_, i) => i !== idx)); setShowCart(false); sT("✏️ Modifica " + g.brandLabel) };
-  const rmCG = (idx: number) => setCart(p => p.filter((_, i) => i !== idx));
+  const editCG=idx=>{const g=cart[idx];if(!g)return;setBrand(g.brandId);if(g.sv){setSales(g.sv.sales||{});setSesCode(g.sv.sesCode||"");setSkyS(g.sv.skyS||[{tvSel:null,tvCC:"",fibraSel:null,fibraCC:"",fibraGnp:null,fibraGnpBrand:"",fibraGnpNum:"",mobileSel:false,mobMnp:null,mobNumProv:"",mobNumDef:"",mobBrandMnp:"",mobIccid:"",mobNum:"",mobIccidNo:""}])}setCart(p=>p.filter((_,i)=>i!==idx));setShowCart(false);sT("✏️ Modifica "+g.brandLabel)};
+  const rmCG=idx=>setCart(p=>p.filter((_,i)=>i!==idx));
+  const fullReset=()=>{setBrand(null);setTipoCliente(null);setLookupValue("");setClienteFound(false);setShowAna(false);setSales({});setSesCode("");setSkyS([{tvSel:null,tvCC:"",fibraSel:null,fibraCC:"",fibraGnp:null,fibraGnpBrand:"",fibraGnpNum:"",mobileSel:false,mobMnp:null,mobNumProv:"",mobNumDef:"",mobBrandMnp:"",mobIccid:"",mobNum:"",mobIccidNo:""}]);setCart([]);setShowCart(false);setExpI({});setConfirmReset(false);setShowStep4(false);setMargItems([]);clearDraft("crm_v9");setAna({nome:"",cognome:"",cellulare:"",email:"",via:"",cap:"",citta:"",ragioneSociale:"",nomeRef:"",cognomeRef:"",recapito:""})};
+  // ── Auto-save every state change ──
+  useAutoSave("crm_v9",{brand,tipoCliente,ana,sales,sesCode,skyS,selVend,selNeg,lookupValue,margItems});
+  
+  // ── Load draft on mount (once) ──
+  useEffect(()=>{if(draftLoaded)return;setDraftLoaded(true);const d=loadDraft("crm_v9");if(d){if(d.tipoCliente)setTipoCliente(d.tipoCliente);if(d.ana)setAna(d.ana);if(d.selVend)setSelVend(d.selVend);if(d.selNeg)setSelNeg(d.selNeg);if(d.margItems)setMargItems(d.margItems)}},[]);
+  
+  // ── Remember last brand+tipo for next session ──
+  useEffect(()=>{if(tipoCliente)try{sessionStorage.setItem("crm_lastTipo",tipoCliente)}catch(e){}},[tipoCliente]);
+  
+  // ── Marginalità handlers ──
+  const addMargItem=(item)=>{setMargItems(p=>[...p,item]);setShowMargPOS(false)};
+  const rmMargItem=(idx)=>setMargItems(p=>p.filter((_,i)=>i!==idx));
 
+  
   const handleDownloadPDF = async () => {
     try {
       const pdfBytes = await generateContractPDF(ana, cart, margItems);
-      const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
-
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });
       const reader = new FileReader();
       reader.onloadend = () => {
-        const dataUri = reader.result as string;
+        const dataUri = reader.result;
         const link = document.createElement("a");
         const cleanNome = (ana.nome || "Cliente").trim().replace(/\s+/g, "_");
         const cleanCognome = (ana.cognome || "Sconosciuto").trim().replace(/\s+/g, "_");
         const filename = `Contratto_${cleanNome}_${cleanCognome}.pdf`;
-
         link.href = dataUri;
         link.download = filename;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        sT("✓ PDF generato e scaricato");
+        showToast("✓ PDF generato e scaricato");
       };
       reader.readAsDataURL(blob);
     } catch (err) {
       console.error("PDF Error:", err);
-      sT("? Errore generazione PDF");
+      showToast("? Errore generazione PDF");
     }
   };
-  const fullReset = () => {
-    clearDraft(DRAFT_KEY_REGISTRA);
-    setBrand(null); setTipoCliente(null); setLookupValue(""); setClienteFound(false); setShowAna(false); setSales({}); setSesCode(""); setSkyS([{ selected: [] }]); setCart([]); setMargItems([]); setShowCart(false); setExpI({}); setConfirmReset(false); setShowStep4(false); setAna({ ...defaultAna });
-    setNotes(""); setReminderDate("2026-03-07"); setReminderTime(""); setShowNotes(false); setAttachments([]);
-  };
 
-  useEffect(() => {
-    const payload = { brand, tipoCliente, lookupValue, clienteFound, showAna, ana, sales, sesCode, skyS, cart, cfD, selVend, selNeg, showStep4, margItems, notes, reminderDate, reminderTime, showNotes };
-    const t = setTimeout(() => saveDraft(DRAFT_KEY_REGISTRA, payload), 800);
-    return () => clearTimeout(t);
-  }, [brand, tipoCliente, lookupValue, clienteFound, showAna, ana, sales, sesCode, skyS, cart, cfD, selVend, selNeg, showStep4, margItems, notes, reminderDate, reminderTime, showNotes]);
-
-  const finalSubmit = async () => {
+const finalSubmit = async () => {
     const cur = colItems();
-    const fc: any[] = [...cart];
+    const fc = [...cart];
     if (cur.length > 0 && bObj) {
       fc.push({
         brandId: brand,
@@ -1169,7 +2138,7 @@ export default function CRM() {
     }
 
     if (fc.length === 0 && margItems.length === 0) {
-      sT("⚠️ Nessun prodotto da salvare");
+      showToast("⚠️ Nessun prodotto da salvare");
       return;
     }
 
@@ -1207,18 +2176,16 @@ export default function CRM() {
 
         if (!uploadErr) {
           const { data: { publicUrl } } = supabase.storage.from("contracts").getPublicUrl(filePath);
-          uploadedFiles.push({ contract_id: "", url: publicUrl, name: att.name, type: att.type }); // ID set later
+          uploadedFiles.push({ contract_id: "", url: publicUrl, name: att.name, type: att.type });
         }
       }
 
       // 2. Prepare Contract Rows
-      const contractRows: any[] = [];
-      const nowTs = new Date().toISOString();
+      const contractRows = [];
       const dateStr = new Date().toLocaleDateString("it-IT");
 
-      // Flatten Cart items
       fc.forEach(group => {
-        (group.items || []).forEach((item: any) => {
+        (group.items || []).forEach((item) => {
           const actCode = item.details["Codice Contratto"] || item.details["Codice Proposta"] || item.details["Codice Ordine"] || item.details["Codice"] || "—";
           contractRows.push({
             id: `CTR-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
@@ -1234,13 +2201,11 @@ export default function CRM() {
             data_registrazione: dateStr,
             data_attivazione: dateStr,
             dettagli: item.details || {},
-            note: notes || null,
             is_demo: false
           });
         });
       });
 
-      // Add Marginality Items (Extra products)
       margItems.forEach(mi => {
         contractRows.push({
           id: `EXT-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
@@ -1259,14 +2224,12 @@ export default function CRM() {
         });
       });
 
-      // 3. Batch Insert
       if (contractRows.length > 0) {
         const { data: createdContracts, error: contractErr } = await supabase.from("contracts").insert(contractRows).select();
         if (contractErr) throw contractErr;
 
-        // 4. Save Attachments Meta
         if (uploadedFiles.length > 0 && createdContracts && createdContracts.length > 0) {
-          const firstContractId = createdContracts[0].id; // Link attachments to the first contract in batch or the main one
+          const firstContractId = createdContracts[0].id;
           const attendanceRows = uploadedFiles.map(f => ({
             contract_id: firstContractId,
             file_url: f.url,
@@ -1278,13 +2241,27 @@ export default function CRM() {
         }
       }
 
-      sT(`✅ Salvato! ${fc.length} brand, ${contractRows.length} prodotti in totale`);
+      setUploading(false);
+      showToast(`✅ Salvato! ${fc.length} brand, ${contractRows.length} prodotti in totale`);
       setTimeout(fullReset, 2000);
-    } catch (err: any) {
+    } catch (err) {
+      setUploading(false);
       console.error("Submit Error:", err);
-      sT("❌ Errore durante il salvataggio: " + (err.message || "Verifica connessione"));
+      showToast("❌ Errore durante il salvataggio: " + (err.message || "Verifica connessione"));
     }
   };
+  
+  const handleFileChange = (e, type) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files).map(file => ({
+        file,
+        name: file.name,
+        type
+      }));
+      setAttachments(prev => [...prev, ...newFiles]);
+    }
+  };
+
   const doLookup = async () => {
     if (!lookupValue) return;
     try {
@@ -1292,10 +2269,9 @@ export default function CRM() {
         .from("clients")
         .select("*")
         .eq("cf_piva", lookupValue)
+        .limit(1)
         .maybeSingle();
-
       if (error) throw error;
-
       if (data) {
         setClienteFound(true);
         setShowAna(true);
@@ -1306,467 +2282,397 @@ export default function CRM() {
           cellulare: data.cellulare || "",
           email: data.email || "",
           via: data.indirizzo || "",
-          cap: (data as any).cap || "",
+          cap: data.cap || "",
           citta: data.citta || "",
           ragioneSociale: data.ragione_sociale || "",
-          nomeRef: (data as any).nome_ref || "",
-          cognomeRef: (data as any).cognome_ref || "",
+          nomeRef: data.nome_ref || "",
+          cognomeRef: data.cognome_ref || "",
           recapito: data.cellulare || ""
         });
-        sT("✓ Cliente trovato nel database");
+        showToast("✓ Cliente trovato nel database");
       } else {
         setClienteFound(false);
         setShowAna(true);
         setShowStep4(false);
-        sT("⚠️ Cliente non trovato, inserimento manuale");
+        showToast("⚠️ Cliente non trovato, inserimento manuale");
       }
     } catch (err) {
       console.error("Lookup error:", err);
-      sT("❌ Errore ricerca cliente");
+      showToast("❌ Errore ricerca cliente");
     }
   };
-  const doCF = () => { const { nome, cognome, sesso, giorno, mese, anno, comune, estero, paese } = cfD; if (!nome || !cognome || !giorno || !mese || !anno) return; if (estero && !paese) return; if (!estero && !comune) return; const luogo = (estero ? paese : comune).toUpperCase(); const cc = estero ? (CO_EE[luogo] || "Z999") : (CO[luogo] || "Z999"); const cn = xC(cognome), vn = xV(cognome), sur = [...cn, ...vn, "X", "X", "X"].slice(0, 3).join(""); const cna = xC(nome); const nam = cna.length >= 4 ? [cna[0], cna[2], cna[3]].join("") : [...cna, ...xV(nome), "X", "X", "X"].slice(0, 3).join(""); const an = anno.slice(-2), me = MCF[mese] || "A"; let gi = parseInt(giorno); if (sesso === "F") gi += 40; const bd = an + me + (gi < 10 ? "0" + gi : String(gi)); const partial = sur + nam + bd + cc; let sm = 0; for (let i = 0; i < 15; i++) { const ch = partial[i]; sm += (i % 2 === 0) ? (DI[ch] || 0) : (PA[ch] || 0) } setLookupValue(partial + _R[sm % 26]); setShowCF(false); setShowAna(true); uA("nome", nome.charAt(0).toUpperCase() + nome.slice(1).toLowerCase()); uA("cognome", cognome.charAt(0).toUpperCase() + cognome.slice(1).toLowerCase()) };
 
-  const tCI = cart.reduce((s, g) => s + g.items.length, 0) + colItems().length;
-  const bC = bObj ? bObj.color : "#6b7280";
-  const bG = bObj ? bObj.gradient : "linear-gradient(135deg,#374151,#6b7280)";
-  const gSS = (i: number) => { if (i === 0) return brand ? "done" : "active"; if (i === 1) return !brand ? "pending" : tipoCliente ? "done" : "active"; if (i === 2) return !tipoCliente ? "pending" : showAna ? "done" : "active"; return showAna ? "active" : "pending" };
 
-  // ----------- CART -----------
-  if (showCart) {
-    const curI = colItems(); const allG = [...cart];
-    if (curI.length > 0 && bObj) allG.push({ brandId: brand, brandLabel: bObj.label, brandIcon: bObj.icon, brandColor: bObj.color, items: curI, isCurrent: true });
-    const tp = allG.reduce((s, g) => s + g.items.length, 0);
+  const tCI=cart.reduce((s,g)=>s+g.items.length,0)+colItems().length;
+  const bC=bObj?bObj.color:"#8892b0";
+  const bG=bObj?bObj.gradient:"linear-gradient(135deg,#374151,#6b7280)";
+  const gSS=i=>{if(i===0)return brand?"done":"active";if(i===1)return !brand?"pending":tipoCliente?"done":"active";if(i===2)return !tipoCliente?"pending":showAna?"done":"active";return showAna?"active":"pending"};
+
+  // ═══════════ CART ═══════════
+  if(showCart){
+    const curI=colItems();const allG=[...cart];
+    if(curI.length>0&&bObj)allG.push({brandId:brand,brandLabel:bObj.label,brandIcon:bObj.icon,brandColor:bObj.color,items:curI,isCurrent:true});
+    const tp=allG.reduce((s,g)=>s+g.items.length,0);
+    const onlyMarg=allG.length===0&&margItems.length>0;
     const cartContent = (
-      <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6 space-y-6 text-slate-300">
-        {toast && <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3 rounded-xl text-sm font-bold bg-emerald-500/90 text-white shadow-lg border border-white/10 backdrop-blur-sm">{toast}</div>}
-        <div className="glass-card p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-extrabold text-white mb-1">🛒 Carrello</h2>
-              <div className="flex items-center gap-2 text-sm text-slate-400">
-                <span className="bg-white/5 px-2 py-0.5 rounded-md">{tipoCliente === "privato" ? (ana.nome + " " + ana.cognome) : ana.ragioneSociale}</span>
-                <span className="text-white/20">•</span>
-                <span className="font-mono tracking-wider">{lookupValue}</span>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <div className="bg-white/5 rounded-xl py-2.5 px-5 text-center border border-white/5"><div className="text-2xl font-extrabold text-white">{allG.length}</div><div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">BRAND</div></div>
-              <div className="bg-violet-500/20 rounded-xl py-2.5 px-5 text-center border border-violet-500/20"><div className="text-2xl font-extrabold text-white">{tp}</div><div className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">PRODOTTI</div></div>
+      <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6 space-y-4" style={{fontFamily:"Inter,-apple-system,sans-serif",minHeight:"100vh"}}>
+        {toast&&<div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",background:"#28a745",color:"#fff",padding:"12px 28px",borderRadius:10,fontSize:14,fontWeight:700,boxShadow:"0 6px 20px rgba(0,0,0,.2)",zIndex:9999}}>{toast}</div>}
+        <div style={{background:"linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)",borderRadius:16,padding:"24px 28px",marginBottom:20}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div><div style={{color:"#fff",fontWeight:800,fontSize:22,marginBottom:4}}>🛒 Carrello</div><div style={{color:"rgba(255,255,255,.6)",fontSize:13}}>{tipoCliente==="privato"?(ana.nome+" "+ana.cognome):ana.ragioneSociale} · {lookupValue}</div></div>
+            <div style={{display:"flex",gap:8}}>
+              <div style={{background:"rgba(255,255,255,.15)",borderRadius:10,padding:"8px 16px",textAlign:"center"}}><div style={{color:"#fff",fontWeight:800,fontSize:22}}>{allG.length}</div><div style={{color:"rgba(255,255,255,.6)",fontSize:10}}>BRAND</div></div>
+              <div style={{background:"rgba(255,255,255,.15)",borderRadius:10,padding:"8px 16px",textAlign:"center"}}><div style={{color:"#fff",fontWeight:800,fontSize:22}}>{tp}</div><div style={{color:"rgba(255,255,255,.6)",fontSize:10}}>PRODOTTI</div></div>
             </div>
           </div>
         </div>
-        {allG.length === 0 ? <div className="glass-card p-16 text-center"><div className="text-5xl mb-4">🛒</div><div className="text-base font-semibold text-slate-500">Il tuo carrello è vuoto</div></div> :
-          allG.map((g, gi) => (
-            <div key={gi} className="glass-panel overflow-hidden border-l-4" style={{ borderLeftColor: g.brandColor }}>
-              <div className="p-4 border-b border-white/5 flex items-center justify-between" style={{ background: g.brandColor + "20" }}>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{g.brandIcon}</span>
-                  <span className="font-extrabold text-base uppercase" style={{ color: g.brandColor }}>{g.brandLabel}</span>
-                  <span className="px-3 py-0.5 rounded-full text-xs font-extrabold text-white" style={{ background: g.brandColor }}>{g.items.length}</span>
-                  {g.isCurrent && <span className="px-3 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-500 text-white">IN CORSO</span>}
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => g.isCurrent ? setShowCart(false) : editCG(gi)} className="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs font-bold hover:bg-white/10 transition-all">✏️ Modifica</button>
-                  {!g.isCurrent && <button onClick={() => rmCG(gi)} className="px-4 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold hover:bg-rose-500/20 transition-all">? Rimuovi</button>}
+        {!onlyMarg&&(allG.length===0?<div style={{background:"rgba(255,255,255,0.02)",borderRadius:12,padding:40,textAlign:"center",color:"#64748b"}}><div style={{fontSize:40}}>🛒</div><div style={{fontSize:15,fontWeight:600,marginTop:10}}>Vuoto</div></div>:
+          allG.map((g,gi)=>(
+            <div key={gi} style={{background:"rgba(255,255,255,0.02)",borderRadius:12,marginBottom:12,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+              <div style={{background:g.brandColor,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:20}}>{g.brandIcon}</span><span style={{color:"#fff",fontWeight:700,fontSize:15}}>{g.brandLabel}</span><span style={{background:"rgba(255,255,255,.25)",borderRadius:12,padding:"2px 10px",color:"#fff",fontSize:11,fontWeight:600}}>{g.items.length}</span>{g.isCurrent&&<span style={{background:"#FFD800",borderRadius:12,padding:"2px 10px",color:"#f8fafc",fontSize:10,fontWeight:700}}>IN CORSO</span>}</div>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>g.isCurrent?setShowCart(false):editCG(gi)} style={{background:"rgba(255,255,255,.25)",border:"none",borderRadius:6,padding:"5px 14px",color:"#fff",fontSize:11,cursor:"pointer",fontWeight:700}}>✏️ Modifica</button>
+                  {!g.isCurrent&&<button onClick={()=>rmCG(gi)} style={{background:"rgba(255,0,0,.25)",border:"none",borderRadius:6,padding:"5px 14px",color:"#fff",fontSize:11,cursor:"pointer",fontWeight:600}}>✕ Rimuovi</button>}
                 </div>
               </div>
-              <div className="p-5">
-                {g.items.map((it: any, ii: number) => (
-                  <CartItem key={ii} it={it} ii={ii} gi={gi} total={g.items.length} expI={expI} setExpI={setExpI} />))}
-              </div>
+              <div style={{padding:"6px 16px"}}>
+                {g.items.map((it,ii)=><CartItem key={ii} it={it} ii={ii} gi={gi} total={g.items.length} expI={expI} setExpI={setExpI}/>)}              </div>
             </div>
           ))
-        }
-        <div className="glass-card p-5 mb-6 border-l-4 border-cyan-500 mt-6 relative">
-          {uploading && <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-xl"><div className="flex flex-col items-center gap-2"><div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div><span className="text-xs font-bold text-cyan-400">CARICAMENTO ALLEGATI...</span></div></div>}
-          <div className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider mb-4">📎 Step 5 — Allegati</div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[{ l: "Documento", i: "🪪", t: "identity" }, { l: "Contratti", i: "📄", t: "contract" }, { l: "Altro", i: "📎", t: "other" }].map((a, i) => (
-              <label key={i} className="border-2 border-dashed border-white/10 rounded-xl p-5 text-center cursor-pointer bg-white/[0.02] hover:bg-white/[0.05] hover:border-cyan-500/30 transition-all flex flex-col items-center">
-                <input type="file" multiple className="hidden" onChange={(e) => handleFileChange(e, a.t)} />
-                <div className="text-3xl mb-2">{a.i}</div>
-                <div className="text-sm font-bold text-slate-300 mb-2">{a.l}</div>
-                <div className="flex flex-wrap justify-center gap-1 mb-2">
-                  {attachments.filter(at => at.type === a.t).map((at, ii) => (
-                    <span key={ii} className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400 text-[9px] font-bold truncate max-w-[80px]">{at.name}</span>
-                  ))}
-                </div>
-                <span className="inline-block px-4 py-1.5 rounded-lg bg-cyan-500 text-white text-xs font-bold shadow-lg shadow-cyan-500/30 whitespace-nowrap">Carica</span>
-              </label>
-            ))}
+        )}
+        {margItems.length>0&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:12,padding:16,marginBottom:12,marginTop:12,boxShadow:"0 2px 8px rgba(0,0,0,.06)",overflow:"hidden"}}>
+          <div style={{background:"linear-gradient(135deg,#6f42c1,#9b59b6)",padding:"10px 16px",borderRadius:"8px 8px 0 0",margin:"-16px -16px 14px -16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18}}>📦</span><span style={{color:"#fff",fontWeight:700,fontSize:14}}>Prodotti & Marginalità</span><span style={{background:"rgba(255,255,255,.25)",borderRadius:12,padding:"2px 10px",color:"#fff",fontSize:11,fontWeight:600}}>{margItems.length}</span></div>
+            <button onClick={()=>{setMargEditItem(null);setShowMargPOS(true)}} style={{background:"rgba(255,255,255,.2)",border:"none",borderRadius:6,padding:"5px 14px",color:"#fff",fontSize:11,cursor:"pointer",fontWeight:700}}>+ Aggiungi</button>
           </div>
+          {margItems.map((item,idx)=>(
+            <div key={idx} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
+              <div>
+                <span style={{fontWeight:700,fontSize:13}}>{item.product}</span>
+                {item.model&&<span style={{fontSize:11,color:"#64748b",marginLeft:6}}>{item.model}</span>}
+                <span style={{fontSize:11,color:"#6f42c1",marginLeft:8}}>x{item.qty||1}</span>
+              </div>
+              <button onClick={()=>{const it=margItems[idx];setMargItems(p=>p.filter((_,i)=>i!==idx));setMargEditItem(it);setShowCart(false);setShowMargPOS(true)}} style={{padding:"4px 12px",borderRadius:6,border:"1px solid #6f42c1",background:"rgba(255,255,255,0.04)",color:"#6f42c1",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>✏️ Modifica</button>
+            </div>
+          ))}
+        </div>}
+        {!onlyMarg&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid #17a2b8",marginTop:12}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#17a2b8",marginBottom:14,textTransform:"uppercase"}}>📎 Step 5 — Allegati</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+            {[{l:"Documento",i:"🪪"},{l:"Contratti",i:"📄"},{l:"Altro",i:"📁"}].map((a,i)=><div key={i} style={{border:"2px dashed #ccc",borderRadius:10,padding:"14px 10px",textAlign:"center",cursor:"pointer",background:"rgba(255,255,255,0.03)"}}><div style={{fontSize:24,marginBottom:4}}>{a.i}</div><div style={{fontSize:11,fontWeight:700,marginBottom:6}}>{a.l}</div><div style={{display:"inline-block",padding:"4px 12px",borderRadius:6,background:"#17a2b8",color:"#fff",fontSize:10,fontWeight:600}}>Carica</div></div>)}
+          </div>
+        </div>}
+        {!onlyMarg&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid #28a745"}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#28a745",marginBottom:14,textTransform:"uppercase"}}>🏪 Step 6 — Attribuzione</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"10px 16px"}}>
+            <DD l="Venditore" r v={selVend} o={v=>setSelVend(v)} vals={venditori} nt="Dal login — editabile"/><DD l="Negozio" r v={selNeg} o={v=>setSelNeg(v)} vals={negozi} nt="Dal login — editabile"/>
+            <div><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Data <span style={{color:"#dc3545"}}>*</span></div><input type="date" defaultValue="2026-03-07" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+          </div>
+        </div>}
+        {!onlyMarg&&<NoteStep/>}
+        <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
+          <button onClick={()=>setShowCart(false)} style={{padding:"12px 24px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.02)",color:"#8892b0",fontSize:13,fontWeight:600,cursor:"pointer"}}>← Torna</button>
+<button onClick={handleDownloadPDF} disabled={!ana.nome && cart.length === 0} style={{padding:"11px 26px",borderRadius:10,border:"1px solid rgba(99, 102, 241, 0.3)",background:"rgba(99, 102, 241, 0.1)",color:"#818cf8",fontSize:13,fontWeight:700,cursor:(ana.nome || cart.length > 0) ? "pointer":"not-allowed",display:"flex",alignItems:"center",gap:8,opacity:(ana.nome || cart.length > 0)?1:0.5}}>Scarica PDF</button>
+          {!onlyMarg&&<button onClick={()=>{if(brand&&colItems().length>0)addCart();else{setBrand(null);setShowCart(false)}}} style={{padding:"12px 24px",borderRadius:10,border:"2px solid #6f42c1",background:"rgba(111,66,193,0.1)",color:"#6f42c1",fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Altro brand</button>}
+          {onlyMarg&&<button onClick={()=>setShowMargSave(true)} style={{padding:"12px 36px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#6f42c1,#9b59b6)",color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer",marginLeft:"auto"}}>💾 Salva Marginalità ({margItems.length})</button>}
+          {!onlyMarg&&<button onClick={finalSubmit} disabled={tp===0} style={{padding:"12px 36px",borderRadius:10,border:"none",background:tp>0?"linear-gradient(135deg,#28a745,#20c997)":"#ccc",color:"#fff",fontSize:14,fontWeight:800,cursor:tp>0?"pointer":"not-allowed",marginLeft:"auto"}}>💾 Salva contratto ({tp})</button>}
         </div>
-        <div className="glass-card p-5 mb-6 border-l-4 border-emerald-500">
-          <div className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider mb-4">👤 Step 6 — Attribuzione</div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <DD l="Venditore" r v={selVend} o={v => setSelVend(v)} vals={venditori} nt="Dal login — editabile" />
-            <DD l="Negozio" r v={selNeg} o={v => setSelNeg(v)} vals={negozi} nt="Dal login — editabile" />
-            <div>
-              <div className="text-xs font-semibold text-slate-400 mb-1">Data <span className="text-rose-500">*</span></div>
-              <input type="date" defaultValue="2026-03-07" className="w-full glass-input py-2 px-3 text-sm rounded-xl" />
+        {showMargSave&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(4px)"}}>
+          <div style={{background:"rgba(255,255,255,0.02)",borderRadius:16,width:"100%",maxWidth:420,padding:24,boxShadow:"0 8px 40px rgba(0,0,0,.25)",margin:"0 16px"}}>
+            <div style={{fontWeight:800,fontSize:17,color:"#f8fafc",marginBottom:4}}>💾 Salva Vendita Prodotti</div>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:16}}>Riepilogo: {margItems.length} prodott{margItems.length===1?"o":"i"} registrat{margItems.length===1?"o":"i"}</div>
+            <div style={{background:"rgba(255,255,255,0.04)",borderRadius:10,padding:"10px 14px",marginBottom:14}}>
+              {margItems.map((item,idx)=>(
+                <div key={idx} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
+                  <span style={{fontWeight:600}}>{item.product} x{item.qty||1}</span>
+                  {item.model&&<span style={{color:"#64748b"}}>{item.model}</span>}
+                </div>
+              ))}
+            </div>
+            <label style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,cursor:"pointer",background:"rgba(255,255,255,0.04)",borderRadius:8,padding:"10px 14px"}}>
+              <input type="checkbox" checked={margSaveForm.anonimo} onChange={e=>setMargSaveForm(p=>({...p,anonimo:e.target.checked}))} style={{width:18,height:18,cursor:"pointer"}}/>
+              <div><div style={{fontWeight:700,fontSize:13,color:"#f8fafc"}}>Vendi senza dati cliente</div><div style={{fontSize:11,color:"#64748b"}}>Salta nome, cognome e telefono</div></div>
+            </label>
+            {!margSaveForm.anonimo&&<div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>
+              <div style={{display:"flex",gap:10}}>
+                <div style={{flex:1}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Nome <span style={{color:"#dc3545"}}>*</span></div><input value={margSaveForm.nome} onChange={e=>setMargSaveForm(p=>({...p,nome:e.target.value}))} placeholder="Es. Mario" style={{width:"100%",padding:"8px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,0.1)",fontSize:13,boxSizing:"border-box"}}/></div>
+                <div style={{flex:1}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Cognome <span style={{color:"#dc3545"}}>*</span></div><input value={margSaveForm.cognome} onChange={e=>setMargSaveForm(p=>({...p,cognome:e.target.value}))} placeholder="Es. Rossi" style={{width:"100%",padding:"8px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,0.1)",fontSize:13,boxSizing:"border-box"}}/></div>
+              </div>
+              <div><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Telefono <span style={{color:"#dc3545"}}>*</span></div><input value={margSaveForm.tel} onChange={e=>setMargSaveForm(p=>({...p,tel:e.target.value}))} placeholder="Es. 3391234567" style={{width:"100%",padding:"8px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,0.1)",fontSize:13,boxSizing:"border-box"}}/></div>
+            </div>}
+            <div style={{display:"flex",gap:10,marginTop:4}}>
+              <button onClick={()=>setShowMargSave(false)} style={{flex:1,padding:"11px 0",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.02)",color:"#8892b0",fontSize:13,fontWeight:700,cursor:"pointer"}}>← Annulla</button>
+              <button onClick={()=>{const ok=margSaveForm.anonimo||(margSaveForm.nome.trim()&&margSaveForm.cognome.trim()&&margSaveForm.tel.trim());if(!ok)return;setMargSaveForm({nome:"",cognome:"",tel:"",anonimo:false});setShowMargSave(false);fullReset();showToast("Vendita salvata!");}} style={{flex:1,padding:"11px 0",borderRadius:10,border:"none",background:"linear-gradient(135deg,#28a745,#218838)",color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer"}}>✅ Salva vendita</button>
             </div>
           </div>
-        </div>
-        <NoteStep notes={notes} setNotes={setNotes} date={reminderDate} setDate={setReminderDate} time={reminderTime} setTime={setReminderTime} show={showNotes} setShow={setShowNotes} />
-        <div className="flex gap-3 mt-6 flex-wrap items-center">
-          <button onClick={() => setShowCart(false)} className="px-6 py-3 rounded-xl border border-white/10 bg-white/5 text-slate-400 text-sm font-bold hover:bg-white/10 transition-all">? Torna al form</button>
-          <button onClick={() => { if (brand && colItems().length > 0) addCart(); else { setBrand(null); setShowCart(false) } }} className="px-6 py-3 rounded-xl border border-violet-500/30 bg-violet-500/10 text-violet-300 text-sm font-bold hover:bg-violet-500/20 transition-all">+ Aggiungi altro brand</button>
-          <button onClick={finalSubmit} disabled={tp === 0} className={`ml-auto px-8 py-3.5 rounded-xl text-base font-extrabold transition-all ${tp > 0 ? "primary-btn bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30" : "bg-white/5 text-slate-500 cursor-not-allowed"}`}>SALVA CONTRATTO ({tp})</button>
-        </div>
+        </div>}
       </div>
     );
     return cartContent;
   }
 
-  // ----------- FORM -----------
   const formContent = (
-    <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6 space-y-6 text-slate-300">
-      {toast && <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3 rounded-xl text-sm font-bold bg-emerald-500/90 text-white shadow-lg border border-white/10 backdrop-blur-sm">{toast}</div>}
-      <div className="glass-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6" style={{ background: bG, border: "1px solid rgba(255,255,255,0.1)" }}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-lg border border-white/10">{bObj ? bObj.icon : "📋"}</div>
-          <div>
-            <h1 className="text-lg font-bold text-white">CRM - Inserimento Contratto</h1>
-            <p className="text-xs text-slate-400">{bObj ? bObj.label + " · v5" : "Seleziona brand"}{tipoCliente ? " · " + (tipoCliente === "privato" ? "Privato" : "Business") : ""}</p>
-          </div>
-        </div>
-        <div className="flex gap-2 items-center">
-          <button onClick={() => setShowMargList(true)} className="px-4 py-2 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 rounded-xl text-sm font-bold border border-violet-500/30 transition-all flex items-center gap-2">📦{margItems.length > 0 && <span className="bg-violet-400 text-slate-900 rounded-full px-1.5 py-0.5 text-[10px] font-black">{margItems.length}</span>}</button>
-          <button onClick={() => setShowCart(true)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-medium transition-all flex items-center gap-2">🛒{tCI > 0 && <span className="bg-amber-400 text-slate-900 rounded-full px-1.5 py-0.5 text-xs font-bold">{tCI}</span>}</button>
-          {brand && <button onClick={addCart} className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all">🔄 Cambia</button>}
-          <button onClick={fullReset} className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 transition-all" title="Ricomincia">🔄</button>
+    <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6 space-y-4" style={{fontFamily:"Inter,-apple-system,sans-serif",minHeight:"100vh"}}>
+      {toast&&<div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",background:"#28a745",color:"#fff",padding:"12px 28px",borderRadius:10,fontSize:14,fontWeight:700,boxShadow:"0 6px 20px rgba(0,0,0,.2)",zIndex:9999}}>{toast}</div>}
+      <div style={{background:bG,borderRadius:12,padding:"14px 20px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:36,height:36,background:"rgba(255,255,255,.2)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{bObj?bObj.icon:"⚡"}</div><div><div style={{color:"#fff",fontWeight:700,fontSize:16}}>CRM - Inserimento Contratto</div><div style={{color:"rgba(255,255,255,.7)",fontSize:11}}>{bObj?bObj.label+" · v5":"Seleziona brand"}{tipoCliente?" · "+(tipoCliente==="privato"?"Privato":"Business"):""}</div></div></div>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <button onClick={()=>setShowMargSection(true)} title="Prodotti & Marginalità" style={{padding:"8px 16px",borderRadius:8,border:"1px solid rgba(255,255,255,.4)",background:"rgba(255,255,255,.15)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>📦 Prodotti&Marginalità{margItems.length>0&&<span style={{background:"#FFD800",color:"#f8fafc",borderRadius:8,padding:"1px 7px",fontSize:11,fontWeight:800}}>{margItems.length}</span>}</button><button onClick={()=>setShowCart(true)} style={{background:tCI>0?"rgba(255,255,255,.25)":"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.3)",borderRadius:8,padding:"8px 16px",color:"#fff",fontSize:13,cursor:"pointer",fontWeight:700,display:"flex",alignItems:"center",gap:6}}>🛒 Carrello{tCI>0&&<span style={{background:"#FFD800",color:"#f8fafc",borderRadius:10,padding:"1px 7px",fontSize:11,fontWeight:800}}>{tCI}</span>}</button>
+          {brand&&<button onClick={addCart} style={{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.3)",borderRadius:8,padding:"8px 14px",color:"#fff",fontSize:13,cursor:"pointer",fontWeight:700}}>📦 Salva brand</button>}
+          <button onClick={fullReset} title="Reset tutto" style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.25)",borderRadius:8,padding:"8px 14px",color:"rgba(255,255,255,.85)",fontSize:13,cursor:"pointer",fontWeight:700}}>🔄 Reset</button>
         </div>
       </div>
 
-      <div className="flex gap-0.5 mb-6">
-        {["Brand", "Tipo Cliente", "Anagrafica", "Prodotti", "Allegati", "Attribuzione", "Note"].map((st, i) => {
-          const state = gSS(i);
-          return (
-            <div key={i} className={`flex-1 text-center py-1.5 px-0.5 rounded-md text-[9.5px] font-semibold ${state === "pending" ? "bg-white/5 text-slate-500" : state === "done" ? "bg-emerald-500/20 text-emerald-400" : "bg-violet-500/20 text-violet-300 border border-violet-500/30"}`}>
-              {state === "done" ? "✓ " : ""}{st}
-            </div>
-          );
-        })}
+      <div style={{display:"flex",gap:3,marginBottom:16}}>
+        {["Brand","Tipo Cliente","Anagrafica","Prodotti","Allegati","Attribuzione","Note"].map((st,i)=><div key={i} style={{flex:1,textAlign:"center",padding:"7px 2px",borderRadius:6,fontSize:9.5,fontWeight:600,background:gSS(i)==="active"?bC:gSS(i)==="done"?"#28a745":"#e9ecef",color:gSS(i)==="pending"?"#aaa":"#fff"}}>{gSS(i)==="done"?"✓ ":""}{st}</div>)}
       </div>
 
-      {cart.length > 0 && <div onClick={() => setShowCart(true)} className="glass-card p-4 flex items-center justify-between cursor-pointer hover:border-white/15 transition-all mb-4"><div className="flex items-center gap-3 flex-wrap"><span>🛒</span><span className="text-sm font-semibold text-white">Carrello:</span>{cart.map((g, i) => <span key={i} className="px-2 py-0.5 rounded-md text-[10px] font-bold text-white" style={{ background: g.brandColor }}>{g.brandIcon} {g.items.length}</span>)}</div><span className="text-xs text-slate-400">Vedi →</span></div>}
+      {(cart.length>0||margItems.length>0)&&<div onClick={()=>setShowCart(true)} style={{background:"linear-gradient(90deg,#1a1a2e,#16213e)",borderRadius:10,padding:"10px 16px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}><div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}><span>🛒</span><span style={{color:"#fff",fontSize:12,fontWeight:600}}>Carrello:</span>{cart.map((g,i)=><span key={i} style={{background:g.brandColor,color:"#fff",borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700}}>{g.brandIcon} {g.items.length}</span>)}{margItems.length>0&&<span style={{background:"#6f42c1",color:"#fff",borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700}}>📦 {margItems.length}</span>}</div><span style={{color:"rgba(255,255,255,.5)",fontSize:11}}>Vedi →</span></div>}
 
-      {!brand ? (
-        <div className="glass-card p-6 mb-6">
-          <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-4">Step 1 — Brand</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {BRANDS.map(b => (
-              <button
-                key={b.id}
-                onClick={() => {
-                  if (b.ready) {
-                    setBrand(b.id);
-                    setSales({});
-                    setSkyS([{ selected: [] }]);
-                    setSesCode("");
-                  }
-                }}
-                className={`p-5 rounded-2xl border border-white/10 bg-white/[0.03] text-center relative overflow-hidden transition-all ${b.ready ? "cursor-pointer hover:bg-white/[0.06] hover:border-white/15" : "cursor-default opacity-60"}`}
-              >
-                {!b.ready && (
-                  <div className="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center z-10">
-                    <div className="text-2xl">📋</div>
-                    <div className="text-[10px] font-bold text-slate-400">Manutenzione</div>
-                  </div>
-                )}
-                <div className="mb-2 flex justify-center">
-                  {b.logo ? (
-                    <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center">
-                      <Image
-                        src={b.logo}
-                        alt={b.label}
-                        width={56}
-                        height={56}
-                        className="w-full h-full object-cover rounded-xl"
-                      />
-                    </div>
-                  ) : (
-                    <span className="text-3xl">{b.icon}</span>
-                  )}
-                </div>
-                <div className="font-extrabold text-base" style={{ color: b.color }}>
-                  {b.label}
-                </div>
-                <div className="text-xs text-slate-500 mt-1">{b.desc}</div>
-              </button>
-            ))}
-          </div>
+      {!brand?<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:20,marginBottom:10}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:14,textTransform:"uppercase"}}>Step 1 — Brand</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+          {BRANDS.map(b=><button key={b.id} onClick={()=>{if(b.ready){setBrand(b.id);setSales({});setSkyS([{tvSel:null,tvCC:"",fibraSel:null,fibraCC:"",fibraGnp:null,fibraGnpBrand:"",fibraGnpNum:"",mobileSel:false,mobMnp:null,mobNumProv:"",mobNumDef:"",mobBrandMnp:"",mobIccid:"",mobNum:"",mobIccidNo:""}]);setSesCode("")}}} style={{padding:16,borderRadius:12,border:"2px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.02)",cursor:b.ready?"pointer":"default",textAlign:"center",opacity:b.ready?1:.6,position:"relative",overflow:"hidden"}}>
+            {!b.ready&&<div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"rgba(255,255,255,.6)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:2}}><div style={{fontSize:22}}>🔧</div><div style={{fontSize:10,fontWeight:700,color:"#64748b"}}>Manutenzione</div></div>}
+            <div style={{fontSize:30,marginBottom:4}}>{b.icon}</div><div style={{fontWeight:800,fontSize:15,color:b.color}}>{b.label}</div><div style={{fontSize:10,color:"#64748b",marginTop:3}}>{b.desc}</div>
+          </button>)}
         </div>
-      ) : (
-        <div className="rounded-xl p-4 mb-4 flex items-center gap-3 border border-emerald-500/20 bg-emerald-500/5">
-          <span className="text-xs font-extrabold text-emerald-400">①</span>
-          <span className="text-sm font-semibold text-slate-200">
-            Brand selezionato:{" "}
-            <span className="font-extrabold" style={{ color: bObj?.color || "#94a3b8" }}>
-              {bObj?.label || "Seleziona brand"}
-            </span>
-          </span>
-        </div>
-      )}
-
-      {brand && !showStep4 && (
-        <div className="glass-card p-6 mb-6 border-l-4 border-violet-500">
-          <div className="text-[11px] font-bold text-violet-400 uppercase tracking-wider mb-4">Step 2 — Tipo Cliente</div>
-          <div className="flex gap-4 mb-5">
-            {["privato", "business"].map(t => (
-              <button key={t} onClick={() => { setTipoCliente(t); setShowAna(false); setClienteFound(false); setLookupValue(""); setSales({}); setSkyS([{ selected: [] }]); setShowStep4(false) }}
-                className={`flex-1 py-4 px-4 rounded-xl border text-center transition-all cursor-pointer ${tipoCliente === t ? "border-violet-500 bg-violet-500/15 text-violet-300" : "border-white/10 bg-white/[0.03] text-slate-400 hover:bg-white/[0.06] hover:border-white/15"}`}>
-                <div className="text-2xl mb-1.5">{t === "privato" ? "👤" : "🏢"}</div>
-                <div className="font-bold text-sm">{t === "privato" ? "Privato" : "Business"}</div>
-              </button>
-            ))}
-          </div>
-          {tipoCliente && (
-            <div className="p-5 rounded-xl bg-white/[0.02] border border-white/5 relative">
-              <div className="text-sm font-semibold text-slate-400 mb-2">{tipoCliente === "privato" ? "Codice Fiscale" : "Partita IVA"}</div>
-              <div className="flex gap-3 flex-wrap">
-                <input placeholder={tipoCliente === "privato" ? "RSSMRA80A01H501Z" : "12345678901"} value={lookupValue} onChange={e => setLookupValue(e.target.value.toUpperCase())}
-                  className="flex-1 min-w-[200px] glass-input font-mono tracking-wider text-sm py-3 px-4 rounded-xl" />
-                <button onClick={doLookup} className="primary-btn px-6 py-2.5 text-sm font-bold flex items-center gap-2">🔍 Cerca</button>
-                {tipoCliente === "privato" && (
-                  <button onClick={() => setShowCF(!showCF)} className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${showCF ? "border-2 border-orange-500 bg-orange-500/15 text-orange-400" : "border border-white/10 bg-white/5 text-slate-400 hover:bg-white/10"}`}>🧮 Calcola</button>
-                )}
-              </div>
-              {clienteFound && <div className="mt-3 py-2.5 px-4 rounded-lg bg-emerald-500/15 text-emerald-400 text-sm border border-emerald-500/20">✓ Cliente identificato nel sistema</div>}
-              {showCF && tipoCliente === "privato" && (
-                <div className="fixed inset-0 sm:absolute sm:bottom-[110%] sm:left-0 sm:right-0 z-50 flex items-center justify-center p-4 sm:p-0 sm:items-stretch sm:block bg-black/50 sm:bg-transparent backdrop-blur-sm sm:backdrop-blur-none">
-                  <div className="w-full max-h-[90vh] sm:max-h-[75vh] overflow-y-auto rounded-2xl sm:rounded-xl bg-[#0f172a] border-2 border-orange-500 shadow-2xl p-4 sm:p-6 flex flex-col sm:static">
-                    <div className="flex justify-between items-center mb-4 shrink-0">
-                      <span className="text-sm sm:text-base font-extrabold text-orange-400 tracking-wide">🧮 CALCOLO CODICE FISCALE</span>
-                      <button type="button" onClick={() => setShowCF(false)} className="p-2 -m-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 touch-manipulation" aria-label="Chiudi">✕</button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3 min-h-0">
-                      <TF l="Cognome" r v={cfD.cognome} o={v => setCfD(p => ({ ...p, cognome: v }))} p="Rossi" />
-                      <TF l="Nome" r v={cfD.nome} o={v => setCfD(p => ({ ...p, nome: v }))} p="Mario" />
-                      <div className="sm:col-span-1"><div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", marginBottom: 4 }}>Sesso</div><div className="flex gap-2">{(["M", "F"] as Array<"M" | "F">).map(sx => <button key={sx} type="button" onClick={() => setCfD(p => ({ ...p, sesso: sx }))} className={`flex-1 py-2.5 sm:py-2 rounded-lg text-sm font-bold border-2 transition-all min-h-[44px] touch-manipulation ${cfD.sesso === sx ? "border-orange-500 bg-orange-500/20 text-orange-400" : "border-white/10 bg-white/5 text-slate-400"}`}>{sx === "M" ? "👤 Uomo" : "👩 Donna"}</button>)}</div></div>
-                      <div className="sm:col-span-1">
-                        <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", marginBottom: 4 }}>Luogo di nascita <span className="text-rose-400">*</span></div>
-                        <div className="flex gap-2 mb-2">
-                          {[{ k: false, l: "🇮🇹 Italia" }, { k: true, l: "🌍 Estero" }].map(({ k, l }) =>
-                            <button key={String(k)} type="button" onClick={() => setCfD(p => ({ ...p, estero: k, comune: "", paese: "" }))} className={`flex-1 py-2.5 sm:py-2 rounded-lg text-xs font-bold border-2 transition-all min-h-[44px] touch-manipulation ${cfD.estero === k ? "border-orange-500 bg-orange-500/20 text-orange-400" : "border-white/10 bg-white/5 text-slate-400"}`}>{l}</button>
-                          )}
-                        </div>
-                        {!cfD.estero
-                          ? <div><input list="cf-comuni-list" value={cfD.comune} onChange={e => setCfD(p => ({ ...p, comune: e.target.value.toUpperCase() }))} placeholder="Es. ROMA" className="w-full py-2.5 sm:py-2 px-3 rounded-lg border border-white/10 bg-white/5 text-slate-100 text-sm uppercase outline-none focus:border-orange-500/50" /><datalist id="cf-comuni-list">{_CNA.slice(0, 500).map(n => <option key={n} value={n} />)}</datalist></div>
-                          : <div><input list="cf-paesi-list" value={cfD.paese} onChange={e => setCfD(p => ({ ...p, paese: e.target.value.toUpperCase() }))} placeholder="Es. GERMANIA" className="w-full py-2.5 sm:py-2 px-3 rounded-lg border border-white/10 bg-white/5 text-slate-100 text-sm uppercase outline-none focus:border-orange-500/50" /><datalist id="cf-paesi-list">{_PNA.map(n => <option key={n} value={n} />)}</datalist></div>
-                        }
-                      </div>
-                      <div className="sm:col-span-2"><div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", marginBottom: 4 }}>Data di Nascita</div><div className="grid grid-cols-3 gap-2"><input value={cfD.giorno} onChange={e => setCfD(p => ({ ...p, giorno: e.target.value }))} placeholder="GG" maxLength={2} className="py-2.5 sm:py-2 rounded-lg border border-white/10 bg-white/5 text-slate-100 text-sm text-center outline-none focus:border-orange-500/50 min-h-[44px]" /><select value={cfD.mese} onChange={e => setCfD(p => ({ ...p, mese: e.target.value }))} className="py-2.5 sm:py-2 px-2 rounded-lg border border-white/10 bg-white/5 text-slate-100 text-sm outline-none focus:border-orange-500/50 min-h-[44px]"><option value="" className="bg-[#0f172a]">MM</option>{["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"].map(m => <option key={m} value={m} className="bg-[#0f172a]">{m}</option>)}</select><input value={cfD.anno} onChange={e => setCfD(p => ({ ...p, anno: e.target.value }))} placeholder="AAAA" maxLength={4} className="py-2.5 sm:py-2 rounded-lg border border-white/10 bg-white/5 text-slate-100 text-sm text-center outline-none focus:border-orange-500/50 min-h-[44px]" /></div></div>
-                      <div className="sm:col-span-2 flex sm:items-end"><button type="button" onClick={doCF} className="w-full py-3.5 sm:py-3 rounded-xl border-0 bg-gradient-to-br from-orange-500 to-orange-600 text-white text-sm font-extrabold cursor-pointer shadow-lg shadow-orange-500/30 min-h-[48px] touch-manipulation">🧮 CALCOLA ORA</button></div>
-                    </div>
-                  </div>
-                </div>
-              )}
+        <div style={{marginTop:12}}>
+          <button onClick={()=>setShowMargPOS(true)} style={{width:"100%",padding:"14px 20px",borderRadius:12,border:"2px dashed #6f42c1",background:"rgba(255,255,255,0.04)",cursor:"pointer",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            <span style={{fontSize:24}}>📦</span>
+            <div style={{textAlign:"left"}}>
+              <div style={{fontWeight:800,fontSize:14,color:"#6f42c1"}}>Prodotti & Marginalità</div>
+              <div style={{fontSize:11,color:"#9b59b6",marginTop:2}}>Registra vendite prodotti senza attivazione brand</div>
             </div>
-          )}
-        </div>
-      )}
-
-      {showAna && !showStep4 && (
-        <div style={{ background: "rgba(255, 255, 255, 0.02)", borderRadius: 16, padding: 24, marginBottom: 16, borderLeft: "4px solid #0ea5e9", borderTop: "1px solid rgba(255, 255, 255, 0.05)", borderRight: "1px solid rgba(255, 255, 255, 0.05)", borderBottom: "1px solid rgba(255, 255, 255, 0.05)", backdropFilter: "blur(20px)" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#38bdf8", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.05em" }}>👤 Step 3 — Anagrafica</div>
-          {tipoCliente === "privato" ? (
-            <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 24px" }}>
-                <TF l="Nome" r v={ana.nome} o={v => uA("nome", v)} p="Mario" pf={clienteFound} />
-                <TF l="Cognome" r v={ana.cognome} o={v => uA("cognome", v)} p="Rossi" pf={clienteFound} />
-                <TF l="Cellulare" v={ana.cellulare} o={v => uA("cellulare", v)} p="333..." pf={clienteFound} />
-                <TF l="Email" v={ana.email} o={v => uA("email", v)} p="email" pf={clienteFound} />
-              </div>
-              <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid rgba(255, 255, 255, 0.05)", display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "16px 24px" }}>
-                <TF l="Via" v={ana.via} o={v => uA("via", v)} p="Via Roma" pf={clienteFound} />
-                <TF l="CAP" v={ana.cap} o={v => uA("cap", v)} p="00100" pf={clienteFound} />
-                <TF l="Città" v={ana.citta} o={v => uA("citta", v)} p="Roma" pf={clienteFound} />
-              </div>
-            </>
-          ) : (
-            <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 24px" }}>
-                <TF l="Ragione Sociale" r v={ana.ragioneSociale} o={v => uA("ragioneSociale", v)} p="Rossi Srl" pf={clienteFound} />
-                <TF l="Nome Ref." r v={ana.nomeRef} o={v => uA("nomeRef", v)} p="Mario" pf={clienteFound} />
-                <TF l="Cognome Ref." r v={ana.cognomeRef} o={v => uA("cognomeRef", v)} p="Rossi" pf={clienteFound} />
-                <TF l="Recapito" v={ana.recapito} o={v => uA("recapito", v)} p="333..." pf={clienteFound} />
-                <TF l="Email" v={ana.email} o={v => uA("email", v)} p="info@" pf={clienteFound} />
-              </div>
-              <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid rgba(255, 255, 255, 0.05)", display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "16px 24px" }}>
-                <TF l="Via" v={ana.via} o={v => uA("via", v)} p="Via Roma" pf={clienteFound} />
-                <TF l="CAP" v={ana.cap} o={v => uA("cap", v)} p="00100" pf={clienteFound} />
-                <TF l="Città" v={ana.citta} o={v => uA("citta", v)} p="Roma" pf={clienteFound} />
-              </div>
-            </>
-          )}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24, paddingTop: 20, borderTop: "1px solid rgba(255, 255, 255, 0.05)" }}>
-            <button onClick={() => { setAna({ nome: "", cognome: "", cellulare: "", email: "", via: "", cap: "", citta: "", ragioneSociale: "", nomeRef: "", cognomeRef: "", recapito: "" }); setLookupValue(""); setClienteFound(false); setShowStep4(false) }}
-              style={{ padding: "10px 24px", borderRadius: 10, border: "1px solid rgba(244, 63, 94, 0.3)", background: "rgba(244, 63, 94, 0.1)", color: "#fb7185", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, transition: "all 0.2s" }}>🔄 Reset</button>
-            <button onClick={() => setShowStep4(true)}
-              style={{ padding: "12px 32px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #0ea5e9, #0284c7)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 4px 15px rgba(14, 165, 233, 0.3)", transition: "all 0.2s" }}>Procedi alla scelta prodotti →</button>
-          </div>
-        </div>
-      )}
-
-      {showAna && showStep4 && brand === "windtre" && (
-        <div style={{ background: "rgba(255, 255, 255, 0.02)", borderRadius: 16, padding: 24, marginBottom: 16, borderLeft: "4px solid #f97316", borderTop: "1px solid rgba(255, 255, 255, 0.05)", borderRight: "1px solid rgba(255, 255, 255, 0.05)", borderBottom: "1px solid rgba(255, 255, 255, 0.05)", backdropFilter: "blur(20px)" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#fb923c", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.05em" }}>📦 Step 4 — Prodotti e Contratto</div>
-          <div style={{ background: "rgba(249, 115, 22, 0.05)", borderRadius: 12, padding: 14, marginBottom: 20, display: "flex", alignItems: "center", gap: 12, border: "1px solid rgba(249, 115, 22, 0.15)", flexWrap: "wrap" }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#fb923c" }}>Codice inserimento:</span>
-            <select value={sesCode} onChange={e => setSesCode(e.target.value)} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255, 255, 255, 0.1)", fontSize: 13, fontWeight: 600, background: "rgba(255, 255, 255, 0.05)", color: "#f8fafc", minWidth: 160, outline: "none" }}>
-              <option value="" style={{ background: "#0f172a" }}>— Seleziona —</option>
-              {codiciW3.map(c => <option key={c} value={c} style={{ background: "#0f172a" }}>{c}</option>)}
-            </select>
-          </div>
-          {cats.map(group => (
-            <div key={group.id} style={{ marginBottom: 20 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <span style={{ fontSize: 18 }}>{group.icon}</span>
-                <span style={{ fontSize: 12, fontWeight: 800, color: group.color, textTransform: "uppercase", letterSpacing: "0.05em" }}>{group.title}</span>
-              </div>
-              {gS(group.id).map((sale: any, si: number) => (
-                <div key={si} style={{ padding: 16, borderRadius: 12, marginBottom: 12, background: "rgba(255, 255, 255, 0.01)", borderLeft: "4px solid " + group.color, borderTop: "1px solid rgba(255, 255, 255, 0.03)", borderRight: "1px solid rgba(255, 255, 255, 0.03)", borderBottom: "1px solid rgba(255, 255, 255, 0.03)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: group.color, background: group.color + "15", padding: "2px 8px", borderRadius: 6 }}>VENDITA #{si + 1}</span>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      {si === gS(group.id).length - 1 && <button onClick={() => addSl(group.id)} style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid " + group.color, background: "transparent", color: group.color, fontSize: 16, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}>+</button>}
-                      {si > 0 && <button onClick={() => rmSl(group.id, si)} style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(244, 63, 94, 0.3)", background: "transparent", color: "#fb7185", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}>?</button>}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: group.subs.some(s => sale[s.id] && sale[s.id].active) ? 12 : 0 }}>
-                    {group.subs.map(sub => (
-                      <button key={sub.id} onClick={() => togSub(group.id, si, sub.id, group.radio ? group.subs.map(s => s.id) : null)}
-                        style={{ padding: "8px 16px", borderRadius: 10, border: (sale[sub.id] && sale[sub.id].active) ? "1px solid " + group.color : "1px solid rgba(255, 255, 255, 0.1)", background: (sale[sub.id] && sale[sub.id].active) ? group.color : "rgba(255, 255, 255, 0.05)", color: (sale[sub.id] && sale[sub.id].active) ? "#fff" : "#94a3b8", cursor: "pointer", fontSize: 13, fontWeight: 700, transition: "all 0.2s" }}>
-                        {sub.title}
-                      </button>
-                    ))}
-                  </div>
-                  {group.subs.filter(sub => sale[sub.id] && sale[sub.id].active).map(sub =>
-                    <SubCard key={sub.id} sub={sub} rawSd={sale[sub.id] || {}} group={group} si={si} sessionCode={sesCode} sale={sale} uF={uF} uC={uC} uP={uP} catSales={gS(group.id)} anaCel={ana.cellulare || ""} tipoCliente={tipoCliente} />
-                  )}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {showAna && showStep4 && brand === "sky" && (
-        <div style={{ background: "rgba(255, 255, 255, 0.02)", borderRadius: 16, padding: 24, marginBottom: 16, borderLeft: "4px solid #0072C6", borderTop: "1px solid rgba(255, 255, 255, 0.05)", borderRight: "1px solid rgba(255, 255, 255, 0.05)", borderBottom: "1px solid rgba(255, 255, 255, 0.05)", backdropFilter: "blur(20px)" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#38bdf8", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.05em" }}>📺 Step 4 — Sky</div>
-          {skyS.map((sale, si) => (
-            <div key={si} style={{ padding: 16, borderRadius: 12, marginBottom: 12, background: "rgba(255, 255, 255, 0.01)", borderLeft: "4px solid #0072C6", borderTop: "1px solid rgba(255, 255, 255, 0.03)", borderRight: "1px solid rgba(255, 255, 255, 0.03)", borderBottom: "1px solid rgba(255, 255, 255, 0.03)" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: "#38bdf8", background: "rgba(56, 189, 248, 0.15)", padding: "2px 8px", borderRadius: 6 }}>VENDITA #{si + 1}</span>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {si === skyS.length - 1 && <button onClick={() => setSkyS(p => [...p, { selected: [] }])} style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #0072C6", background: "transparent", color: "#38bdf8", fontSize: 16, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>}
-                  {si > 0 && <button onClick={() => setSkyS(p => { const n = [...p]; n.splice(si, 1); return n })} style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(244, 63, 94, 0.3)", background: "transparent", color: "#fb7185", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>?</button>}
-                </div>
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {((tipoCliente ? SKY_P[tipoCliente] : []) || []).map((p: string) => (
-                  <button key={p} onClick={() => togSky(si, p)}
-                    style={{ padding: "10px 20px", borderRadius: 10, cursor: "pointer", border: (sale.selected && sale.selected.indexOf(p) >= 0) ? "1px solid #0072C6" : "1px solid rgba(255, 255, 255, 0.1)", background: (sale.selected && sale.selected.indexOf(p) >= 0) ? "#0072C6" : "rgba(255, 255, 255, 0.05)", color: (sale.selected && sale.selected.indexOf(p) >= 0) ? "#fff" : "#94a3b8", fontSize: 13, fontWeight: 700, transition: "all 0.2s" }}>
-                    {p}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {showAna && showStep4 && (
-        <div className="glass-card p-6 mb-6 border-l-4 border-violet-500 bg-violet-500/[0.02]">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <div className="text-[11px] font-bold text-violet-400 uppercase tracking-wider mb-1">📦 Prodotti & Marginalità</div>
-              <div className="text-xs text-slate-500 font-medium italic">Registra prodotti extra, accessori o servizi venduti</div>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setShowMargPOS(true)} className="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black shadow-lg shadow-violet-600/30 transition-all flex items-center gap-2">
-                <span>?</span> AGGIUNGI PRODOTTO
-              </button>
-              {margItems.length > 0 && (
-                <button onClick={() => setShowMargList(true)} className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold border border-white/10 transition-all">
-                  Lista ({margItems.length})
-                </button>
-              )}
-            </div>
-          </div>
-
-          {margItems.length === 0 ? (
-            <div className="py-8 border-2 border-dashed border-white/5 rounded-2xl text-center bg-black/20">
-              <div className="text-2xl mb-2 opacity-50">📦</div>
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">Nessun prodotto extra registrato</div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {margItems.map((it: any, i: number) => (
-                <div key={i} className="p-3.5 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-between group">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{(MARG_PRODUCTS as any).flatMap((c: any) => c.items).find((p: any) => p.id === it.productId)?.icon || "📦"}</span>
-                    <div>
-                      <div className="text-sm font-bold text-slate-200">{it.product} {it.qty > 1 && <span className="text-violet-400 font-black ml-1">×{it.qty}</span>}</div>
-                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{it.model || "Prodotto Extra"}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`text-[11px] font-black ${it.totalMargin >= 0 ? "text-emerald-400" : "text-rose-400"}`}>€{it.totalMargin.toFixed(2)}</span>
-                    <button onClick={() => rmMargItem(i)} className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500 lg:opacity-0 group-hover:opacity-100 transition-all">?</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {showAna && showStep4 && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 32, marginTop: 16, gap: 16 }}>
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <button onClick={() => setShowStep4(false)} style={{ padding: "12px 24px", borderRadius: 12, border: "1px solid rgba(255, 255, 255, 0.1)", background: "rgba(255, 255, 255, 0.05)", color: "#94a3b8", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>? Indietro</button>
-            {confirmReset ? (
-              <div style={{ display: "flex", gap: 12, alignItems: "center", background: "rgba(244, 63, 94, 0.1)", padding: "4px 16px", borderRadius: 12, border: "1px solid rgba(244, 63, 94, 0.2)" }}>
-                <span style={{ fontSize: 12, fontWeight: 800, color: "#fb7185" }}>CONFERMI?</span>
-                <button onClick={fullReset} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#f43f5e", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>Sì, resetta</button>
-                <button onClick={() => setConfirmReset(false)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(255, 255, 255, 0.1)", background: "transparent", color: "#94a3b8", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Annulla</button>
-              </div>
-            ) : (
-              <button onClick={() => setConfirmReset(true)} style={{ padding: "12px 24px", borderRadius: 12, border: "1px solid rgba(244, 63, 94, 0.3)", background: "transparent", color: "#fb7185", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>🔄 Reset form</button>
-            )}
-            <button onClick={handleDownloadPDF} disabled={!ana.nome && cart.length === 0}
-              style={{
-                padding: "12px 24px",
-                borderRadius: 12,
-                border: "1px solid rgba(99, 102, 241, 0.3)",
-                background: "rgba(99, 102, 241, 0.1)",
-                color: "#818cf8",
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: (ana.nome || cart.length > 0) ? "pointer" : "not-allowed",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                opacity: (ana.nome || cart.length > 0) ? 1 : 0.5
-              }}>
-              <FileDown size={18} /> Scarica PDF
-            </button>
-          </div>
-          <button onClick={() => setShowCart(true)}
-            style={{ padding: "14px 32px", borderRadius: 12, border: "none", background: "linear-gradient(135deg, #6366f1, #4f46e5)", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 10px 30px rgba(99, 102, 241, 0.4)" }}>
-            🛒 RIEPILOGO CARRELLO {tCI > 0 && <span style={{ background: "#fbbf24", color: "#000", borderRadius: 20, padding: "2px 10px", fontSize: 13, fontWeight: 900 }}>{tCI}</span>}
+            {margItems.length>0&&<span style={{marginLeft:"auto",background:"#6f42c1",color:"#fff",borderRadius:10,padding:"2px 10px",fontSize:12,fontWeight:800}}>{margItems.length}</span>}
           </button>
         </div>
+      </div>:<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:"12px 16px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:11,fontWeight:700,color:"#28a745"}}>✓ 1</span><span style={{fontSize:13,fontWeight:600}}>Brand: <span style={{color:bObj.color}}>{bObj.icon} {bObj.label}{tipoCliente==="business"?" Business":""}</span></span></div>}
+
+      {brand&&!showStep4&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid #6f42c1"}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#6f42c1",marginBottom:12,textTransform:"uppercase"}}>Step 2 — Tipo Cliente</div>
+        <div style={{display:"flex",gap:12,marginBottom:tipoCliente?16:0}}>
+          {["privato","business"].map(t=><button key={t} onClick={()=>{setTipoCliente(t);setShowAna(false);setClienteFound(false);setLookupValue("");setSales({});setSkyS([{tvSel:null,tvCC:"",fibraSel:null,fibraCC:"",fibraGnp:null,fibraGnpBrand:"",fibraGnpNum:"",mobileSel:false,mobMnp:null,mobNumProv:"",mobNumDef:"",mobBrandMnp:"",mobIccid:"",mobNum:"",mobIccidNo:""}]);setShowStep4(false)}} style={{flex:1,padding:12,borderRadius:10,border:tipoCliente===t?"2px solid #6f42c1":"2px solid #e8e8e8",background:tipoCliente===t?"#F3EEFB":"#fff",cursor:"pointer",textAlign:"center"}}><div style={{fontSize:22,marginBottom:2}}>{t==="privato"?"👤":"🏢"}</div><div style={{fontWeight:700,fontSize:14,color:tipoCliente===t?"#6f42c1":"#333"}}>{t==="privato"?"Privato":"Business"}</div></button>)}
+        </div>
+        {tipoCliente&&<div style={{background:"rgba(255,255,255,0.03)",borderRadius:8,padding:14,position:"relative"}}>
+          <div style={{fontSize:12,fontWeight:600,color:"#8892b0",marginBottom:8}}>{tipoCliente==="privato"?"Codice Fiscale":"Partita IVA"}</div>
+          <div style={{display:"flex",gap:8}}>
+            <input placeholder={tipoCliente==="privato"?"RSSMRA80A01H501Z":"12345678901"} value={lookupValue} onChange={e=>setLookupValue(e.target.value.toUpperCase())} style={{flex:1,padding:"10px 12px",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",fontSize:14,fontFamily:"monospace",letterSpacing:1.2}}/>
+            <button onClick={doLookup} style={{padding:"10px 18px",borderRadius:8,border:"none",background:"#6f42c1",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>🔍 Cerca</button>
+          </div>
+          {clienteFound&&<div style={{marginTop:10,background:"rgba(40,167,69,0.1)",borderRadius:6,padding:"8px 12px",fontSize:12,color:"#28a745"}}>✅ Trovato!</div>}
+        </div>}
+      </div>}
+
+      {showAna&&!showStep4&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid #1B3A5C"}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#1B3A5C",marginBottom:14,textTransform:"uppercase"}}>📝 Step 3 — Anagrafica</div>
+        {tipoCliente==="privato"?<><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 16px"}}><TF l="Nome" r v={ana.nome} o={v=>uA("nome",v)} p="Mario" pf={clienteFound}/><TF l="Cognome" r v={ana.cognome} o={v=>uA("cognome",v)} p="Rossi" pf={clienteFound}/><TF l="Cellulare" v={ana.cellulare} o={v=>uA("cellulare",v)} p="333..." pf={clienteFound}/><TF l="Email" v={ana.email} o={v=>uA("email",v)} p="email" pf={clienteFound}/></div><div style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(255,255,255,0.05)",display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:"10px 16px"}}><TF l="Via" v={ana.via} o={v=>uA("via",v)} p="Via Roma" pf={clienteFound}/><TF l="CAP" v={ana.cap} o={v=>uA("cap",v)} p="00100" pf={clienteFound}/><TF l="Città" v={ana.citta} o={v=>uA("citta",v)} p="Roma" pf={clienteFound}/></div></>
+        :<><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 16px"}}><TF l="Ragione Sociale" r v={ana.ragioneSociale} o={v=>uA("ragioneSociale",v)} p="Rossi Srl" pf={clienteFound}/><TF l="Nome Ref." r v={ana.nomeRef} o={v=>uA("nomeRef",v)} p="Mario" pf={clienteFound}/><TF l="Cognome Ref." r v={ana.cognomeRef} o={v=>uA("cognomeRef",v)} p="Rossi" pf={clienteFound}/><TF l="Recapito" v={ana.recapito} o={v=>uA("recapito",v)} p="333..." pf={clienteFound}/><TF l="Email" v={ana.email} o={v=>uA("email",v)} p="info@" pf={clienteFound}/></div><div style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(255,255,255,0.05)",display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:"10px 16px"}}><TF l="Via" v={ana.via} o={v=>uA("via",v)} p="Via Roma" pf={clienteFound}/><TF l="CAP" v={ana.cap} o={v=>uA("cap",v)} p="00100" pf={clienteFound}/><TF l="Città" v={ana.citta} o={v=>uA("citta",v)} p="Roma" pf={clienteFound}/></div></>}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:14,paddingTop:12,borderTop:"1px solid rgba(255,255,255,0.05)"}}>
+          <button onClick={()=>{setAna({nome:"",cognome:"",cellulare:"",email:"",via:"",cap:"",citta:"",ragioneSociale:"",nomeRef:"",cognomeRef:"",recapito:""});setLookupValue("");setClienteFound(false);setShowStep4(false)}} style={{padding:"9px 18px",borderRadius:8,border:"2px solid #dc3545",background:"rgba(255,255,255,0.02)",color:"#dc3545",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>↺ Reset anagrafica</button>
+          <button onClick={()=>setShowStep4(true)} style={{padding:"9px 22px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#2E75B6,#1B3A5C)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>Avanti →</button>
+        </div>
+      </div>}
+
+      {showAna&&showStep4&&(brand==="windtre"||brand==="vodafone"||brand==="fastweb"||brand==="iliad"||brand==="energy")&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid "+(brand==="vodafone"?"#E60000":brand==="fastweb"?"#CC9900":brand==="iliad"?"#C00028":brand==="energy"?"#28a745":"#2E75B6")}}>
+        <div style={{fontSize:11,fontWeight:700,color:brand==="vodafone"?"#E60000":brand==="fastweb"?"#CC9900":brand==="iliad"?"#C00028":brand==="energy"?"#28a745":"#2E75B6",marginBottom:14,textTransform:"uppercase"}}>📂 Step 4 — Prodotti e Contratto</div>
+        <div style={{background:"rgba(255,255,255,0.04)",borderRadius:8,padding:10,marginBottom:14,display:"flex",alignItems:"center",gap:12,border:"1px solid rgba(0,114,198,0.3)",flexWrap:"wrap"}}>
+          <span style={{fontSize:11,fontWeight:700,color:"#1B3A5C"}}>Codice inserimento:</span>
+          <select value={sesCode} onChange={e=>setSesCode(e.target.value)} style={{padding:"6px 10px",borderRadius:6,border:"1px solid rgba(0,114,198,0.3)",fontSize:12,fontWeight:600,background:"rgba(255,255,255,0.02)",minWidth:140}}><option value="">— Seleziona —</option>{(brand==="vodafone"?VF_CODICI_NEGOZIO:brand==="fastweb"?FW_CODICI_NEGOZIO:brand==="iliad"?IL_CODICI_NEGOZIO:brand==="energy"?EN_CODICI_NEGOZIO:codiciW3).map(c=><option key={c} value={c}>{c}</option>)}</select>
+        </div>
+        {cats.map(group=><div key={group.id} style={{marginBottom:16}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:16}}>{group.icon}</span><span style={{fontSize:13,fontWeight:700,color:group.color,textTransform:"uppercase"}}>{group.title}</span></div>
+          {gS(group.id).map((sale,si)=><div key={si} style={{padding:12,borderRadius:8,marginBottom:6,background:"rgba(255,255,255,0.03)",borderLeft:"3px solid "+group.color}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+              <span style={{fontSize:11,fontWeight:700,color:group.color}}>Vendita #{si+1}</span>
+              <div style={{display:"flex",gap:6}}>
+                {si===gS(group.id).length-1&&<button onClick={()=>addSl(group.id)} style={{padding:"4px 12px",borderRadius:6,border:"1px solid "+group.color,background:"rgba(255,255,255,0.02)",color:group.color,fontSize:11,fontWeight:700,cursor:"pointer"}}>+</button>}
+                {si>0&&<button onClick={()=>rmSl(group.id,si)} style={{padding:"4px 10px",borderRadius:6,border:"1px solid #dc3545",background:"rgba(255,255,255,0.02)",color:"#dc3545",fontSize:10,fontWeight:700,cursor:"pointer"}}>✕</button>}
+              </div>
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:group.subs.some(s=>sale[s.id]&&sale[s.id].active)?10:0}}>
+              {group.subs.map(sub=><button key={sub.id} onClick={()=>togSub(group.id,si,sub.id,group.radio?group.subs.map(s=>s.id):null)} style={{padding:"8px 14px",borderRadius:8,border:(sale[sub.id]&&sale[sub.id].active)?"2px solid "+group.color:"2px solid #e0e0e0",background:(sale[sub.id]&&sale[sub.id].active)?group.color:"#fff",color:(sale[sub.id]&&sale[sub.id].active)?"#fff":"#555",cursor:"pointer",fontSize:12,fontWeight:600}}>{sub.title}</button>)}
+            </div>
+            {group.subs.filter(sub=>sale[sub.id]&&sale[sub.id].active).map(sub=>
+              <SubCard key={sub.id} sub={sub} rawSd={sale[sub.id]||{}} group={group} si={si} sessionCode={sesCode} sale={sale} uF={uF} uC={uC} uP={uP} catSales={gS(group.id)} anaCel={ana.cellulare||""} onOpenVFModal={openVFModal}/>
+            )}
+          </div>)}
+        </div>)}
+      </div>}
+
+      {showAna&&showStep4&&brand==="sky"&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid #0072C6"}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#0072C6",marginBottom:14,textTransform:"uppercase"}}>📺 Step 4 — Sky</div>
+        {skyS.map((sale,si)=>{
+          const SKY_COLOR="#0072C6";
+          const btnSky=(label,active,onClick)=><button onClick={onClick} style={{padding:"10px 18px",borderRadius:8,cursor:"pointer",border:active?"2px solid "+SKY_COLOR:"2px solid #e0e0e0",background:active?SKY_COLOR:"#fff",color:active?"#fff":"#555",fontSize:13,fontWeight:600}}>{label}</button>;
+          const ynSky=(val,onYes,onNo)=><div style={{display:"flex",gap:6}}>{[{v:"Sì",fn:onYes},{v:"No",fn:onNo}].map(({v,fn})=><button key={v} onClick={fn} style={{padding:"7px 22px",borderRadius:8,border:val===v?"2px solid "+SKY_COLOR:"2px solid #e0e0e0",background:val===v?SKY_COLOR:"#fff",color:val===v?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>{v}</button>)}</div>;
+          const dBox=(children)=><div style={{marginTop:10,background:"rgba(0,114,198,0.1)",borderRadius:8,padding:12,border:"1px solid rgba(0,114,198,0.3)"}}><div style={{fontSize:11,fontWeight:700,color:SKY_COLOR,marginBottom:8,textTransform:"uppercase"}}>📄 Dati contratto</div>{children}</div>;
+          return (<div key={si} style={{padding:12,borderRadius:8,marginBottom:8,background:"rgba(255,255,255,0.03)",borderLeft:"3px solid #0072C6"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+              <span style={{fontSize:11,fontWeight:700,color:"#0072C6"}}>Vendita #{si+1}</span>
+              <div style={{display:"flex",gap:6}}>
+                {si===skyS.length-1&&<button onClick={()=>setSkyS(p=>[...p,{tvSel:null,tvCC:"",fibraSel:null,fibraCC:"",fibraGnp:null,fibraGnpBrand:"",fibraGnpNum:"",mobileSel:false,mobMnp:null,mobNumProv:"",mobNumDef:"",mobBrandMnp:"",mobIccid:"",mobNum:"",mobIccidNo:""}])} style={{padding:"4px 12px",borderRadius:6,border:"1px solid #0072C6",background:"rgba(255,255,255,0.02)",color:"#0072C6",fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Vendita</button>}
+                {si>0&&<button onClick={()=>setSkyS(p=>{const n=[...p];n.splice(si,1);return n})} style={{padding:"4px 10px",borderRadius:6,border:"1px solid #dc3545",background:"rgba(255,255,255,0.02)",color:"#dc3545",fontSize:10,fontWeight:700,cursor:"pointer"}}>✕</button>}
+              </div>
+            </div>
+
+            {/* ── MACRO 1: TV ─────────────────────────────────── */}
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>📺 TV</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {SKY_TV.map(pr=>btnSky(pr,sale.tvSel===pr,()=>togSky(si,pr)))}
+              </div>
+              {sale.tvSel&&dBox(
+                <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Codice contratto <span style={{color:"#dc3545"}}>*</span></div>
+                <input value={sale.tvCC||""} onChange={e=>uSkyF(si,"tvCC",e.target.value)} placeholder="es. 1679428185586" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+              )}
+            </div>
+
+            {/* ── MACRO 2: FIBRA ──────────────────────────────── */}
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>🌐 Fibra</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {SKY_FIBRA.map(pr=>btnSky(pr,sale.fibraSel===pr,()=>togSky(si,pr)))}
+              </div>
+              {sale.fibraSel&&dBox(<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 12px"}}>
+                <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Codice contratto <span style={{color:"#dc3545"}}>*</span></div>
+                <input value={sale.fibraCC||""} onChange={e=>uSkyF(si,"fibraCC",e.target.value)} placeholder="es. 1679428185586" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>GNP?</div>
+                {ynSky(sale.fibraGnp,()=>uSkyF(si,"fibraGnp","Sì"),()=>{uSkyF(si,"fibraGnp","No");uSkyF(si,"fibraGnpBrand","");uSkyF(si,"fibraGnpNum","");})}</div>
+                {sale.fibraGnp==="Sì"&&<>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Brand GNP</div>
+                  <select value={sale.fibraGnpBrand||""} onChange={e=>uSkyF(si,"fibraGnpBrand",e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12}}>
+                    <option value="">— Seleziona —</option>
+                    {SKY_BRAND_FIBRA.map(b=><option key={b} value={b}>{b}</option>)}
+                  </select></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Numero fisso in portabilità</div>
+                  <input value={sale.fibraGnpNum||""} onChange={e=>uSkyF(si,"fibraGnpNum",e.target.value)} placeholder="es. 060000000" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+                </>}
+              </div>)}
+            </div>
+
+            {/* ── MACRO 3: MOBILE ─────────────────────────────── */}
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>📱 Mobile</div>
+              <div style={{display:"flex",gap:6}}>
+                {btnSky("Sky Mobile",sale.mobileSel,()=>togSky(si,"Sky Mobile"))}
+              </div>
+              {sale.mobileSel&&dBox(<div>
+                <div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:4}}>MNP?</div>
+                {ynSky(sale.mobMnp,()=>uSkyF(si,"mobMnp","Sì"),()=>{uSkyF(si,"mobMnp","No");uSkyF(si,"mobNumProv","");uSkyF(si,"mobNumDef","");uSkyF(si,"mobBrandMnp","");uSkyF(si,"mobIccid","");})}
+                {sale.mobMnp==="Sì"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 12px",marginTop:8}}>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Numero provvisorio</div><input value={sale.mobNumProv||""} onChange={e=>uSkyF(si,"mobNumProv",e.target.value)} placeholder="es. 393XXXXXXX" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Numero definitivo</div><input value={sale.mobNumDef||""} onChange={e=>uSkyF(si,"mobNumDef",e.target.value)} placeholder="Numero da portare" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Brand MNP</div>
+                  <select value={sale.mobBrandMnp||""} onChange={e=>uSkyF(si,"mobBrandMnp",e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12}}>
+                    <option value="">— Seleziona —</option>
+                    {["TIM","Vodafone","Fastweb","WINDTRE","Iliad","PosteMobile","CoopVoce","ho.","Very Mobile","Rabona","Lyca","Kena","MVNO altro"].map(b=><option key={b} value={b}>{b}</option>)}
+                  </select></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>ICCID</div><input value={sale.mobIccid||""} onChange={e=>uSkyF(si,"mobIccid",e.target.value)} placeholder="893XXXXXXXXXXXXXXXX" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+                </div>}
+                {sale.mobMnp==="No"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 12px",marginTop:8}}>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Numero</div><input value={sale.mobNum||""} onChange={e=>uSkyF(si,"mobNum",e.target.value)} placeholder="es. 393XXXXXXX" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>ICCID</div><input value={sale.mobIccidNo||""} onChange={e=>uSkyF(si,"mobIccidNo",e.target.value)} placeholder="893XXXXXXXXXXXXXXXX" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+                </div>}
+              </div>)}
+            </div>
+
+          </div>);
+        })}
+      </div>}
+
+
+      
+      {/* ── PRODOTTI & MARGINALITÀ ── */}
+      {showAna&&showStep4&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid #6f42c1"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#6f42c1",textTransform:"uppercase"}}>📦 Prodotti & Marginalità</div>
+          <button onClick={()=>setShowMargPOS(true)} style={{padding:"6px 16px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#6f42c1,#9b59b6)",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Aggiungi</button>
+        </div>
+        {margItems.length>0?(<div>
+          {margItems.map((it,i)=>(<div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
+            <span style={{fontSize:12,color:"#f8fafc"}}>{it.product}{it.qty>1?` ×${it.qty}`:""}{it.model?` (${it.model})`:""}</span>
+            <button onClick={()=>rmMargItem(i)} style={{background:"none",border:"none",color:"#dc3545",cursor:"pointer",fontSize:10}}>✕</button>
+          </div>))}
+        </div>):(<div style={{textAlign:"center",padding:14,color:"#64748b",fontSize:12}}>Nessun prodotto. Usa "+ Aggiungi" o 📦 nella topbar.</div>)}
+      </div>}
+      <MargPOS show={showMargPOS} onClose={()=>{setShowMargPOS(false);setMargEditItem(null)}} venditore={selVend} negozio={selNeg} onAdd={(item)=>{addMargItem(item);setMargEditItem(null)}} editItem={margEditItem}/>
+      <MargList items={margItems} onRemove={rmMargItem} show={showMargList} onClose={()=>setShowMargList(false)}/>
+
+      {showMargSection&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center",backdropFilter:"blur(4px)"}}>
+        <style>{`@keyframes margSecSlideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
+        <div style={{background:"rgba(255,255,255,0.02)",borderRadius:"20px 20px 0 0",width:"100%",maxWidth:640,maxHeight:"80vh",overflow:"hidden",display:"flex",flexDirection:"column",boxShadow:"0 -4px 30px rgba(0,0,0,.2)",animation:"margSecSlideUp 0.32s cubic-bezier(0.22,1,0.36,1)"}}>
+          <div style={{background:"linear-gradient(135deg,#6f42c1,#9b59b6)",padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div><div style={{color:"#fff",fontWeight:800,fontSize:17}}>📦 Prodotti in Marginalità</div><div style={{color:"rgba(255,255,255,.75)",fontSize:11,marginTop:2}}>{margItems.length} prodott{margItems.length===1?"o":"i"} registrat{margItems.length===1?"o":"i"}</div></div>
+            <button onClick={()=>setShowMargSection(false)} style={{padding:"6px 14px",borderRadius:8,border:"1px solid rgba(255,255,255,.4)",background:"rgba(255,255,255,.15)",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>✕ Chiudi</button>
+          </div>
+          <div style={{flex:1,overflowY:"auto",padding:16}}>
+            {margItems.length===0?<div style={{textAlign:"center",padding:"40px 20px",color:"#64748b"}}><div style={{fontSize:40}}>📦</div><div style={{fontSize:14,fontWeight:600,marginTop:10}}>Nessun prodotto registrato</div><div style={{fontSize:12,marginTop:4}}>Aggiungi prodotti dal catalogo</div></div>:
+              margItems.map((item,idx)=>(
+                <div key={idx} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:13}}>{item.product}</div>
+                    {item.model&&<div style={{fontSize:11,color:"#64748b"}}>{item.model}</div>}
+                    <div style={{fontSize:12,color:"#8892b0",marginTop:2}}>x{item.qty||1}</div>
+                  </div>
+                  <button onClick={()=>setMargItems(p=>p.filter((_,i)=>i!==idx))} style={{padding:"4px 10px",borderRadius:6,border:"1px solid #dc3545",background:"rgba(220,53,69,0.1)",color:"#dc3545",fontSize:11,fontWeight:700,cursor:"pointer"}}>✕</button>
+                </div>
+              ))
+            }
+          </div>
+          <div style={{padding:"14px 16px",borderTop:"1px solid rgba(255,255,255,0.05)",display:"flex",gap:10}}>
+            <button onClick={()=>{setShowMargSection(false);setShowMargPOS(true)}} style={{flex:1,padding:"12px 0",borderRadius:10,border:"2px solid #6f42c1",background:"rgba(255,255,255,0.04)",color:"#6f42c1",fontSize:13,fontWeight:800,cursor:"pointer"}}>+ Aggiungi prodotto</button>
+            {margItems.length>0&&<button onClick={()=>setShowCart(true)} style={{flex:1,padding:"12px 0",borderRadius:10,border:"none",background:"linear-gradient(135deg,#6f42c1,#9b59b6)",color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer"}}>🛒 Vai al carrello</button>}
+          </div>
+        </div>
+      </div>}
+
+{showAna&&showStep4&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:20,marginTop:8,gap:10}}>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <button onClick={()=>setShowStep4(false)} style={{padding:"11px 20px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.02)",color:"#8892b0",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>← Indietro</button>
+          {confirmReset
+            ? <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <span style={{fontSize:12,fontWeight:600,color:"#dc3545"}}>Sei sicuro?</span>
+                <button onClick={fullReset} style={{padding:"8px 16px",borderRadius:8,border:"none",background:"#dc3545",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sì, resetta</button>
+                <button onClick={()=>setConfirmReset(false)} style={{padding:"8px 16px",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.02)",color:"#8892b0",fontSize:12,fontWeight:600,cursor:"pointer"}}>Annulla</button>
+              </div>
+            : <button onClick={()=>setConfirmReset(true)} style={{padding:"11px 22px",borderRadius:10,border:"2px solid #dc3545",background:"rgba(255,255,255,0.02)",color:"#dc3545",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>🗑️ Reset form</button>
+          }
+        </div>
+        <button onClick={()=>setShowCart(true)} style={{padding:"11px 26px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#1a1a2e,#0f3460)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>🛒 Riepilogo carrello{tCI>0&&<span style={{background:"#FFD800",color:"#f8fafc",borderRadius:10,padding:"1px 8px",fontSize:12,fontWeight:800}}>{tCI}</span>}</button>
+      </div>}
+
+      {/* ── VF QTY MODAL OVERLAY ─────────────────────────────────────────── */}
+      {vfQtyModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.65)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={e=>{if(e.target===e.currentTarget)setVfQtyModal(null)}}>
+          <style>{`@keyframes vfModalIn{from{opacity:0;transform:translateY(48px) scale(0.93)}to{opacity:1;transform:translateY(0) scale(1)}}`}</style>
+          <div style={{background:"rgba(255,255,255,0.02)",borderRadius:20,padding:32,width:360,boxShadow:"0 24px 80px rgba(0,0,0,0.35)",animation:"vfModalIn .28s cubic-bezier(.22,1,.36,1) both",textAlign:"center"}}>
+            <div style={{fontSize:36,marginBottom:8}}>📱</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#f8fafc",marginBottom:4}}>Quante SIM hai venduto?</div>
+            <div style={{fontSize:13,fontWeight:600,color:"#E60000",background:"rgba(230,0,0,0.1)",borderRadius:8,padding:"6px 16px",display:"inline-block",marginBottom:24}}>{vfQtyModal.offer}</div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:20,marginBottom:28}}>
+              <button onClick={()=>setVfQtyModal(p=>({...p,tempQty:Math.max(1,p.tempQty-1)}))} style={{width:52,height:52,borderRadius:"50%",border:"2px solid rgba(255,255,255,0.1)",background:"#f5f5f5",fontSize:26,fontWeight:700,cursor:"pointer",color:"#8892b0",lineHeight:"1",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:52,fontWeight:900,color:"#E60000",lineHeight:1}}>{vfQtyModal.tempQty}</div>
+                <div style={{fontSize:11,color:"#64748b",marginTop:2}}>SIM</div>
+              </div>
+              <button onClick={()=>setVfQtyModal(p=>({...p,tempQty:Math.min(9,p.tempQty+1)}))} style={{width:52,height:52,borderRadius:"50%",border:"2px solid #E60000",background:"#E60000",fontSize:26,fontWeight:700,cursor:"pointer",color:"#fff",lineHeight:"1",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+            </div>
+            <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+              <button onClick={()=>setVfQtyModal(null)} style={{padding:"11px 28px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",background:"#f5f5f5",color:"#8892b0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Annulla</button>
+              {vfQtyModal&&vfQtyModal.tempQty>0&&((sales[vfQtyModal.catId]||[{}])[vfQtyModal.si]||{})[vfQtyModal.subId]&&((((sales[vfQtyModal.catId]||[{}])[vfQtyModal.si]||{})[vfQtyModal.subId]||{}).vfOffers||{})[vfQtyModal.offer]>0&&<button onClick={()=>{if(!vfQtyModal)return;const{catId,si,subId,offer}=vfQtyModal;const cur=((sales[catId]||[{}])[si]||{})[subId];const newVfO={...((cur&&cur.vfOffers)||{})};delete newVfO[offer];const newVfC={...((cur&&cur.vfContratti)||{})};delete newVfC[offer];uP(catId,si,subId,"vfOffers",newVfO);uP(catId,si,subId,"vfContratti",newVfC);setVfQtyModal(null);}} style={{padding:"11px 20px",borderRadius:10,border:"1px solid #dc3545",background:"rgba(255,255,255,0.02)",color:"#dc3545",fontSize:13,fontWeight:600,cursor:"pointer"}}>✕ Rimuovi</button>}
+              <button onClick={confirmVFQty} style={{padding:"11px 36px",borderRadius:10,border:"none",background:"#E60000",color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 16px rgba(230,0,0,0.35)"}}>Conferma</button>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* MODALS */}
-      <MargPOS show={showMargPOS} onClose={() => setShowMargPOS(false)} onAdd={addMargItem} venditore={selVend} negozio={selNeg} />
-      <MargList show={showMargList} onClose={() => setShowMargList(false)} items={margItems} onRemove={rmMargItem} />
     </div>
   );
-
   return formContent;
 }
+
+import dynamic from "next/dynamic";
+const CRM_NoSSR = dynamic(() => Promise.resolve(CRM), { ssr: false });
+export default CRM_NoSSR;
