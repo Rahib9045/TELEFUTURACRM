@@ -271,26 +271,29 @@ export default function PasswordV2Page() {
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-                            {BRANDS.map((b) => (
-                                <button
-                                    key={b.id}
-                                    onClick={() => setBrand(b.id)}
-                                    className="group glass-card p-6 flex flex-col items-center gap-4 hover:bg-white/5 transition-all text-center border-white/5 hover:border-indigo-500/30 hover:-translate-y-1"
-                                >
-                                    <div className={cn(
-                                        "w-20 h-20 rounded-3xl border flex items-center justify-center overflow-hidden p-4 group-hover:scale-110 transition-transform shadow-xl shadow-black/20",
-                                        b.bg
-                                    )}>
-                                        <img src={b.image} alt={b.name} className="w-full h-full object-contain filter drop-shadow-lg" />
+                            {BRANDS.map((b) => {
+                                const colorHex = b.id === "windtre" ? "#f97316" : b.id === "vodafone" ? "#e60000" : b.id === "sky" ? "#0072CE" : b.id === "fastweb" ? "#7c3aed" : "#10b981";
+                                return (
+                                    <div
+                                        key={b.id}
+                                        onClick={() => setBrand(b.id)}
+                                        className="glass-card p-6 cursor-pointer group hover:bg-white/[0.04] transition-all relative overflow-hidden border border-white/[0.08]"
+                                    >
+                                        <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(to right, ${colorHex}, ${colorHex}88)` }} />
+                                        <div className="flex flex-col items-center justify-center text-center gap-4 py-4">
+                                            <div className={cn("w-20 h-20 rounded-xl overflow-hidden flex items-center justify-center", b.bg)}>
+                                                <img src={b.image} alt={b.name} className="w-full h-full object-cover rounded-xl" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xl font-bold text-white mb-1">{b.name}</h3>
+                                                <p className={cn("text-sm font-semibold", b.color)}>
+                                                    {b.categories} categorie
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="font-black text-white text-lg">{b.name}</h3>
-                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
-                                            {b.categories} categorie
-                                        </p>
-                                    </div>
-                                </button>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}

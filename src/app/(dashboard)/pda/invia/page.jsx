@@ -2036,39 +2036,29 @@ export default function InviaPda() {
                     <Info className="w-4 h-4" /> Modalità Business — tutti i brand inclusi
                   </div>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {visibleBrands.map(b => (
-                    <button
+                    <div
                       key={b.id}
                       onClick={() => { setBrand(b.id); setAllSales({}); }}
-                      className={`p-6 rounded-2xl text-left border-2 transition-all ${brand === b.id ? "bg-white/10 border-white shadow-lg" : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20 shadow-sm"}`}
+                      className={`glass-card p-6 cursor-pointer group hover:bg-white/[0.04] transition-all relative overflow-hidden border ${brand === b.id ? "" : "border-white/[0.08]"}`}
                       style={brand === b.id ? { borderColor: b.color, backgroundColor: `${b.color}15` } : {}}
                     >
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          {b.logo && (
-                            <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
-                              <Image
-                                src={b.logo}
-                                alt={b.label}
-                                width={40}
-                                height={40}
-                                className="w-full h-full object-cover rounded-lg"
-                              />
-                            </div>
-                          )}
-                          <span className="font-bold text-lg text-white tracking-tight">{b.label}</span>
+                      <div className="absolute top-0 left-0 right-0 h-1" style={{background:`linear-gradient(to right, ${b.color}, ${b.color}88)`}}/>
+                      <div className="flex flex-col items-center justify-center text-center gap-4 py-4">
+                        <div className="w-20 h-20 rounded-xl overflow-hidden flex items-center justify-center" style={{background:`${b.color}15`}}>
+                          {b.logo && <Image src={b.logo} alt={b.label} width={80} height={80} className="w-full h-full object-cover rounded-xl"/>}
                         </div>
-                        <Pill>{b.badge}</Pill>
+                        <div>
+                          <h3 className="text-xl font-bold text-white mb-1">{b.label}</h3>
+                          <p className="text-sm font-semibold" style={{color:b.color}}>{b.desc}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {b.onlyBusiness && <Tag c="#a78bfa" bg="#a78bfa10">Solo Business</Tag>}
+                          {brand === b.id && <Tag c="#10b981" bg="#10b98110">Selezionato</Tag>}
+                        </div>
                       </div>
-                      <div className="text-[10px] text-slate-500 mb-4 font-bold uppercase tracking-tight leading-relaxed line-clamp-2">
-                        {b.desc}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {b.onlyBusiness && <Tag c="#a78bfa" bg="#a78bfa10">🔒 Solo Business</Tag>}
-                        {brand === b.id && <Tag c="#10b981" bg="#10b98110">✓ Selezionato</Tag>}
-                      </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
                 <NavBar onBack={goBack} onNext={goNext} canNext={canProceed()} />
