@@ -11,10 +11,13 @@ interface Cliente {
     nome: string;
     cognome?: string;
     ragioneSociale?: string;
+    nomeRef?: string;
+    cognomeRef?: string;
     cellulare: string;
     email: string;
     cf_piva: string;
     indirizzo: string;
+    cap?: string;
     citta: string;
 }
 
@@ -34,10 +37,13 @@ function mapRowToCliente(row: Record<string, unknown>): Cliente {
         nome: row.nome as string,
         cognome: (row.cognome as string) ?? undefined,
         ragioneSociale: (row.ragione_sociale as string) ?? undefined,
+        nomeRef: (row.nome_ref as string) ?? undefined,
+        cognomeRef: (row.cognome_ref as string) ?? undefined,
         cellulare: row.cellulare as string,
         email: row.email as string,
         cf_piva: row.cf_piva as string,
         indirizzo: row.indirizzo as string,
+        cap: (row.cap as string) ?? undefined,
         citta: row.citta as string,
     };
 }
@@ -183,10 +189,13 @@ function ClienteFormModal({ cliente, onClose, onSave }: { cliente?: Cliente | nu
     const [nome, setNome] = useState(cliente?.nome ?? "");
     const [cognome, setCognome] = useState(cliente?.cognome ?? "");
     const [ragioneSociale, setRagioneSociale] = useState(cliente?.ragioneSociale ?? "");
+    const [nomeRef, setNomeRef] = useState(cliente?.nomeRef ?? "");
+    const [cognomeRef, setCognomeRef] = useState(cliente?.cognomeRef ?? "");
     const [cellulare, setCellulare] = useState(cliente?.cellulare ?? "");
     const [email, setEmail] = useState(cliente?.email ?? "");
     const [cfPiva, setCfPiva] = useState(cliente?.cf_piva ?? "");
     const [indirizzo, setIndirizzo] = useState(cliente?.indirizzo ?? "");
+    const [cap, setCap] = useState(cliente?.cap ?? "");
     const [citta, setCitta] = useState(cliente?.citta ?? "");
 
     const handleSave = async () => {
@@ -207,10 +216,13 @@ function ClienteFormModal({ cliente, onClose, onSave }: { cliente?: Cliente | nu
             nome,
             cognome: tipo === "consumer" ? cognome : (cognome || null),
             ragione_sociale: tipo === "business" ? ragioneSociale : null,
+            nome_ref: tipo === "business" ? nome : null,
+            cognome_ref: tipo === "business" ? cognome : null,
             cellulare,
             email,
             cf_piva: cfPiva,
             indirizzo,
+            cap,
             citta,
         };
 
@@ -341,17 +353,6 @@ function ClienteFormModal({ cliente, onClose, onSave }: { cliente?: Cliente | nu
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Città</label>
-                                <input
-                                    type="text"
-                                    value={citta}
-                                    onChange={(e) => setCitta(e.target.value)}
-                                    className="w-full glass-input text-sm rounded-xl py-3"
-                                    placeholder="Es. Roma"
-                                />
-                            </div>
-
-                            <div className="md:col-span-2 space-y-1.5">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Indirizzo</label>
                                 <input
                                     type="text"
@@ -359,6 +360,29 @@ function ClienteFormModal({ cliente, onClose, onSave }: { cliente?: Cliente | nu
                                     onChange={(e) => setIndirizzo(e.target.value)}
                                     className="w-full glass-input text-sm rounded-xl py-3"
                                     placeholder="Via Esempio 123"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">CAP</label>
+                                <input
+                                    type="text"
+                                    value={cap}
+                                    onChange={(e) => setCap(e.target.value)}
+                                    className="w-full glass-input text-sm rounded-xl py-3 font-mono"
+                                    placeholder="00100"
+                                    maxLength={5}
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Città</label>
+                                <input
+                                    type="text"
+                                    value={citta}
+                                    onChange={(e) => setCitta(e.target.value)}
+                                    className="w-full glass-input text-sm rounded-xl py-3"
+                                    placeholder="Es. Roma"
                                 />
                             </div>
                         </div>

@@ -3,10 +3,11 @@
 
 import Image from "next/image";
 import { generateContractPDF } from "@/utils/contract-pdf";
-import { FileDown, Search, CheckCircle2 } from "lucide-react";
+import { FileDown, Search, CheckCircle2, UserPlus, UserCheck, Building, User, ChevronRight, Calculator, RotateCcw } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
-import { useState, useCallback, useEffect, memo } from "react";
+import { useState, useCallback, useEffect, memo, useRef } from "react";
+import { calculateCF, _CNA } from "@/lib/cf";
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -114,12 +115,12 @@ const MargPOS=memo(({show,onClose,venditore,negozio,onAdd,editItem})=>{
   return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center",backdropFilter:"blur(4px)"}}>
     <style>{`@keyframes margSlideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
     <div style={{background:"rgba(255,255,255,0.02)",borderRadius:"20px 20px 0 0",width:"100%",maxWidth:640,maxHeight:"85vh",overflow:"hidden",display:"flex",flexDirection:"column",boxShadow:"0 -4px 30px rgba(0,0,0,.2)",animation:"margSlideUp 0.32s cubic-bezier(0.22,1,0.36,1)"}}>
-      <div style={{padding:"16px 20px",borderBottom:"2px solid #f0f0f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div style={{padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,0.08)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div><div style={{fontSize:16,fontWeight:800,color:"#f8fafc"}}>📦 Registra Prodotto</div><div style={{fontSize:11,color:"#64748b"}}>{venditore||"—"} • {negozio||"—"} • {new Date().toLocaleDateString("it-IT")}</div></div>
         <button onClick={onClose} style={{padding:"6px 14px",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.02)",color:"#8892b0",fontSize:12,fontWeight:600,cursor:"pointer"}}>✕</button>
       </div>
       <div style={{display:"flex",gap:4,padding:"10px 16px",overflowX:"auto",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
-        {MARG_PRODUCTS.map((cat,ci)=>(<button key={ci} onClick={()=>{setSelCat(ci);setSelProd(null)}} style={{padding:"6px 14px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",border:selCat===ci?"2px solid #6f42c1":"2px solid #e0e0e0",background:selCat===ci?"#f0ebff":"#fff",color:selCat===ci?"#6f42c1":"#555"}}>{cat.cat}</button>))}
+        {MARG_PRODUCTS.map((cat,ci)=>(<button key={ci} onClick={()=>{setSelCat(ci);setSelProd(null)}} style={{padding:"6px 14px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",border:selCat===ci?"2px solid #6f42c1":"1px solid rgba(255,255,255,0.1)",background:selCat===ci?"rgba(111,66,193,0.15)":"rgba(255,255,255,0.03)",color:selCat===ci?"#c084fc":"#94a3b8"}}>{cat.cat}</button>))}
       </div>
       <div style={{flex:1,overflow:"auto",padding:16}}>
         {!selProd?(<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:8}}>
@@ -134,11 +135,11 @@ const MargPOS=memo(({show,onClose,venditore,negozio,onAdd,editItem})=>{
             <span style={{fontSize:16,fontWeight:800,color:"#f8fafc"}}>{selProd.name}</span>
           </div>
           {selProd.hasQty&&<div style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Quantità</div>
-            <input value={qty} onChange={e=>setQty(e.target.value)} type="number" min="1" style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",fontSize:14,fontWeight:700,boxSizing:"border-box"}}/></div>}
-          {selProd.needsModel&&<div style={{marginBottom:10}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Modello</div><input value={model} onChange={e=>setModel(e.target.value)} placeholder="es. iPhone 15..." style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",fontSize:13,boxSizing:"border-box"}}/></div>}
-          {selProd.needsImei&&<div style={{marginBottom:10}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>IMEI</div><input value={imei} onChange={e=>setImei(e.target.value)} placeholder="15 cifre" style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",fontSize:13,boxSizing:"border-box",fontFamily:"monospace"}}/></div>}
+            <input value={qty} onChange={e=>setQty(e.target.value)} type="number" min="1" className="glass-input" style={{width:"100%",padding:"10px 14px",borderRadius:10,fontSize:14,fontWeight:700,boxSizing:"border-box"}}/></div>}
+          {selProd.needsModel&&<div style={{marginBottom:10}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Modello</div><input value={model} onChange={e=>setModel(e.target.value)} placeholder="es. iPhone 15..." className="glass-input" style={{width:"100%",padding:"10px 14px",borderRadius:10,fontSize:13,boxSizing:"border-box"}}/></div>}
+          {selProd.needsImei&&<div style={{marginBottom:10}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>IMEI</div><input value={imei} onChange={e=>setImei(e.target.value)} placeholder="15 cifre" className="glass-input" style={{width:"100%",padding:"10px 14px",borderRadius:10,fontSize:13,boxSizing:"border-box",fontFamily:"monospace"}}/></div>}
           <div style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Importo €</div>
-            <input value={importo} onChange={e=>setImporto(e.target.value)} type="number" min="0" step="0.01" placeholder="es. 29.90" style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",fontSize:14,fontWeight:700,boxSizing:"border-box"}}/></div>
+            <input value={importo} onChange={e=>setImporto(e.target.value)} type="number" min="0" step="0.01" placeholder="es. 29.90" className="glass-input" style={{width:"100%",padding:"10px 14px",borderRadius:10,fontSize:14,fontWeight:700,boxSizing:"border-box"}}/></div>
           <button onClick={handleAdd} style={{width:"100%",padding:14,borderRadius:12,border:"none",background:"linear-gradient(135deg,#6f42c1,#9b59b6)",color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer"}}>✅ Registra {selProd.name}</button>
         </div>)}
       </div>
@@ -173,12 +174,12 @@ const MargList=memo(({items,onRemove,show,onClose})=>{
 
 
 const BRANDS = [
-  { id: "windtre", label: "WindTre", short: "W3", color: "#FF6B00", gradient: "linear-gradient(135deg, #1B3A5C 0%, #2E75B6 100%)", icon: "📶", desc: "Mobile, Fisso, Luce & Gas, Assicurazioni, Protecta", ready: true },
-  { id: "sky", label: "Sky", short: "SKY", color: "#0072C6", gradient: "linear-gradient(135deg, #003366 0%, #0072C6 100%)", icon: "📺", desc: "TV, Fibra, Mobile, Glass, Pacchetti combinati", ready: true },
-  { id: "vodafone", label: "Vodafone", short: "VF", color: "#E60000", gradient: "linear-gradient(135deg, #990000 0%, #E60000 100%)", icon: "📱", desc: "Mobile, Fisso, Luce & Gas, Assicurazioni, Protecta", ready: true },
-  { id: "fastweb", label: "Fastweb", short: "FW", color: "#CC9900", gradient: "linear-gradient(135deg, #CC9900 0%, #FFD800 100%)", icon: "⚡", desc: "Mobile, Fisso, Energy", ready: true },
-  { id: "iliad", label: "Iliad", short: "IL", color: "#C00028", gradient: "linear-gradient(135deg, #800018 0%, #C00028 100%)", icon: "📡", desc: "Mobile e Fisso (Fibra)", ready: true },
-  { id: "energy", label: "Energy", short: "EN", color: "#28a745", gradient: "linear-gradient(135deg, #1a6b2d 0%, #28a745 100%)", icon: "🔋", desc: "Forniture Luce e Gas (S4, Barton)", ready: true },
+  { id: "windtre", label: "WindTre", short: "W3", color: "#FF6B00", gradient: "linear-gradient(135deg, #1B3A5C 0%, #2E75B6 100%)", icon: "📶", logo: "/windtre.webp", desc: "Mobile, Fisso, Luce & Gas, Assicurazioni, Protecta", ready: true },
+  { id: "sky", label: "Sky", short: "SKY", color: "#0072C6", gradient: "linear-gradient(135deg, #003366 0%, #0072C6 100%)", icon: "📺", logo: "/sky.png", desc: "TV, Fibra, Mobile, Glass, Pacchetti combinati", ready: true },
+  { id: "vodafone", label: "Vodafone", short: "VF", color: "#E60000", gradient: "linear-gradient(135deg, #990000 0%, #E60000 100%)", icon: "📱", logo: "/vodaphone - Copy.png", desc: "Mobile, Fisso, Luce & Gas, Assicurazioni, Protecta", ready: true },
+  { id: "fastweb", label: "Fastweb", short: "FW", color: "#CC9900", gradient: "linear-gradient(135deg, #CC9900 0%, #FFD800 100%)", icon: "⚡", logo: "/fastweb.png", desc: "Mobile, Fisso, Energy", ready: true },
+  { id: "iliad", label: "Iliad", short: "IL", color: "#C00028", gradient: "linear-gradient(135deg, #800018 0%, #C00028 100%)", icon: "📡", logo: "/iliad.png", desc: "Mobile e Fisso (Fibra)", ready: true },
+  { id: "energy", label: "Energy", short: "EN", color: "#28a745", gradient: "linear-gradient(135deg, #1a6b2d 0%, #28a745 100%)", icon: "🔋", logo: "/energy - Copy.png", desc: "Forniture Luce e Gas (S4, Barton)", ready: true },
 ];
 const codiciW3 = ["Magliana","Libia","San Paolo","Mazzini","Donna","Promontori","Collatina"];
 const venditori = ["Alberto","Alex","Alin","Asad","Ben Aziza","Cristhian","Cristi","Damiano","Daniel","Daniele2","Denise","Dimitri","Eloise","Eros","Fadel","Federico","Francesca","Francesco","George","Giacomo","Gian","Giulia","Giuseppe B.","Ilaria","Lorenzo","Manu","Marta","Marta2","Marta3","Matteo","Michele","Riccardo","Roberto","Samantha","Sheekell","Tommaso","Veronica"];
@@ -294,32 +295,32 @@ const getVF = (tc) => {
 // ── Small components (no return keyword needed with arrow implicit) ──────
 
 const YN = ({val,onCh,label}) => (
-  <div style={{marginTop:8,padding:10,background:"#f8fafc",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)"}}>
+  <div style={{marginTop:8,padding:10,background:"rgba(255,255,255,0.03)",borderRadius:8,border:"1px solid rgba(255,255,255,0.08)"}}>
     <div style={{fontSize:12,fontWeight:700,color:"#f8fafc",marginBottom:6}}>{label}</div>
     <div style={{display:"flex",gap:8}}>
-      <button onClick={()=>onCh(true)} style={{padding:"6px 20px",borderRadius:6,border:val===true?"2px solid #28a745":"2px solid #e0e0e0",background:val===true?"#d4edda":"#fff",color:val===true?"#155724":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sì</button>
-      <button onClick={()=>onCh(false)} style={{padding:"6px 20px",borderRadius:6,border:val===false?"2px solid #dc3545":"2px solid #e0e0e0",background:val===false?"#f8d7da":"#fff",color:val===false?"#721c24":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>No</button>
+      <button onClick={()=>onCh(true)} style={{padding:"6px 20px",borderRadius:6,border:val===true?"2px solid #28a745":"1px solid rgba(255,255,255,0.12)",background:val===true?"rgba(40,167,69,0.15)":"rgba(255,255,255,0.03)",color:val===true?"#4ade80":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sì</button>
+      <button onClick={()=>onCh(false)} style={{padding:"6px 20px",borderRadius:6,border:val===false?"2px solid #dc3545":"1px solid rgba(255,255,255,0.12)",background:val===false?"rgba(220,53,69,0.15)":"rgba(255,255,255,0.03)",color:val===false?"#f87171":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>No</button>
     </div>
   </div>
 );
 
 const TF = ({l,r,v,o,p,pf,dis,nt}) => (
-  <div>
-    <div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>{l} {r&&<span style={{color:"#dc3545"}}>*</span>}</div>
+  <div className="space-y-1.5">
+    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">{l} {r&&<span className="text-rose-400">*</span>}</label>
     <input value={v||""} onChange={e=>o&&o(e.target.value)} placeholder={p} disabled={dis} readOnly={dis}
-      style={{width:"100%",padding:"7px 10px",borderRadius:6,border:dis?"2px solid #17a2b8":pf?"2px solid #28a745":"1px solid #d0d0d0",fontSize:12,boxSizing:"border-box",background:dis?"#e8f4f8":pf?"#f0fff0":"#fff",color:dis?"#17a2b8":"#333",fontStyle:dis?"italic":"normal"}} />
-    {nt&&<div style={{fontSize:10,color:dis?"#17a2b8":"#888",marginTop:2}}>{nt}</div>}
+      className={`glass-input w-full text-sm rounded-xl py-3 ${dis?"border-cyan-500/30 bg-cyan-500/5 text-cyan-300 italic":pf?"border-emerald-500/30 bg-emerald-500/5 text-emerald-300":""}`} />
+    {nt&&<span className={`text-[10px] ${dis?"text-cyan-400":"text-slate-600"}`}>{nt}</span>}
   </div>
 );
 
 const DD = ({l,r,v,o,vals,nt}) => (
-  <div>
-    <div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>{l} {r&&<span style={{color:"#dc3545"}}>*</span>}</div>
-    <select value={v||""} onChange={e=>o&&o(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}>
+  <div className="space-y-1.5">
+    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">{l} {r&&<span className="text-rose-400">*</span>}</label>
+    <select value={v||""} onChange={e=>o&&o(e.target.value)} className="glass-input w-full text-sm rounded-xl py-3">
       <option value="">— Seleziona —</option>
       {vals.map(x=><option key={x} value={x}>{x}</option>)}
     </select>
-    {nt&&<div style={{fontSize:10,color:"#64748b",marginTop:2}}>{nt}</div>}
+    {nt&&<span className="text-[10px] text-slate-600">{nt}</span>}
   </div>
 );
 
@@ -329,7 +330,7 @@ const SCd = ({session,codici,val,onCh}) => {
   const content = (
     <div>
       <div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Codice <span style={{color:"#dc3545"}}>*</span></div>
-      <select value={actual} onChange={e=>onCh(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:6,fontSize:12,border:actual?"2px solid #28a745":"1px solid #d0d0d0",background:actual&&!isOv?"#f0fff0":"#fff"}}>
+      <select value={actual} onChange={e=>onCh(e.target.value)} className="glass-input" style={{width:"100%",padding:"7px 10px",borderRadius:6,fontSize:12,border:actual?"2px solid rgba(40,167,69,0.4)":"1px solid rgba(255,255,255,0.08)",background:actual&&!isOv?"rgba(40,167,69,0.08)":"rgba(15,23,42,0.6)",color:"#f8fafc"}}>
         <option value="">— Seleziona —</option>
         {codici.map(c=><option key={c} value={c}>{c}</option>)}
       </select>
@@ -344,16 +345,16 @@ const CartItem = ({it,ii,gi,total,expI,setExpI}) => {
   const exp = expI[gi+"_"+ii];
   const dets = it.details ? Object.entries(it.details).filter(([k,v])=>v&&k!=="hasContract") : [];
   const content = (
-    <div style={{borderBottom:ii<total-1?"1px solid #f0f0f0":"none"}}>
+    <div style={{borderBottom:ii<total-1?"1px solid rgba(255,255,255,0.06)":"none"}}>
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0"}}>
-        <span style={{fontSize:14}}>{it.macroIcon}</span><span style={{fontSize:12,fontWeight:600,color:it.macroColor}}>{it.macro}</span><span style={{color:"#ccc"}}>›</span><span style={{fontSize:12,color:"#f8fafc"}}>{it.sub}</span>
+        <span style={{fontSize:14}}>{it.macroIcon}</span><span style={{fontSize:12,fontWeight:600,color:it.macroColor}}>{it.macro}</span><span style={{color:"#475569"}}>›</span><span style={{fontSize:12,color:"#f8fafc"}}>{it.sub}</span>
         {it.details&&it.details.hasContract&&<span style={{fontSize:9,fontWeight:600,color:"#fff",background:it.macroColor,padding:"1px 6px",borderRadius:4}}>CONTRATTO</span>}
         <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
-          <span style={{fontSize:10,color:"#bbb"}}>V.#{it.saleNum}</span>
-          <button onClick={()=>setExpI(p=>({...p,[gi+"_"+ii]:!p[gi+"_"+ii]}))} style={{background:exp?"#f0f7ff":"#f8f9fa",border:exp?"1px solid #2E75B6":"1px solid #e0e0e0",borderRadius:5,padding:"3px 10px",fontSize:10,fontWeight:600,cursor:"pointer",color:exp?"#2E75B6":"#888"}}>{exp?"▲ Nascondi":"👁 Mostra"}</button>
+          <span style={{fontSize:10,color:"#64748b"}}>V.#{it.saleNum}</span>
+          <button onClick={()=>setExpI(p=>({...p,[gi+"_"+ii]:!p[gi+"_"+ii]}))} style={{background:exp?"rgba(46,117,182,0.1)":"rgba(255,255,255,0.03)",border:exp?"1px solid rgba(46,117,182,0.3)":"1px solid rgba(255,255,255,0.1)",borderRadius:5,padding:"3px 10px",fontSize:10,fontWeight:600,cursor:"pointer",color:exp?"#60a5fa":"#94a3b8"}}>{exp?"▲ Nascondi":"👁 Mostra"}</button>
         </div>
       </div>
-      {exp&&<div style={{padding:"8px 12px 12px 32px"}}><div style={{background:"#f8fafc",borderRadius:8,padding:12,border:"1px solid #e8edf2"}}><div style={{fontSize:11,fontWeight:700,color:it.macroColor,marginBottom:8}}>📋 {it.sub}</div>
+      {exp&&<div style={{padding:"8px 12px 12px 32px"}}><div style={{background:"rgba(255,255,255,0.03)",borderRadius:8,padding:12,border:"1px solid rgba(255,255,255,0.06)"}}><div style={{fontSize:11,fontWeight:700,color:it.macroColor,marginBottom:8}}>📋 {it.sub}</div>
         {dets.length>0?<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 16px"}}>{dets.map(([k,v])=><div key={k}><span style={{fontSize:10,fontWeight:600,color:"#64748b",textTransform:"uppercase"}}>{k}</span><div style={{fontSize:12,color:"#f8fafc",marginTop:1}}>{String(v)}</div></div>)}</div>
         :<div style={{fontSize:12,color:"#64748b"}}>Nessun dettaglio — premi ✏️ Modifica</div>}
       </div></div>}
@@ -365,15 +366,15 @@ const CartItem = ({it,ii,gi,total,expI,setExpI}) => {
 // ── VF Mobile GA component ────────────────────────────────────────────────
 
 const VF_C="#E60000";
-const VF_LIGHT="#FFF5F5";
-const VF_BORDER="#F5C6C6";
+const VF_LIGHT="rgba(230,0,0,0.06)";
+const VF_BORDER="rgba(230,0,0,0.2)";
 const VF_BRANDS=["TIM","Vodafone","WindTre","Iliad","Fastweb","Sky","Very Mobile","Ho Mobile","Postemobile","Coop Voce","Tiscali","Lyca Mobile","Altro"];
 const VF_SMARTPHONES=["Samsung Galaxy S25","Samsung Galaxy S25+","Samsung Galaxy S25 Ultra","iPhone 16","iPhone 16 Plus","iPhone 16 Pro","iPhone 16 Pro Max","Google Pixel 9","Google Pixel 9 Pro","Xiaomi 14","Xiaomi 14 Ultra","OnePlus 13","Oppo Find X8 Pro","Altro"];
 const VF_GNP_BRANDS=["TIM","Vodafone","WindTre","Fastweb","Tiscali","Altro"];
 const VF_CODICI_NEGOZIO=["VF-RM001","VF-RM002","VF-RM003","VF-RM004","VF-RM005","VF-RM006","VF-RM007","VF-RM008","VF-RM009","VF-RM010"];
 const FW_C = "#CC9900";
-const FW_LIGHT = "#FFFDE7";
-const FW_BORDER = "#F5E070";
+const FW_LIGHT = "rgba(204,153,0,0.06)";
+const FW_BORDER = "rgba(204,153,0,0.2)";
 
 const FW_MOBILE_OFFERS = [
   "Start","Start MNP","Start Tied","Start MNP Tied",
@@ -414,7 +415,7 @@ const FWMobile = ({sd, uP}) => {
           const isActive=sd.fwOffer===offer;
           return (
             <button key={offer} onClick={()=>{upv("fwOffer",isActive?null:offer);upv("fwMnpBrand","");upv("fwMnpNum","");upv("fwModello","");upv("fwImei","");upv("fwCodIns","");upv("fwNumProv","");upv("fwIccid","");}}
-              style={{padding:"8px 14px",borderRadius:10,border:isActive?"2px solid "+FW_C:"2px solid #e0e0e0",background:isActive?FW_C:"#fff",color:isActive?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+              style={{padding:"8px 14px",borderRadius:10,border:isActive?"2px solid "+FW_C:"1px solid rgba(255,255,255,0.12)",background:isActive?FW_C:"rgba(255,255,255,0.03)",color:isActive?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>
               {offer}
             </button>
           );
@@ -509,7 +510,7 @@ const MiniC = ({label,val,opts,onCh,locked,lockVal}) => {
           const isActive=locked?(o===(lockVal===true?"Sì":lockVal===false?"No":lockVal)):val===o||val===(o==="Sì"?true:o==="No"?false:o);
           return (
             <button key={o} onClick={()=>!locked&&onCh(val===o?null:o)} disabled={locked}
-              style={{padding:"5px 16px",borderRadius:6,border:isActive?"2px solid #2E75B6":"2px solid #e0e0e0",background:isActive?"#2E75B6":"#fff",color:isActive?"#fff":"#555",fontSize:11,fontWeight:700,cursor:locked?"not-allowed":"pointer",opacity:locked?0.8:1}}>
+              style={{padding:"5px 16px",borderRadius:6,border:isActive?"2px solid #2E75B6":"1px solid rgba(255,255,255,0.12)",background:isActive?"#2E75B6":"rgba(255,255,255,0.03)",color:isActive?"#fff":"#94a3b8",fontSize:11,fontWeight:700,cursor:locked?"not-allowed":"pointer",opacity:locked?0.8:1}}>
               {o}
             </button>
           );
@@ -527,7 +528,7 @@ const RB = ({label,val,opts,onCh}) => {
       <div style={{display:"flex",gap:8}}>
         {opts.map(o=>(
           <button key={o} onClick={()=>onCh(val===o?null:o)}
-            style={{padding:"7px 20px",borderRadius:8,border:val===o?"2px solid "+VF_C:"2px solid #e0e0e0",background:val===o?VF_C:"#fff",color:val===o?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+            style={{padding:"7px 20px",borderRadius:8,border:val===o?"2px solid "+VF_C:"1px solid rgba(255,255,255,0.12)",background:val===o?VF_C:"rgba(255,255,255,0.03)",color:val===o?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>
             {o}
           </button>
         ))}
@@ -546,7 +547,7 @@ const RigaBundleAccessorio = ({riga, onUpd, modoRiga}) => {
         <div style={{display:"flex",gap:6,marginBottom:8}}>
           {["Bundle","Accessorio"].map(t=>(
             <button key={t} onClick={()=>onUpd("tipo",riga.tipo===t?null:t)}
-              style={{padding:"4px 14px",borderRadius:6,border:riga.tipo===t?"2px solid "+VF_C:"2px solid #e0e0e0",background:riga.tipo===t?VF_C:"#fff",color:riga.tipo===t?"#fff":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+              style={{padding:"4px 14px",borderRadius:6,border:riga.tipo===t?"2px solid "+VF_C:"1px solid rgba(255,255,255,0.12)",background:riga.tipo===t?VF_C:"rgba(255,255,255,0.03)",color:riga.tipo===t?"#fff":"#94a3b8",fontSize:11,fontWeight:700,cursor:"pointer"}}>
               {t}
             </button>
           ))}
@@ -562,7 +563,7 @@ const RigaBundleAccessorio = ({riga, onUpd, modoRiga}) => {
           <div style={{flex:1}}>
             <div style={{fontSize:10,fontWeight:600,color:"#64748b",marginBottom:2}}>Tipologia €</div>
             <select value={riga.tipoBundleVal||""} onChange={e=>onUpd("tipoBundleVal",e.target.value)}
-              style={{width:"100%",padding:"6px 8px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box",background:"rgba(255,255,255,0.02)"}}>
+              className="glass-input w-full text-sm rounded-lg py-2">
               <option value="">--</option>
               {BUNDLE_VALORI.map(v=><option key={v} value={v}>{v} €</option>)}
             </select>
@@ -658,7 +659,7 @@ const CompassDatiTNP = ({sd, upv}) => {
                     const isOn=t==="Bundle"?bundleOn:accessorioOn;
                     return (
                       <button key={t} onClick={()=>toggleMode(i,t)}
-                        style={{padding:"4px 14px",borderRadius:6,border:isOn?"2px solid "+VF_C:"2px solid #e0e0e0",background:isOn?VF_C:"#fff",color:isOn?"#fff":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                        style={{padding:"4px 14px",borderRadius:6,border:isOn?"2px solid "+VF_C:"1px solid rgba(255,255,255,0.12)",background:isOn?VF_C:"rgba(255,255,255,0.03)",color:isOn?"#fff":"#94a3b8",fontSize:11,fontWeight:700,cursor:"pointer"}}>
                         {t}
                       </button>
                     );
@@ -691,7 +692,7 @@ const CompassDatiTNP = ({sd, upv}) => {
             {/* Kasko */}
             <div style={{borderTop:"1px solid #f0e0e0",paddingTop:8}}>
               <button onClick={()=>updItem(i,"kasko",!item.kasko)}
-                style={{padding:"5px 16px",borderRadius:7,border:item.kasko?"2px solid #6f42c1":"2px solid #e0e0e0",background:item.kasko?"#f0ebff":"#fff",color:item.kasko?"#6f42c1":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                style={{padding:"5px 16px",borderRadius:7,border:item.kasko?"2px solid #6f42c1":"1px solid rgba(255,255,255,0.12)",background:item.kasko?"rgba(111,66,193,0.15)":"rgba(255,255,255,0.03)",color:item.kasko?"#c084fc":"#94a3b8",fontSize:11,fontWeight:700,cursor:"pointer"}}>
                 🛡️ Kasko{item.kasko?" ✓":""}
               </button>
               {item.kasko&&(
@@ -735,7 +736,7 @@ const TnpSlot = ({slot, idx, total, isWallet, upSlot, onAddSlot, onRemoveSlot}) 
           const initCompass=COMPASS_OPTS.includes(t)?[emCompassItem()]:[];
           return (
             <button key={t} onClick={()=>set("__replace__",isOn?emTnpSlot():{...emTnpSlot(),tipo:t,compassItems:initCompass})}
-              style={{padding:"7px 14px",borderRadius:8,border:isOn?"2px solid "+VF_C:"2px solid #e0e0e0",background:isOn?VF_C:"#fff",color:isOn?"#fff":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+              style={{padding:"7px 14px",borderRadius:8,border:isOn?"2px solid "+VF_C:"1px solid rgba(255,255,255,0.12)",background:isOn?VF_C:"rgba(255,255,255,0.03)",color:isOn?"#fff":"#94a3b8",fontSize:11,fontWeight:700,cursor:"pointer"}}>
               {t}
             </button>
           );
@@ -806,7 +807,7 @@ const VFMobileGA = ({sd,uP}) => {
                 uP("__resetVFOfferTo__",{offer,isDV:isBecomesDV});
               }
             }}
-              style={{padding:"8px 14px",borderRadius:10,border:isActive?"2px solid "+VF_C:"2px solid #e0e0e0",background:isActive?VF_C:"#fff",color:isActive?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+              style={{padding:"8px 14px",borderRadius:10,border:isActive?"2px solid "+VF_C:"1px solid rgba(255,255,255,0.12)",background:isActive?VF_C:"rgba(255,255,255,0.03)",color:isActive?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>
               {offer}
             </button>
           );
@@ -879,7 +880,7 @@ const VFMobileGA = ({sd,uP}) => {
                           <div style={{display:"flex",gap:8}}>
                             {["Sì","No"].map(o=>(
                               <button key={o} onClick={()=>upv("vfSecurity",sd.vfSecurity===o?null:o)}
-                                style={{padding:"7px 22px",borderRadius:8,border:sd.vfSecurity===o?"2px solid "+VF_C:"2px solid #e0e0e0",background:sd.vfSecurity===o?VF_C:"#fff",color:sd.vfSecurity===o?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                                style={{padding:"7px 22px",borderRadius:8,border:sd.vfSecurity===o?"2px solid "+VF_C:"1px solid rgba(255,255,255,0.12)",background:sd.vfSecurity===o?VF_C:"rgba(255,255,255,0.03)",color:sd.vfSecurity===o?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>
                                 {o}
                               </button>
                             ))}
@@ -904,7 +905,7 @@ const VFMobileGA = ({sd,uP}) => {
                                 <div style={{display:"flex",gap:8}}>
                                   {["Sì","No"].map(o=>(
                                     <button key={o} onClick={()=>upv("dcRicaricaAuto",sd.dcRicaricaAuto===o?null:o)}
-                                      style={{padding:"6px 18px",borderRadius:8,border:sd.dcRicaricaAuto===o?"2px solid "+VF_C:"2px solid #e0e0e0",background:sd.dcRicaricaAuto===o?VF_C:"#fff",color:sd.dcRicaricaAuto===o?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                                      style={{padding:"6px 18px",borderRadius:8,border:sd.dcRicaricaAuto===o?"2px solid "+VF_C:"1px solid rgba(255,255,255,0.12)",background:sd.dcRicaricaAuto===o?VF_C:"rgba(255,255,255,0.03)",color:sd.dcRicaricaAuto===o?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>
                                       {o}
                                     </button>
                                   ))}
@@ -951,14 +952,14 @@ const VFMobileGAFisso = ({sd,uP}) => {
               {/* Add-on Fisso — appare dopo GNP */}
               {sd.vfFGnp&&(
                 <div>
-                  <div style={{background:"#f8fafc",border:"1px solid #e0e8f0",borderRadius:8,padding:12,marginBottom:12}}>
+                  <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:12,marginBottom:12}}>
                     <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:8,textTransform:"uppercase"}}>Add-on Fisso</div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                       {VF_ADDON_FISSO.map(a=>{
                         const on=(sd.vfFAddons||{})[a];
                         return (
                           <button key={a} onClick={()=>toggleAddon(a)}
-                            style={{padding:"5px 14px",borderRadius:6,border:on?"2px solid #28a745":"2px solid #e0e0e0",background:on?"#d4edda":"#fff",color:on?"#155724":"#555",fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                            style={{padding:"5px 14px",borderRadius:6,border:on?"2px solid #28a745":"1px solid rgba(255,255,255,0.12)",background:on?"rgba(40,167,69,0.15)":"rgba(255,255,255,0.03)",color:on?"#4ade80":"#94a3b8",fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                             <span>{on?"☑":"☐"}</span>{a}
                           </button>
                         );
@@ -1021,7 +1022,7 @@ const VFCB = ({sd, uP}) => {
       {/* ── TNP CB ── */}
       <div style={{marginBottom:10}}>
         <button onClick={()=>{upv("cbTnp",!sd.cbTnp);if(!sd.cbTnp)upv("cbTnpList",[emTnpSlot()]);else upv("cbTnpList",[]);}}
-          style={{padding:"8px 20px",borderRadius:8,border:sd.cbTnp?"2px solid "+VF_C:"2px solid #e0e0e0",background:sd.cbTnp?VF_C:"#fff",color:sd.cbTnp?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+          style={{padding:"8px 20px",borderRadius:8,border:sd.cbTnp?"2px solid "+VF_C:"1px solid rgba(255,255,255,0.12)",background:sd.cbTnp?VF_C:"rgba(255,255,255,0.03)",color:sd.cbTnp?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>
           TNP CB
         </button>
       </div>
@@ -1041,7 +1042,7 @@ const VFCB = ({sd, uP}) => {
               <div style={{display:"flex",gap:8}}>
                 {["TNP XS-S","TNP M-L"].map(t=>(
                   <button key={t} onClick={()=>upv("cbTaglia",sd.cbTaglia===t?null:t)}
-                    style={{padding:"5px 16px",borderRadius:7,border:sd.cbTaglia===t?"2px solid "+VF_C:"2px solid #e0e0e0",background:sd.cbTaglia===t?VF_C:"#fff",color:sd.cbTaglia===t?"#fff":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                    style={{padding:"5px 16px",borderRadius:7,border:sd.cbTaglia===t?"2px solid "+VF_C:"1px solid rgba(255,255,255,0.12)",background:sd.cbTaglia===t?VF_C:"rgba(255,255,255,0.03)",color:sd.cbTaglia===t?"#fff":"#94a3b8",fontSize:11,fontWeight:700,cursor:"pointer"}}>
                     {t}
                   </button>
                 ))}
@@ -1062,7 +1063,7 @@ const VFCB = ({sd, uP}) => {
       {/* ── Cambio Offerta ── */}
       <div style={{marginBottom:10}}>
         <button onClick={()=>upv("cbCambio2",!sd.cbCambio2)}
-          style={{padding:"8px 20px",borderRadius:8,border:sd.cbCambio2?"2px solid "+VF_C:"2px solid #e0e0e0",background:sd.cbCambio2?VF_C:"#fff",color:sd.cbCambio2?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+          style={{padding:"8px 20px",borderRadius:8,border:sd.cbCambio2?"2px solid "+VF_C:"1px solid rgba(255,255,255,0.12)",background:sd.cbCambio2?VF_C:"rgba(255,255,255,0.03)",color:sd.cbCambio2?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>
           Cambio Offerta
         </button>
       </div>
@@ -1083,7 +1084,7 @@ const VFCB = ({sd, uP}) => {
       {/* ── Rete Sicura ── */}
       <div style={{marginTop:4}}>
         <button onClick={()=>upv("cbSecurity",!sd.cbSecurity)}
-          style={{padding:"8px 20px",borderRadius:8,border:sd.cbSecurity?"2px solid "+VF_C:"2px solid #e0e0e0",background:sd.cbSecurity?VF_C:"#fff",color:sd.cbSecurity?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+          style={{padding:"8px 20px",borderRadius:8,border:sd.cbSecurity?"2px solid "+VF_C:"1px solid rgba(255,255,255,0.12)",background:sd.cbSecurity?VF_C:"rgba(255,255,255,0.03)",color:sd.cbSecurity?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>
           Rete Sicura
         </button>
       </div>
@@ -1116,7 +1117,7 @@ const VFBizMobile = ({sd,uP}) => {
           const isActive=sd.vfbOffer===offer;
           return (
             <button key={offer} onClick={()=>{upv("vfbOffer",isActive?null:offer);if(!isActive){upv("vfbMnp",null);upv("vfbTnp",null);upv("vfbModello","");upv("vfbImei","");upv("vfbEasyRent",null);upv("vfbRataPiva",null);upv("vfbCodIns","");}}}
-              style={{padding:"8px 14px",borderRadius:10,border:isActive?"2px solid "+VF_C:"2px solid #e0e0e0",background:isActive?VF_C:"#fff",color:isActive?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+              style={{padding:"8px 14px",borderRadius:10,border:isActive?"2px solid "+VF_C:"1px solid rgba(255,255,255,0.12)",background:isActive?VF_C:"rgba(255,255,255,0.03)",color:isActive?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>
               {offer}
             </button>
           );
@@ -1147,7 +1148,7 @@ const VFBizMobile = ({sd,uP}) => {
                       const isOn=sd.vfbRataPiva===opt;
                       return (
                         <button key={opt} onClick={()=>upv("vfbRataPiva",isOn?null:opt)}
-                          style={{padding:"7px 18px",borderRadius:8,border:isOn?"2px solid "+VF_C:"2px solid #e0e0e0",background:isOn?VF_C:"#fff",color:isOn?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                          style={{padding:"7px 18px",borderRadius:8,border:isOn?"2px solid "+VF_C:"1px solid rgba(255,255,255,0.12)",background:isOn?VF_C:"rgba(255,255,255,0.03)",color:isOn?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>
                           {opt}
                         </button>
                       );
@@ -1178,7 +1179,7 @@ const VFBizMobileCB = ({sd,uP}) => {
     <div>
       <div style={{marginBottom:10}}>
         <button onClick={()=>upv("vfbCbOn",!sd.vfbCbOn)}
-          style={{padding:"8px 20px",borderRadius:8,border:sd.vfbCbOn?"2px solid "+VF_C:"2px solid #e0e0e0",background:sd.vfbCbOn?VF_C:"#fff",color:sd.vfbCbOn?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+          style={{padding:"8px 20px",borderRadius:8,border:sd.vfbCbOn?"2px solid "+VF_C:"1px solid rgba(255,255,255,0.12)",background:sd.vfbCbOn?VF_C:"rgba(255,255,255,0.03)",color:sd.vfbCbOn?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>
           CB
         </button>
       </div>
@@ -1273,7 +1274,7 @@ const ILMobile = ({sd, uP}) => {
           const isActive=sd.ilOffer===offer;
           return (
             <button key={offer} onClick={()=>{upv("ilOffer",isActive?null:offer);upv("ilMnp",null);upv("ilMnpBrand","");upv("ilMnpNum","");upv("ilCodIns","");upv("ilNumProv","");upv("ilNumDef","");upv("ilIccid","");}}
-              style={{padding:"8px 14px",borderRadius:10,border:isActive?"2px solid "+IL_C:"2px solid #e0e0e0",background:isActive?IL_C:"#fff",color:isActive?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+              style={{padding:"8px 14px",borderRadius:10,border:isActive?"2px solid "+IL_C:"1px solid rgba(255,255,255,0.12)",background:isActive?IL_C:"rgba(255,255,255,0.03)",color:isActive?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>
               {offer}
             </button>
           );
@@ -1439,11 +1440,11 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
           )}
           {/* Security when Easy Pay = No (after Offerta Mobile) */}
           {mobDone&&(sd.easyPay==="No"||sd.easyPay===false)&&(
-            <div style={{marginTop:8,padding:8,background:"#f8fafc",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+            <div style={{marginTop:8,padding:8,background:"rgba(255,255,255,0.03)",borderRadius:6,border:"1px solid rgba(255,255,255,0.08)"}}>
               <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6}}>Security</div>
               <div style={{display:"flex",gap:6}}>
                 {["Security","Security PRO"].map(s=>
-                  <button key={s} onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel[s]?{}:{[s]:true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel[s]?"2px solid #fd7e14":"2px solid #e0e0e0",background:sd.securitySel[s]?"#fff3e0":"#fff",color:sd.securitySel[s]?"#e8590c":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                  <button key={s} onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel[s]?{}:{[s]:true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel[s]?"2px solid #fd7e14":"1px solid rgba(255,255,255,0.12)",background:sd.securitySel[s]?"rgba(253,126,20,0.12)":"rgba(255,255,255,0.03)",color:sd.securitySel[s]?"#fb923c":"#94a3b8",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                     <span>{sd.securitySel[s]?"◉":"○"}</span>{s}
                   </button>
                 )}
@@ -1459,7 +1460,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
                   <div style={{fontSize:10,fontWeight:700,color:"#2E75B6",marginBottom:8,textTransform:"uppercase"}}>Dati TNP GA</div>
                   <div style={{display:"flex",gap:6,marginBottom:sd.tnpTipo?8:0}}>
                     {["Rata 5G","Finanziamento > 600€","Finanziamento < 600€"].map(opt=>
-                      <button key={opt} onClick={()=>uP(group.id,si,sub.id,"tnpTipo",opt)} style={{padding:"6px 14px",borderRadius:6,border:sd.tnpTipo===opt?"2px solid #2E75B6":"2px solid #e0e0e0",background:sd.tnpTipo===opt?"#2E75B6":"#fff",color:sd.tnpTipo===opt?"#fff":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>{opt}</button>
+                      <button key={opt} onClick={()=>uP(group.id,si,sub.id,"tnpTipo",opt)} style={{padding:"6px 14px",borderRadius:6,border:sd.tnpTipo===opt?"2px solid #2E75B6":"1px solid rgba(255,255,255,0.12)",background:sd.tnpTipo===opt?"#2E75B6":"rgba(255,255,255,0.03)",color:sd.tnpTipo===opt?"#fff":"#94a3b8",fontSize:11,fontWeight:700,cursor:"pointer"}}>{opt}</button>
                     )}
                   </div>
                   {sd.tnpTipo&&(
@@ -1474,7 +1475,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
                       <div style={{fontSize:11,fontWeight:700,color:"#2E75B6",marginBottom:6}}>Quanti TNP hai finanziato?</div>
                       <div style={{display:"flex",gap:6,marginBottom:8}}>
                         {[1,2,3].map(n=>
-                          <button key={n} onClick={()=>uP(group.id,si,sub.id,"tnpCount",sd.tnpCount===n?null:n)} style={{width:40,height:40,borderRadius:8,border:sd.tnpCount===n?"2px solid #2E75B6":"2px solid #e0e0e0",background:sd.tnpCount===n?"#2E75B6":"#fff",color:sd.tnpCount===n?"#fff":"#555",fontSize:14,fontWeight:700,cursor:"pointer"}}>{n}</button>
+                          <button key={n} onClick={()=>uP(group.id,si,sub.id,"tnpCount",sd.tnpCount===n?null:n)} style={{width:40,height:40,borderRadius:8,border:sd.tnpCount===n?"2px solid #2E75B6":"1px solid rgba(255,255,255,0.12)",background:sd.tnpCount===n?"#2E75B6":"rgba(255,255,255,0.03)",color:sd.tnpCount===n?"#fff":"#94a3b8",fontSize:14,fontWeight:700,cursor:"pointer"}}>{n}</button>
                         )}
                       </div>
                       {sd.tnpCount&&[...Array(sd.tnpCount)].map((_,idx)=>(
@@ -1514,7 +1515,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
                       {(sd.tnpGaReload===true)&&(
                         <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:6}}>
                           {["Reload","Reload Plus","Reload Exchange"].map(rl=>
-                            <button key={rl} onClick={()=>uP(group.id,si,sub.id,"tnpGaReloadSel",sd.tnpGaReloadSel[rl]?{}:{[rl]:true})} style={{padding:"5px 12px",borderRadius:6,border:sd.tnpGaReloadSel[rl]?"2px solid #28a745":"2px solid #e0e0e0",background:sd.tnpGaReloadSel[rl]?"#d4edda":"#fff",color:sd.tnpGaReloadSel[rl]?"#155724":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                            <button key={rl} onClick={()=>uP(group.id,si,sub.id,"tnpGaReloadSel",sd.tnpGaReloadSel[rl]?{}:{[rl]:true})} style={{padding:"5px 12px",borderRadius:6,border:sd.tnpGaReloadSel[rl]?"2px solid #28a745":"1px solid rgba(255,255,255,0.12)",background:sd.tnpGaReloadSel[rl]?"rgba(40,167,69,0.15)":"rgba(255,255,255,0.03)",color:sd.tnpGaReloadSel[rl]?"#4ade80":"#94a3b8",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                               <span>{sd.tnpGaReloadSel[rl]?"◉":"○"}</span>{rl}
                             </button>
                           )}
@@ -1526,11 +1527,11 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
               )}
               {/* Security for TNP GA = Sì: OUTSIDE blue box, before dati contratto */}
               {(sd.tnpGa==="Sì"||sd.tnpGa===true)&&sd.tnpTipo&&(
-                <div style={{marginTop:8,padding:8,background:"#f8fafc",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                <div style={{marginTop:8,padding:8,background:"rgba(255,255,255,0.03)",borderRadius:6,border:"1px solid rgba(255,255,255,0.08)"}}>
                   <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6}}>Security</div>
                   <div style={{display:"flex",gap:6}}>
                     {["Security","Security PRO"].map(s=>
-                      <button key={s} onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel[s]?{}:{[s]:true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel[s]?"2px solid #fd7e14":"2px solid #e0e0e0",background:sd.securitySel[s]?"#fff3e0":"#fff",color:sd.securitySel[s]?"#e8590c":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                      <button key={s} onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel[s]?{}:{[s]:true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel[s]?"2px solid #fd7e14":"1px solid rgba(255,255,255,0.12)",background:sd.securitySel[s]?"rgba(253,126,20,0.12)":"rgba(255,255,255,0.03)",color:sd.securitySel[s]?"#fb923c":"#94a3b8",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                         <span>{sd.securitySel[s]?"◉":"○"}</span>{s}
                       </button>
                     )}
@@ -1544,11 +1545,11 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
             <div style={{marginTop:6}}>
               <YN val={sd.reloadForever} onCh={v=>uP(group.id,si,sub.id,"reloadForever",v)} label="Reload Forever?"/>
               {/* Security when TNP GA = No (after Reload Forever) */}
-              <div style={{marginTop:8,padding:8,background:"#f8fafc",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+              <div style={{marginTop:8,padding:8,background:"rgba(255,255,255,0.03)",borderRadius:6,border:"1px solid rgba(255,255,255,0.08)"}}>
                 <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6}}>Security</div>
                 <div style={{display:"flex",gap:6}}>
                   {["Security","Security PRO"].map(s=>
-                    <button key={s} onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel[s]?{}:{[s]:true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel[s]?"2px solid #fd7e14":"2px solid #e0e0e0",background:sd.securitySel[s]?"#fff3e0":"#fff",color:sd.securitySel[s]?"#e8590c":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                    <button key={s} onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel[s]?{}:{[s]:true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel[s]?"2px solid #fd7e14":"1px solid rgba(255,255,255,0.12)",background:sd.securitySel[s]?"rgba(253,126,20,0.12)":"rgba(255,255,255,0.03)",color:sd.securitySel[s]?"#fb923c":"#94a3b8",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                       <span>{sd.securitySel[s]?"◉":"○"}</span>{s}
                     </button>
                   )}
@@ -1598,14 +1599,14 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
               <MiniC label="TNP GA" val={sd.tnpGa} onCh={v=>{uP(group.id,si,sub.id,"tnpGa",v);if(v==="No"||v===false){uP(group.id,si,sub.id,"tnpTipo","");uP(group.id,si,sub.id,"tnpModello","");uP(group.id,si,sub.id,"tnpImei","");uP(group.id,si,sub.id,"tnpGaReload",null);uP(group.id,si,sub.id,"tnpGaReloadSel",{})}}} opts={["Sì","No"]}/>
               {(sd.tnpGa==="Sì"||sd.tnpGa===true)&&(
                 <div style={{marginTop:8}}>
-                  <div style={{padding:8,background:"#f8fafc",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                  <div style={{padding:8,background:"rgba(255,255,255,0.03)",borderRadius:6,border:"1px solid rgba(255,255,255,0.08)"}}>
                     <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6}}>Security / Reload</div>
                     <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                      <button onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel["Security"]?{}:{"Security":true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel["Security"]?"2px solid #fd7e14":"2px solid #e0e0e0",background:sd.securitySel["Security"]?"#fff3e0":"#fff",color:sd.securitySel["Security"]?"#e8590c":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                      <button onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel["Security"]?{}:{"Security":true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel["Security"]?"2px solid #fd7e14":"1px solid rgba(255,255,255,0.12)",background:sd.securitySel["Security"]?"rgba(253,126,20,0.12)":"rgba(255,255,255,0.03)",color:sd.securitySel["Security"]?"#fb923c":"#94a3b8",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                         <span>{sd.securitySel["Security"]?"☑":"☐"}</span>Security
                       </button>
                       {["Reload","Reload EU"].map(rl=>
-                        <button key={rl} onClick={()=>uP(group.id,si,sub.id,"tnpGaReloadSel",sd.tnpGaReloadSel[rl]?{}:{[rl]:true})} style={{padding:"5px 14px",borderRadius:6,border:sd.tnpGaReloadSel[rl]?"2px solid #28a745":"2px solid #e0e0e0",background:sd.tnpGaReloadSel[rl]?"#d4edda":"#fff",color:sd.tnpGaReloadSel[rl]?"#155724":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                        <button key={rl} onClick={()=>uP(group.id,si,sub.id,"tnpGaReloadSel",sd.tnpGaReloadSel[rl]?{}:{[rl]:true})} style={{padding:"5px 14px",borderRadius:6,border:sd.tnpGaReloadSel[rl]?"2px solid #28a745":"1px solid rgba(255,255,255,0.12)",background:sd.tnpGaReloadSel[rl]?"rgba(40,167,69,0.15)":"rgba(255,255,255,0.03)",color:sd.tnpGaReloadSel[rl]?"#4ade80":"#94a3b8",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                           <span>{sd.tnpGaReloadSel[rl]?"◉":"○"}</span>{rl}
                         </button>
                       )}
@@ -1614,13 +1615,13 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
                 </div>
               )}
               {(sd.tnpGa==="No"||sd.tnpGa===false)&&(
-                <div style={{marginTop:8,padding:8,background:"#f8fafc",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                <div style={{marginTop:8,padding:8,background:"rgba(255,255,255,0.03)",borderRadius:6,border:"1px solid rgba(255,255,255,0.08)"}}>
                   <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6}}>Security / Reload</div>
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                    <button onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel["Security"]?{}:{"Security":true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel["Security"]?"2px solid #fd7e14":"2px solid #e0e0e0",background:sd.securitySel["Security"]?"#fff3e0":"#fff",color:sd.securitySel["Security"]?"#e8590c":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                    <button onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel["Security"]?{}:{"Security":true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel["Security"]?"2px solid #fd7e14":"1px solid rgba(255,255,255,0.12)",background:sd.securitySel["Security"]?"rgba(253,126,20,0.12)":"rgba(255,255,255,0.03)",color:sd.securitySel["Security"]?"#fb923c":"#94a3b8",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                       <span>{sd.securitySel["Security"]?"◉":"○"}</span>Security
                     </button>
-                    <button onClick={()=>uP(group.id,si,sub.id,"tnpGaReloadSel",sd.tnpGaReloadSel["Reload Open"]?{}:{"Reload Open":true})} style={{padding:"5px 14px",borderRadius:6,border:sd.tnpGaReloadSel["Reload Open"]?"2px solid #28a745":"2px solid #e0e0e0",background:sd.tnpGaReloadSel["Reload Open"]?"#d4edda":"#fff",color:sd.tnpGaReloadSel["Reload Open"]?"#155724":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                    <button onClick={()=>uP(group.id,si,sub.id,"tnpGaReloadSel",sd.tnpGaReloadSel["Reload Open"]?{}:{"Reload Open":true})} style={{padding:"5px 14px",borderRadius:6,border:sd.tnpGaReloadSel["Reload Open"]?"2px solid #28a745":"1px solid rgba(255,255,255,0.12)",background:sd.tnpGaReloadSel["Reload Open"]?"rgba(40,167,69,0.15)":"rgba(255,255,255,0.03)",color:sd.tnpGaReloadSel["Reload Open"]?"#4ade80":"#94a3b8",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                       <span>{sd.tnpGaReloadSel["Reload Open"]?"◉":"○"}</span>Reload Open
                     </button>
                   </div>
@@ -1634,20 +1635,20 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
 
       {sub.isProtecta&&(
         sub.isBizProtecta
-          ? <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRadius:8,background:"#f0ebff",border:"2px solid #6f42c1"}}>
+          ? <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRadius:8,background:"rgba(111,66,193,0.12)",border:"2px solid #6f42c1"}}>
               <span style={{fontSize:16}}>✅</span>
               <span style={{fontSize:13,fontWeight:700,color:"#6f42c1"}}>Protecta PRO attivato</span>
             </div>
           : <div style={{display:"flex",gap:8}}>
               {["Kit Base","Kit Plus"].map(k=>
-                <button key={k} onClick={()=>uF(group.id,si,sub.id,"protectaKit",f.protectaKit===k?"":k)} style={{padding:"8px 18px",borderRadius:8,border:f.protectaKit===k?"2px solid #6f42c1":"2px solid #e0e0e0",background:f.protectaKit===k?"#6f42c1":"#fff",color:f.protectaKit===k?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>{k}</button>
+                <button key={k} onClick={()=>uF(group.id,si,sub.id,"protectaKit",f.protectaKit===k?"":k)} style={{padding:"8px 18px",borderRadius:8,border:f.protectaKit===k?"2px solid #6f42c1":"1px solid rgba(255,255,255,0.12)",background:f.protectaKit===k?"#6f42c1":"rgba(255,255,255,0.03)",color:f.protectaKit===k?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>{k}</button>
               )}
             </div>
       )}
 
       {/* Verisure */}
       {sub.isVerisure&&(
-        <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",borderRadius:8,background:"#f0ebff",border:"2px solid #6f42c1"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",borderRadius:8,background:"rgba(111,66,193,0.12)",border:"2px solid #6f42c1"}}>
           <span style={{fontSize:20}}>🛡️</span>
           <span style={{fontSize:13,fontWeight:700,color:"#6f42c1"}}>Verisure</span>
           <span style={{marginLeft:"auto",fontSize:12,fontWeight:800,color:"#6f42c1",background:"#e0d4ff",borderRadius:6,padding:"3px 12px"}}>✅ VERISURE ATTIVO</span>
@@ -1674,7 +1675,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
             <TF l="Seriale Kasko" r v={f.kfSeriale||""} o={v=>uF(group.id,si,sub.id,"kfSeriale",v)} p="es. KF-000123"/>
             <div>
               <div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Tipologia Kasko <span style={{color:"#dc3545"}}>*</span></div>
-              <select value={f.kfTipologia||""} onChange={e=>uF(group.id,si,sub.id,"kfTipologia",e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box",background:"rgba(255,255,255,0.02)"}}>
+              <select value={f.kfTipologia||""} onChange={e=>uF(group.id,si,sub.id,"kfTipologia",e.target.value)} className="glass-input w-full text-sm rounded-xl py-3">
                 <option value="">— Seleziona —</option>
                 <option value="da_definire">Da definire</option>
               </select>
@@ -1697,7 +1698,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
       {sub.isAssicBiz&&(
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           {["Protezione PRO Negozi - Affittuario","Protezione PRO Negozi - Proprietario"].map(opt=>
-            <button key={opt} onClick={()=>uF(group.id,si,sub.id,"assicBizSel",f.assicBizSel===opt?"":opt)} style={{padding:"8px 16px",borderRadius:8,border:f.assicBizSel===opt?"2px solid #6f42c1":"2px solid #e0e0e0",background:f.assicBizSel===opt?"#6f42c1":"#fff",color:f.assicBizSel===opt?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+            <button key={opt} onClick={()=>uF(group.id,si,sub.id,"assicBizSel",f.assicBizSel===opt?"":opt)} style={{padding:"8px 16px",borderRadius:8,border:f.assicBizSel===opt?"2px solid #6f42c1":"1px solid rgba(255,255,255,0.12)",background:f.assicBizSel===opt?"#6f42c1":"rgba(255,255,255,0.03)",color:f.assicBizSel===opt?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:14}}>{f.assicBizSel===opt?"◉":"○"}</span>{opt}
             </button>
           )}
@@ -1709,9 +1710,9 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
         <div>
           {/* Three toggleable sub-options */}
           <div style={{display:"flex",gap:8,marginBottom:10}}>
-            <button onClick={()=>{const on=!sd.cbTnp;uP(group.id,si,sub.id,"cbTnp",on);if(on){if(!sd.cbTnpCell){const pre=sd.cbCambioCell||anaCel||"";if(pre)uP(group.id,si,sub.id,"cbTnpCell",pre)};if(!sd.cbTnpCC){const pre=sd.cbCambioCC||(c.codice_contratto||"");if(pre)uP(group.id,si,sub.id,"cbTnpCC",pre)}}}} style={{padding:"8px 16px",borderRadius:8,border:sd.cbTnp?"2px solid #2E75B6":"2px solid #e0e0e0",background:sd.cbTnp?"#2E75B6":"#fff",color:sd.cbTnp?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>TNP CB</button>
-            <button onClick={()=>{const on=!sd.cbCambio;uP(group.id,si,sub.id,"cbCambio",on);if(on){if(!sd.cbCambioCell){const pre=sd.cbTnpCell||anaCel||"";if(pre)uP(group.id,si,sub.id,"cbCambioCell",pre)};if(!sd.cbCambioCC){const pre=sd.cbTnpCC||(c.codice_contratto||"");if(pre)uP(group.id,si,sub.id,"cbCambioCC",pre)}}}} style={{padding:"8px 16px",borderRadius:8,border:sd.cbCambio?"2px solid #6f42c1":"2px solid #e0e0e0",background:sd.cbCambio?"#6f42c1":"#fff",color:sd.cbCambio?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cambio Offerta</button>
-            {!sub.isCBBiz&&<button onClick={()=>uP(group.id,si,sub.id,"cbRf",!sd.cbRf)} style={{padding:"8px 16px",borderRadius:8,border:sd.cbRf?"2px solid #28a745":"2px solid #e0e0e0",background:sd.cbRf?"#28a745":"#fff",color:sd.cbRf?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>Reload Forever</button>}
+            <button onClick={()=>{const on=!sd.cbTnp;uP(group.id,si,sub.id,"cbTnp",on);if(on){if(!sd.cbTnpCell){const pre=sd.cbCambioCell||anaCel||"";if(pre)uP(group.id,si,sub.id,"cbTnpCell",pre)};if(!sd.cbTnpCC){const pre=sd.cbCambioCC||(c.codice_contratto||"");if(pre)uP(group.id,si,sub.id,"cbTnpCC",pre)}}}} style={{padding:"8px 16px",borderRadius:8,border:sd.cbTnp?"2px solid #2E75B6":"1px solid rgba(255,255,255,0.12)",background:sd.cbTnp?"#2E75B6":"rgba(255,255,255,0.03)",color:sd.cbTnp?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>TNP CB</button>
+            <button onClick={()=>{const on=!sd.cbCambio;uP(group.id,si,sub.id,"cbCambio",on);if(on){if(!sd.cbCambioCell){const pre=sd.cbTnpCell||anaCel||"";if(pre)uP(group.id,si,sub.id,"cbCambioCell",pre)};if(!sd.cbCambioCC){const pre=sd.cbTnpCC||(c.codice_contratto||"");if(pre)uP(group.id,si,sub.id,"cbCambioCC",pre)}}}} style={{padding:"8px 16px",borderRadius:8,border:sd.cbCambio?"2px solid #6f42c1":"1px solid rgba(255,255,255,0.12)",background:sd.cbCambio?"#6f42c1":"rgba(255,255,255,0.03)",color:sd.cbCambio?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cambio Offerta</button>
+            {!sub.isCBBiz&&<button onClick={()=>uP(group.id,si,sub.id,"cbRf",!sd.cbRf)} style={{padding:"8px 16px",borderRadius:8,border:sd.cbRf?"2px solid #28a745":"1px solid rgba(255,255,255,0.12)",background:sd.cbRf?"#28a745":"rgba(255,255,255,0.03)",color:sd.cbRf?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>Reload Forever</button>}
           </div>
 
           {/* TNP CB section */}
@@ -1731,7 +1732,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
               )}
               <div style={{display:"flex",gap:6,marginBottom:sd.cbTnpTipo?8:0}}>
                 {!sub.isCBBiz&&sub.cbTnpVals.map(opt=>
-                  <button key={opt} onClick={()=>uP(group.id,si,sub.id,"cbTnpTipo",opt)} style={{padding:"6px 14px",borderRadius:6,border:sd.cbTnpTipo===opt?"2px solid #2E75B6":"2px solid #e0e0e0",background:sd.cbTnpTipo===opt?"#2E75B6":"#fff",color:sd.cbTnpTipo===opt?"#fff":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>{opt}</button>
+                  <button key={opt} onClick={()=>uP(group.id,si,sub.id,"cbTnpTipo",opt)} style={{padding:"6px 14px",borderRadius:6,border:sd.cbTnpTipo===opt?"2px solid #2E75B6":"1px solid rgba(255,255,255,0.12)",background:sd.cbTnpTipo===opt?"#2E75B6":"rgba(255,255,255,0.03)",color:sd.cbTnpTipo===opt?"#fff":"#94a3b8",fontSize:11,fontWeight:700,cursor:"pointer"}}>{opt}</button>
                 )}
               </div>
               {!sub.isCBBiz&&sd.cbTnpTipo&&(
@@ -1745,7 +1746,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
                       <div style={{fontSize:11,fontWeight:700,color:"#2E75B6",marginBottom:6}}>Quanti TNP hai finanziato?</div>
                       <div style={{display:"flex",gap:6,marginBottom:8}}>
                         {[1,2,3].map(n=>
-                          <button key={n} onClick={()=>uP(group.id,si,sub.id,"cbTnpCount",sd.cbTnpCount===n?null:n)} style={{width:40,height:40,borderRadius:8,border:sd.cbTnpCount===n?"2px solid #2E75B6":"2px solid #e0e0e0",background:sd.cbTnpCount===n?"#2E75B6":"#fff",color:sd.cbTnpCount===n?"#fff":"#555",fontSize:14,fontWeight:700,cursor:"pointer"}}>{n}</button>
+                          <button key={n} onClick={()=>uP(group.id,si,sub.id,"cbTnpCount",sd.cbTnpCount===n?null:n)} style={{width:40,height:40,borderRadius:8,border:sd.cbTnpCount===n?"2px solid #2E75B6":"1px solid rgba(255,255,255,0.12)",background:sd.cbTnpCount===n?"#2E75B6":"rgba(255,255,255,0.03)",color:sd.cbTnpCount===n?"#fff":"#94a3b8",fontSize:14,fontWeight:700,cursor:"pointer"}}>{n}</button>
                         )}
                       </div>
                       {sd.cbTnpCount&&[...Array(sd.cbTnpCount)].map((_,idx)=>(
@@ -1786,7 +1787,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
                 {(sd.cbTnpReload===true)&&(
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:6}}>
                     {(sub.isCBBiz?["Reload","Reload EU"]:["Reload","Reload Plus","Reload Exchange"]).map(rl=>
-                      <button key={rl} onClick={()=>uP(group.id,si,sub.id,"cbTnpReloadSel",sd.cbTnpReloadSel[rl]?{}:{[rl]:true})} style={{padding:"5px 12px",borderRadius:6,border:sd.cbTnpReloadSel[rl]?"2px solid #28a745":"2px solid #e0e0e0",background:sd.cbTnpReloadSel[rl]?"#d4edda":"#fff",color:sd.cbTnpReloadSel[rl]?"#155724":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                      <button key={rl} onClick={()=>uP(group.id,si,sub.id,"cbTnpReloadSel",sd.cbTnpReloadSel[rl]?{}:{[rl]:true})} style={{padding:"5px 12px",borderRadius:6,border:sd.cbTnpReloadSel[rl]?"2px solid #28a745":"1px solid rgba(255,255,255,0.12)",background:sd.cbTnpReloadSel[rl]?"rgba(40,167,69,0.15)":"rgba(255,255,255,0.03)",color:sd.cbTnpReloadSel[rl]?"#4ade80":"#94a3b8",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                         <span>{sd.cbTnpReloadSel[rl]?"◉":"○"}</span>{rl}
                       </button>
                     )}
@@ -1805,7 +1806,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
               </div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
                 {sub.cbCambioVals.map(opt=>
-                  <button key={opt} onClick={()=>uP(group.id,si,sub.id,"cbCambioVal",sd.cbCambioVal===opt?"":opt)} style={{padding:"6px 14px",borderRadius:6,border:sd.cbCambioVal===opt?"2px solid #6f42c1":"2px solid #e0e0e0",background:sd.cbCambioVal===opt?"#6f42c1":"#fff",color:sd.cbCambioVal===opt?"#fff":"#555",fontSize:11,fontWeight:700,cursor:"pointer"}}>{opt}</button>
+                  <button key={opt} onClick={()=>uP(group.id,si,sub.id,"cbCambioVal",sd.cbCambioVal===opt?"":opt)} style={{padding:"6px 14px",borderRadius:6,border:sd.cbCambioVal===opt?"2px solid #6f42c1":"1px solid rgba(255,255,255,0.12)",background:sd.cbCambioVal===opt?"#6f42c1":"rgba(255,255,255,0.03)",color:sd.cbCambioVal===opt?"#fff":"#94a3b8",fontSize:11,fontWeight:700,cursor:"pointer"}}>{opt}</button>
                 )}
               </div>
               {sd.cbCambioVal&&(
@@ -1828,12 +1829,12 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
               </div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                 {sub.cbAddonVals.map(opt=>
-                  <button key={opt} onClick={()=>{const cur=sd.cbAddonSel[opt];uP(group.id,si,sub.id,"cbAddonSel",{...sd.cbAddonSel,[opt]:!cur})}} style={{padding:"6px 14px",borderRadius:6,border:sd.cbAddonSel[opt]?"2px solid #28a745":"2px solid #e0e0e0",background:sd.cbAddonSel[opt]?"#d4edda":"#fff",color:sd.cbAddonSel[opt]?"#155724":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                  <button key={opt} onClick={()=>{const cur=sd.cbAddonSel[opt];uP(group.id,si,sub.id,"cbAddonSel",{...sd.cbAddonSel,[opt]:!cur})}} style={{padding:"6px 14px",borderRadius:6,border:sd.cbAddonSel[opt]?"2px solid #28a745":"1px solid rgba(255,255,255,0.12)",background:sd.cbAddonSel[opt]?"rgba(40,167,69,0.15)":"rgba(255,255,255,0.03)",color:sd.cbAddonSel[opt]?"#4ade80":"#94a3b8",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                     <span>{sd.cbAddonSel[opt]?"☑":"☐"}</span>{opt}
                   </button>
                 )}
                 {sub.isCBBiz&&(!sd.cbTnp||(sd.cbTnp&&sd.cbCambio&&(sd.cbTnpReload===false||sd.cbTnpReload===null)))&&(
-                  <button onClick={()=>{const cur=sd.cbAddonSel["Reload Open"];uP(group.id,si,sub.id,"cbAddonSel",{...sd.cbAddonSel,"Reload Open":!cur})}} style={{padding:"6px 14px",borderRadius:6,border:sd.cbAddonSel["Reload Open"]?"2px solid #28a745":"2px solid #e0e0e0",background:sd.cbAddonSel["Reload Open"]?"#d4edda":"#fff",color:sd.cbAddonSel["Reload Open"]?"#155724":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                  <button onClick={()=>{const cur=sd.cbAddonSel["Reload Open"];uP(group.id,si,sub.id,"cbAddonSel",{...sd.cbAddonSel,"Reload Open":!cur})}} style={{padding:"6px 14px",borderRadius:6,border:sd.cbAddonSel["Reload Open"]?"2px solid #28a745":"1px solid rgba(255,255,255,0.12)",background:sd.cbAddonSel["Reload Open"]?"rgba(40,167,69,0.15)":"rgba(255,255,255,0.03)",color:sd.cbAddonSel["Reload Open"]?"#4ade80":"#94a3b8",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                     <span>{sd.cbAddonSel["Reload Open"]?"☑":"☐"}</span>Reload Open
                   </button>
                 )}
@@ -1874,13 +1875,13 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
             {(isVCMode||bizDomLocked)?(
               <div style={{display:"flex",alignItems:"center",gap:6}}><button disabled style={{padding:"6px 20px",borderRadius:6,border:"2px solid #28a745",background:"rgba(40,167,69,0.1)",color:"#28a745",fontSize:12,fontWeight:700,cursor:"not-allowed"}}>Sì</button><span style={{fontSize:10,color:"#64748b",fontStyle:"italic"}}>{isVCMode||sub.domLocked?"Obbligatorio":"Business"}</span></div>
             ):(<>
-              <button onClick={()=>uP(group.id,si,sub.id,"domiciliato",true)} style={{padding:"6px 20px",borderRadius:6,border:sd.domiciliato===true?"2px solid #28a745":"2px solid #e0e0e0",background:sd.domiciliato===true?"#d4edda":"#fff",color:sd.domiciliato===true?"#155724":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sì</button>
-              <button onClick={()=>uP(group.id,si,sub.id,"domiciliato",false)} style={{padding:"6px 20px",borderRadius:6,border:sd.domiciliato===false?"2px solid #dc3545":"2px solid #e0e0e0",background:sd.domiciliato===false?"#f8d7da":"#fff",color:sd.domiciliato===false?"#721c24":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>No</button>
+              <button onClick={()=>uP(group.id,si,sub.id,"domiciliato",true)} style={{padding:"6px 20px",borderRadius:6,border:sd.domiciliato===true?"2px solid #28a745":"1px solid rgba(255,255,255,0.12)",background:sd.domiciliato===true?"rgba(40,167,69,0.15)":"rgba(255,255,255,0.03)",color:sd.domiciliato===true?"#4ade80":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sì</button>
+              <button onClick={()=>uP(group.id,si,sub.id,"domiciliato",false)} style={{padding:"6px 20px",borderRadius:6,border:sd.domiciliato===false?"2px solid #dc3545":"1px solid rgba(255,255,255,0.12)",background:sd.domiciliato===false?"rgba(220,53,69,0.15)":"rgba(255,255,255,0.03)",color:sd.domiciliato===false?"#f87171":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>No</button>
             </>)}
           </div></div>
           <div style={{flex:1,minWidth:140}}><div style={{fontSize:12,fontWeight:700,color:"#f8fafc",marginBottom:6}}>Convergente?</div><div style={{display:"flex",gap:8}}>
-            <button onClick={()=>uP(group.id,si,sub.id,"convergente",true)} style={{padding:"6px 20px",borderRadius:6,border:sd.convergente===true?"2px solid #28a745":"2px solid #e0e0e0",background:sd.convergente===true?"#d4edda":"#fff",color:sd.convergente===true?"#155724":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sì</button>
-            <button onClick={()=>uP(group.id,si,sub.id,"convergente",false)} style={{padding:"6px 20px",borderRadius:6,border:sd.convergente===false?"2px solid #dc3545":"2px solid #e0e0e0",background:sd.convergente===false?"#f8d7da":"#fff",color:sd.convergente===false?"#721c24":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>No</button>
+            <button onClick={()=>uP(group.id,si,sub.id,"convergente",true)} style={{padding:"6px 20px",borderRadius:6,border:sd.convergente===true?"2px solid #28a745":"1px solid rgba(255,255,255,0.12)",background:sd.convergente===true?"rgba(40,167,69,0.15)":"rgba(255,255,255,0.03)",color:sd.convergente===true?"#4ade80":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sì</button>
+            <button onClick={()=>uP(group.id,si,sub.id,"convergente",false)} style={{padding:"6px 20px",borderRadius:6,border:sd.convergente===false?"2px solid #dc3545":"1px solid rgba(255,255,255,0.12)",background:sd.convergente===false?"rgba(220,53,69,0.15)":"rgba(255,255,255,0.03)",color:sd.convergente===false?"#f87171":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>No</button>
           </div></div>
         </div>
       )}
@@ -1908,11 +1909,11 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
 
       {/* Addon/Checklist checkboxes (hidden for Voce Casa) */}
       {sub.hasAddons&&sub.addonList&&!isVCMode&&(
-        <div style={{marginTop:10,padding:10,background:"#f8fafc",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)"}}>
+        <div style={{marginTop:10,padding:10,background:"rgba(255,255,255,0.03)",borderRadius:8,border:"1px solid rgba(255,255,255,0.08)"}}>
           <div style={{fontSize:11,fontWeight:700,color:"#f8fafc",marginBottom:8}}>{sub.isFisso?"Add-on Fisso":"Seleziona prodotti"}</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
             {sub.addonList.map(ad=>
-              <button key={ad} onClick={()=>toggleAddon(ad)} style={{padding:"6px 14px",borderRadius:6,border:sd.addons[ad]?"2px solid #28a745":"2px solid #e0e0e0",background:sd.addons[ad]?"#d4edda":"#fff",color:sd.addons[ad]?"#155724":"#555",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+              <button key={ad} onClick={()=>toggleAddon(ad)} style={{padding:"6px 14px",borderRadius:6,border:sd.addons[ad]?"2px solid #28a745":"1px solid rgba(255,255,255,0.12)",background:sd.addons[ad]?"rgba(40,167,69,0.15)":"rgba(255,255,255,0.03)",color:sd.addons[ad]?"#4ade80":"#94a3b8",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                 <span style={{fontSize:14}}>{sd.addons[ad]?"☑":"☐"}</span>{ad}
               </button>
             )}
@@ -1926,10 +1927,10 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
       {sub.hasConvLG&&(
         <div style={{marginTop:8,padding:10,background:lgConvLocked?"#f5f5f5":"#f8fafc",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)"}}>
           <div style={{fontSize:12,fontWeight:700,color:lgConvLocked?"#999":"#333",marginBottom:6}}>Convergente?</div>
-          {lgConvLocked?<div style={{display:"flex",alignItems:"center",gap:8}}><button disabled style={{padding:"6px 20px",borderRadius:6,border:"2px solid #dc3545",background:"#f8d7da",color:"#721c24",fontSize:12,fontWeight:700,cursor:"not-allowed",opacity:.7}}>No</button><span style={{fontSize:10,color:"#64748b",fontStyle:"italic"}}>Già selezionato altrove</span></div>
+          {lgConvLocked?<div style={{display:"flex",alignItems:"center",gap:8}}><button disabled style={{padding:"6px 20px",borderRadius:6,border:"2px solid #dc3545",background:"rgba(220,53,69,0.15)",color:"#f87171",fontSize:12,fontWeight:700,cursor:"not-allowed",opacity:.7}}>No</button><span style={{fontSize:10,color:"#64748b",fontStyle:"italic"}}>Già selezionato altrove</span></div>
           :<div style={{display:"flex",gap:8}}>
-            <button onClick={()=>uP(group.id,si,sub.id,"convergente",true)} style={{padding:"6px 20px",borderRadius:6,border:sd.convergente===true?"2px solid #28a745":"2px solid #e0e0e0",background:sd.convergente===true?"#d4edda":"#fff",color:sd.convergente===true?"#155724":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sì</button>
-            <button onClick={()=>uP(group.id,si,sub.id,"convergente",false)} style={{padding:"6px 20px",borderRadius:6,border:sd.convergente===false?"2px solid #dc3545":"2px solid #e0e0e0",background:sd.convergente===false?"#f8d7da":"#fff",color:sd.convergente===false?"#721c24":"#666",fontSize:12,fontWeight:700,cursor:"pointer"}}>No</button>
+            <button onClick={()=>uP(group.id,si,sub.id,"convergente",true)} style={{padding:"6px 20px",borderRadius:6,border:sd.convergente===true?"2px solid #28a745":"1px solid rgba(255,255,255,0.12)",background:sd.convergente===true?"rgba(40,167,69,0.15)":"rgba(255,255,255,0.03)",color:sd.convergente===true?"#4ade80":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sì</button>
+            <button onClick={()=>uP(group.id,si,sub.id,"convergente",false)} style={{padding:"6px 20px",borderRadius:6,border:sd.convergente===false?"2px solid #dc3545":"1px solid rgba(255,255,255,0.12)",background:sd.convergente===false?"rgba(220,53,69,0.15)":"rgba(255,255,255,0.03)",color:sd.convergente===false?"#f87171":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>No</button>
           </div>}
         </div>
       )}
@@ -1990,19 +1991,19 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
 const NoteStep = () => {
   const [show,setShow]=useState(false);
   const content = (
-    <div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid #e83e8c"}}>
+    <div className="glass-card mb-6 p-6" style={{borderLeft:"4px solid #e83e8c"}}>
       <div style={{fontSize:11,fontWeight:700,color:"#e83e8c",marginBottom:14,textTransform:"uppercase"}}>📝 Step 7 — Note / Promemoria</div>
       <div style={{textAlign:"center",marginBottom:show?16:0}}>
         <div style={{fontSize:13,fontWeight:600,color:"#f8fafc",marginBottom:10}}>Nota o promemoria?</div>
         <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-          <button onClick={()=>setShow(true)} style={{padding:"8px 28px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",border:show?"2px solid #28a745":"2px solid #e0e0e0",background:show?"#d4edda":"#fff",color:show?"#155724":"#666"}}>Sì</button>
-          <button onClick={()=>setShow(false)} style={{padding:"8px 28px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",border:!show?"2px solid #dc3545":"2px solid #e0e0e0",background:!show?"#f8d7da":"#fff",color:!show?"#721c24":"#666"}}>No</button>
+          <button onClick={()=>setShow(true)} style={{padding:"8px 28px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",border:show?"2px solid #28a745":"1px solid rgba(255,255,255,0.12)",background:show?"rgba(40,167,69,0.15)":"rgba(255,255,255,0.03)",color:show?"#4ade80":"#94a3b8"}}>Sì</button>
+          <button onClick={()=>setShow(false)} style={{padding:"8px 28px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",border:!show?"2px solid #dc3545":"1px solid rgba(255,255,255,0.12)",background:!show?"rgba(220,53,69,0.15)":"rgba(255,255,255,0.03)",color:!show?"#f87171":"#94a3b8"}}>No</button>
         </div>
       </div>
       {show&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
         <div style={{border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:14,background:"rgba(255,255,255,0.03)"}}><div style={{fontSize:13,fontWeight:700,marginBottom:8}}>📋 Nota</div><textarea placeholder="Nota…" rows={3} style={{width:"100%",padding:"8px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,resize:"vertical",fontFamily:"inherit",boxSizing:"border-box"}}/></div>
         <div style={{border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:14,background:"rgba(255,255,255,0.03)"}}><div style={{fontSize:13,fontWeight:700,marginBottom:8}}>📅 Promemoria</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><div><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Data</div><input type="date" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div><div><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Ora</div><input type="time" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><div><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Data</div><input type="date" className="glass-input w-full"/></div><div><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Ora</div><input type="time" className="glass-input w-full"/></div></div>
           <div style={{marginTop:8}}><DD l="Negozio" vals={negozi}/></div>
           <div style={{marginTop:8}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Descrizione</div><textarea placeholder="Dettagli…" rows={2} style={{width:"100%",padding:"8px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,resize:"vertical",fontFamily:"inherit",boxSizing:"border-box"}}/></div>
         </div>
@@ -2050,6 +2051,19 @@ function CRM() {
   const [confirmReset,setConfirmReset]=useState(false);
   const [showStep4,setShowStep4]=useState(false);
   const [vfQtyModal,setVfQtyModal]=useState(null);
+
+  // ── CF Generator state ──
+  const [showCFGen,setShowCFGen]=useState(false);
+  const [cfGen,setCfGen]=useState({nome:"",cognome:"",sesso:"M",giorno:"",mese:"",anno:"",comune:"",estero:false,paese:""});
+  const [cfSearch,setCfSearch]=useState("");
+  const [cfResult,setCfResult]=useState("");
+  const cfComuneRef=useRef(null);
+  const uCF=(k,v)=>setCfGen(p=>({...p,[k]:v}));
+  const filteredComuni=cfSearch.length>=2?_CNA.filter(c=>c.toLowerCase().startsWith(cfSearch.toLowerCase())).slice(0,8):[];
+  const doCalcolaCF=()=>{
+    const result=calculateCF({nome:cfGen.nome,cognome:cfGen.cognome,sesso:cfGen.sesso,giorno:cfGen.giorno,mese:cfGen.mese,anno:cfGen.anno,comune:cfGen.comune,estero:cfGen.estero,paese:cfGen.paese});
+    if(result){setCfResult(result);setLookupValue(result);}
+  };
 
   const bObj=brand?BRANDS.find(b=>b.id===brand):null;
   const cats=(brand==="windtre"?getW3(tipoCliente):brand==="vodafone"?getVF(tipoCliente):brand==="fastweb"?getFW(tipoCliente):brand==="iliad"?getIL(tipoCliente):brand==="energy"?getEN(tipoCliente):[]);
@@ -2143,18 +2157,35 @@ const finalSubmit = async () => {
     }
 
     try {
-      // 1. Client Upsert
-      const clientId = lookupValue || `CL-${Date.now()}`;
+      // 1. Resolve CF/PIVA — ensure it's never empty
+      const cfPiva = lookupValue || "";
+      if (!cfPiva) {
+        showToast("⚠️ Codice Fiscale / P.IVA obbligatorio");
+        return;
+      }
+
+      // 2. Check if client already exists by cf_piva
+      const { data: existingClient } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("cf_piva", cfPiva)
+        .maybeSingle();
+
+      const clientId = existingClient?.id || `CL-${cfPiva.replace(/\s/g, "")}-${Date.now()}`;
+
       const clientData = {
         id: clientId,
         tipo: tipoCliente === "privato" ? "consumer" : "business",
         nome: ana.nome || "",
         cognome: ana.cognome || "",
         ragione_sociale: ana.ragioneSociale || "",
-        cellulare: ana.cellulare || "",
+        nome_ref: ana.nomeRef || "",
+        cognome_ref: ana.cognomeRef || "",
+        cellulare: ana.cellulare || ana.recapito || "",
         email: ana.email || "",
-        cf_piva: lookupValue || "",
+        cf_piva: cfPiva,
         indirizzo: ana.via || "",
+        cap: ana.cap || "",
         citta: ana.citta || "",
         is_demo: false
       };
@@ -2162,33 +2193,40 @@ const finalSubmit = async () => {
       const { error: clientErr } = await supabase.from("clients").upsert(clientData, { onConflict: "id" });
       if (clientErr) throw clientErr;
 
-      // 1.5 Upload Attachments
+      // 3. Upload Attachments
       setUploading(true);
       const uploadedFiles = [];
+      let uploadFailCount = 0;
       for (const att of attachments) {
         const fileExt = att.name.split(".").pop();
         const fileName = `${clientId}_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `contracts/${fileName}`;
+        const filePath = `${clientId}/${fileName}`;
 
         const { error: uploadErr } = await supabase.storage
           .from("contracts")
           .upload(filePath, att.file);
 
-        if (!uploadErr) {
+        if (uploadErr) {
+          console.error(`Upload failed for ${att.name}:`, uploadErr);
+          uploadFailCount++;
+        } else {
           const { data: { publicUrl } } = supabase.storage.from("contracts").getPublicUrl(filePath);
-          uploadedFiles.push({ contract_id: "", url: publicUrl, name: att.name, type: att.type });
+          uploadedFiles.push({ url: publicUrl, name: att.name, type: att.type });
         }
       }
+      if (uploadFailCount > 0) {
+        showToast(`⚠️ ${uploadFailCount} file non caricati — controlla la connessione`);
+      }
 
-      // 2. Prepare Contract Rows
+      // 4. Prepare Contract Rows
       const contractRows = [];
-      const dateStr = new Date().toLocaleDateString("it-IT");
+      const dateStr = new Date().toISOString().split("T")[0];
 
       fc.forEach(group => {
         (group.items || []).forEach((item) => {
           const actCode = item.details["Codice Contratto"] || item.details["Codice Proposta"] || item.details["Codice Ordine"] || item.details["Codice"] || "—";
           contractRows.push({
-            id: `CTR-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+            id: `CTR-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
             client_id: clientId,
             data: dateStr,
             brand: group.brandLabel,
@@ -2208,7 +2246,7 @@ const finalSubmit = async () => {
 
       margItems.forEach(mi => {
         contractRows.push({
-          id: `EXT-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+          id: `EXT-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
           client_id: clientId,
           data: dateStr,
           brand: "Extra",
@@ -2220,10 +2258,12 @@ const finalSubmit = async () => {
           codice_attivazione: "VENDITA-DIRETTA",
           data_registrazione: dateStr,
           data_attivazione: dateStr,
+          dettagli: { product: mi.product, price: mi.price, margin: mi.margin, qty: mi.qty, model: mi.model, imei: mi.imei },
           is_demo: false
         });
       });
 
+      // 5. Insert contracts then link attachments
       if (contractRows.length > 0) {
         const { data: createdContracts, error: contractErr } = await supabase.from("contracts").insert(contractRows).select();
         if (contractErr) throw contractErr;
@@ -2294,7 +2334,7 @@ const finalSubmit = async () => {
         setClienteFound(false);
         setShowAna(true);
         setShowStep4(false);
-        showToast("⚠️ Cliente non trovato, inserimento manuale");
+        showToast("✨ Cliente non trovato: Modalità acquisizione nuovo cliente attivata");
       }
     } catch (err) {
       console.error("Lookup error:", err);
@@ -2341,7 +2381,7 @@ const finalSubmit = async () => {
             </div>
           ))
         )}
-        {margItems.length>0&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:12,padding:16,marginBottom:12,marginTop:12,boxShadow:"0 2px 8px rgba(0,0,0,.06)",overflow:"hidden"}}>
+        {margItems.length>0&&<div className="glass-card mb-6 p-6" style={{marginTop:12,boxShadow:"0 2px 8px rgba(0,0,0,.06)",overflow:"hidden"}}>
           <div style={{background:"linear-gradient(135deg,#6f42c1,#9b59b6)",padding:"10px 16px",borderRadius:"8px 8px 0 0",margin:"-16px -16px 14px -16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18}}>📦</span><span style={{color:"#fff",fontWeight:700,fontSize:14}}>Prodotti & Marginalità</span><span style={{background:"rgba(255,255,255,.25)",borderRadius:12,padding:"2px 10px",color:"#fff",fontSize:11,fontWeight:600}}>{margItems.length}</span></div>
             <button onClick={()=>{setMargEditItem(null);setShowMargPOS(true)}} style={{background:"rgba(255,255,255,.2)",border:"none",borderRadius:6,padding:"5px 14px",color:"#fff",fontSize:11,cursor:"pointer",fontWeight:700}}>+ Aggiungi</button>
@@ -2357,17 +2397,36 @@ const finalSubmit = async () => {
             </div>
           ))}
         </div>}
-        {!onlyMarg&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid #17a2b8",marginTop:12}}>
+        {!onlyMarg&&<div className="glass-card mb-6 p-6" style={{borderLeft:"4px solid #17a2b8",marginTop:12}}>
           <div style={{fontSize:11,fontWeight:700,color:"#17a2b8",marginBottom:14,textTransform:"uppercase"}}>📎 Step 5 — Allegati</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
-            {[{l:"Documento",i:"🪪"},{l:"Contratti",i:"📄"},{l:"Altro",i:"📁"}].map((a,i)=><div key={i} style={{border:"2px dashed #ccc",borderRadius:10,padding:"14px 10px",textAlign:"center",cursor:"pointer",background:"rgba(255,255,255,0.03)"}}><div style={{fontSize:24,marginBottom:4}}>{a.i}</div><div style={{fontSize:11,fontWeight:700,marginBottom:6}}>{a.l}</div><div style={{display:"inline-block",padding:"4px 12px",borderRadius:6,background:"#17a2b8",color:"#fff",fontSize:10,fontWeight:600}}>Carica</div></div>)}
+            {[{l:"Documento",i:"🪪",t:"documento"},{l:"Contratti",i:"📄",t:"contratto"},{l:"Altro",i:"📁",t:"altro"}].map((a,i)=>(
+              <label key={i} style={{border:"2px dashed rgba(255,255,255,0.15)",borderRadius:10,padding:"14px 10px",textAlign:"center",cursor:"pointer",background:"rgba(255,255,255,0.03)",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(23,162,184,0.5)";e.currentTarget.style.background="rgba(23,162,184,0.05)"}} onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.15)";e.currentTarget.style.background="rgba(255,255,255,0.03)"}}>
+                <input type="file" multiple accept="image/*,.pdf,.doc,.docx" onChange={e=>handleFileChange(e,a.t)} style={{display:"none"}}/>
+                <div style={{fontSize:24,marginBottom:4}}>{a.i}</div>
+                <div style={{fontSize:11,fontWeight:700,color:"#f8fafc",marginBottom:2}}>{a.l}</div>
+                <div style={{fontSize:10,color:"#64748b",marginBottom:6}}>Trascina o clicca</div>
+                <div style={{display:"inline-block",padding:"4px 12px",borderRadius:6,background:"#17a2b8",color:"#fff",fontSize:10,fontWeight:600}}>Carica</div>
+                {attachments.filter(f=>f.type===a.t).length>0&&<div style={{marginTop:6,fontSize:10,color:"#17a2b8",fontWeight:700}}>{attachments.filter(f=>f.type===a.t).length} file</div>}
+              </label>
+            ))}
           </div>
+          {attachments.length>0&&<div style={{marginTop:12,padding:12,background:"rgba(255,255,255,0.03)",borderRadius:8,border:"1px solid rgba(255,255,255,0.06)"}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:8,textTransform:"uppercase"}}>File caricati ({attachments.length})</div>
+            {attachments.map((f,i)=><div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0",borderBottom:i<attachments.length-1?"1px solid rgba(255,255,255,0.05)":"none"}}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:10,color:"#17a2b8",fontWeight:700,textTransform:"uppercase",background:"rgba(23,162,184,0.1)",padding:"2px 6px",borderRadius:4}}>{f.type}</span>
+                <span style={{fontSize:12,color:"#f8fafc"}}>{f.name}</span>
+              </div>
+              <button onClick={()=>setAttachments(p=>p.filter((_,j)=>j!==i))} style={{background:"none",border:"none",color:"#dc3545",cursor:"pointer",fontSize:11,fontWeight:700}}>✕</button>
+            </div>)}
+          </div>}
         </div>}
-        {!onlyMarg&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid #28a745"}}>
+        {!onlyMarg&&<div className="glass-card mb-6 p-6" style={{borderLeft:"4px solid #28a745"}}>
           <div style={{fontSize:11,fontWeight:700,color:"#28a745",marginBottom:14,textTransform:"uppercase"}}>🏪 Step 6 — Attribuzione</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"10px 16px"}}>
             <DD l="Venditore" r v={selVend} o={v=>setSelVend(v)} vals={venditori} nt="Dal login — editabile"/><DD l="Negozio" r v={selNeg} o={v=>setSelNeg(v)} vals={negozi} nt="Dal login — editabile"/>
-            <div><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Data <span style={{color:"#dc3545"}}>*</span></div><input type="date" defaultValue="2026-03-07" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+            <div><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Data <span style={{color:"#dc3545"}}>*</span></div><input type="date" defaultValue="2026-03-07" className="glass-input w-full"/></div>
           </div>
         </div>}
         {!onlyMarg&&<NoteStep/>}
@@ -2415,8 +2474,8 @@ const finalSubmit = async () => {
   const formContent = (
     <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6 space-y-4" style={{fontFamily:"Inter,-apple-system,sans-serif",minHeight:"100vh"}}>
       {toast&&<div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",background:"#28a745",color:"#fff",padding:"12px 28px",borderRadius:10,fontSize:14,fontWeight:700,boxShadow:"0 6px 20px rgba(0,0,0,.2)",zIndex:9999}}>{toast}</div>}
-      <div style={{background:bG,borderRadius:12,padding:"14px 20px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:36,height:36,background:"rgba(255,255,255,.2)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{bObj?bObj.icon:"⚡"}</div><div><div style={{color:"#fff",fontWeight:700,fontSize:16}}>CRM - Inserimento Contratto</div><div style={{color:"rgba(255,255,255,.7)",fontSize:11}}>{bObj?bObj.label+" · v5":"Seleziona brand"}{tipoCliente?" · "+(tipoCliente==="privato"?"Privato":"Business"):""}</div></div></div>
+      <div className="glass-card mb-6 p-5 flex items-center justify-between" style={{background:bG}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:36,height:36,background:"rgba(255,255,255,.2)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>{bObj?<Image src={bObj.logo} alt={bObj.label} width={24} height={24} style={{objectFit:"contain"}}/>:<span style={{fontSize:18}}>⚡</span>}</div><div><div style={{color:"#fff",fontWeight:700,fontSize:16}}>CRM - Inserimento Contratto</div><div style={{color:"rgba(255,255,255,.7)",fontSize:11}}>{bObj?bObj.label+" · v5":"Seleziona brand"}{tipoCliente?" · "+(tipoCliente==="privato"?"Privato":"Business"):""}</div></div></div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
           <button onClick={()=>setShowMargSection(true)} title="Prodotti & Marginalità" style={{padding:"8px 16px",borderRadius:8,border:"1px solid rgba(255,255,255,.4)",background:"rgba(255,255,255,.15)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>📦 Prodotti&Marginalità{margItems.length>0&&<span style={{background:"#FFD800",color:"#f8fafc",borderRadius:8,padding:"1px 7px",fontSize:11,fontWeight:800}}>{margItems.length}</span>}</button><button onClick={()=>setShowCart(true)} style={{background:tCI>0?"rgba(255,255,255,.25)":"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.3)",borderRadius:8,padding:"8px 16px",color:"#fff",fontSize:13,cursor:"pointer",fontWeight:700,display:"flex",alignItems:"center",gap:6}}>🛒 Carrello{tCI>0&&<span style={{background:"#FFD800",color:"#f8fafc",borderRadius:10,padding:"1px 7px",fontSize:11,fontWeight:800}}>{tCI}</span>}</button>
           {brand&&<button onClick={addCart} style={{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.3)",borderRadius:8,padding:"8px 14px",color:"#fff",fontSize:13,cursor:"pointer",fontWeight:700}}>📦 Salva brand</button>}
@@ -2425,17 +2484,19 @@ const finalSubmit = async () => {
       </div>
 
       <div style={{display:"flex",gap:3,marginBottom:16}}>
-        {["Brand","Tipo Cliente","Anagrafica","Prodotti","Allegati","Attribuzione","Note"].map((st,i)=><div key={i} style={{flex:1,textAlign:"center",padding:"7px 2px",borderRadius:6,fontSize:9.5,fontWeight:600,background:gSS(i)==="active"?bC:gSS(i)==="done"?"#28a745":"#e9ecef",color:gSS(i)==="pending"?"#aaa":"#fff"}}>{gSS(i)==="done"?"✓ ":""}{st}</div>)}
+        {["Brand","Tipo Cliente","Anagrafica","Prodotti","Allegati","Attribuzione","Note"].map((st,i)=><div key={i} style={{flex:1,textAlign:"center",padding:"7px 2px",borderRadius:6,fontSize:9.5,fontWeight:600,background:gSS(i)==="active"?bC:gSS(i)==="done"?"rgba(40,167,69,0.8)":"rgba(255,255,255,0.04)",color:gSS(i)==="pending"?"#475569":"#fff",border:gSS(i)==="pending"?"1px solid rgba(255,255,255,0.06)":"none"}}>{gSS(i)==="done"?"✓ ":""}{st}</div>)}
       </div>
 
       {(cart.length>0||margItems.length>0)&&<div onClick={()=>setShowCart(true)} style={{background:"linear-gradient(90deg,#1a1a2e,#16213e)",borderRadius:10,padding:"10px 16px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}><div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}><span>🛒</span><span style={{color:"#fff",fontSize:12,fontWeight:600}}>Carrello:</span>{cart.map((g,i)=><span key={i} style={{background:g.brandColor,color:"#fff",borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700}}>{g.brandIcon} {g.items.length}</span>)}{margItems.length>0&&<span style={{background:"#6f42c1",color:"#fff",borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700}}>📦 {margItems.length}</span>}</div><span style={{color:"rgba(255,255,255,.5)",fontSize:11}}>Vedi →</span></div>}
 
-      {!brand?<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:20,marginBottom:10}}>
+      {!brand?<div className="glass-card mb-6 p-6" style={{}}>
         <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:14,textTransform:"uppercase"}}>Step 1 — Brand</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
-          {BRANDS.map(b=><button key={b.id} onClick={()=>{if(b.ready){setBrand(b.id);setSales({});setSkyS([{tvSel:null,tvCC:"",fibraSel:null,fibraCC:"",fibraGnp:null,fibraGnpBrand:"",fibraGnpNum:"",mobileSel:false,mobMnp:null,mobNumProv:"",mobNumDef:"",mobBrandMnp:"",mobIccid:"",mobNum:"",mobIccidNo:""}]);setSesCode("")}}} style={{padding:16,borderRadius:12,border:"2px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.02)",cursor:b.ready?"pointer":"default",textAlign:"center",opacity:b.ready?1:.6,position:"relative",overflow:"hidden"}}>
-            {!b.ready&&<div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"rgba(255,255,255,.6)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:2}}><div style={{fontSize:22}}>🔧</div><div style={{fontSize:10,fontWeight:700,color:"#64748b"}}>Manutenzione</div></div>}
-            <div style={{fontSize:30,marginBottom:4}}>{b.icon}</div><div style={{fontWeight:800,fontSize:15,color:b.color}}>{b.label}</div><div style={{fontSize:10,color:"#64748b",marginTop:3}}>{b.desc}</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3, 1fr)",gap:12}}>
+          {BRANDS.map(b=><button key={b.id} onClick={()=>{if(b.ready){setBrand(b.id);setSales({});setSkyS([{tvSel:null,tvCC:"",fibraSel:null,fibraCC:"",fibraGnp:null,fibraGnpBrand:"",fibraGnpNum:"",mobileSel:false,mobMnp:null,mobNumProv:"",mobNumDef:"",mobBrandMnp:"",mobIccid:"",mobNum:"",mobIccidNo:""}]);setSesCode("")}}} className="glass-panel" style={{padding:20,borderRadius:14,border:"2px solid rgba(255,255,255,0.06)",cursor:b.ready?"pointer":"default",textAlign:"center",opacity:b.ready?1:.5,position:"relative",overflow:"hidden",transition:"all 0.25s ease",display:"flex",flexDirection:"column",alignItems:"center",gap:6}} onMouseEnter={e=>{if(b.ready){e.currentTarget.style.border=`2px solid ${b.color}60`;e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow=`0 8px 24px ${b.color}20`}}} onMouseLeave={e=>{e.currentTarget.style.border="2px solid rgba(255,255,255,0.06)";e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow="none"}}>
+            {!b.ready&&<div style={{position:"absolute",inset:0,background:"rgba(15,17,26,0.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:2,backdropFilter:"blur(2px)"}}><div style={{fontSize:22}}>🔧</div><div style={{fontSize:10,fontWeight:700,color:"#64748b"}}>Manutenzione</div></div>}
+            <div style={{width:56,height:56,borderRadius:14,background:`${b.color}15`,border:`1px solid ${b.color}30`,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:4}}><Image src={b.logo} alt={b.label} width={36} height={36} style={{objectFit:"contain"}}/></div>
+            <div style={{fontWeight:800,fontSize:15,color:b.color}}>{b.label}</div>
+            <div style={{fontSize:10,color:"#64748b",lineHeight:1.4}}>{b.desc}</div>
           </button>)}
         </div>
         <div style={{marginTop:12}}>
@@ -2448,42 +2509,160 @@ const finalSubmit = async () => {
             {margItems.length>0&&<span style={{marginLeft:"auto",background:"#6f42c1",color:"#fff",borderRadius:10,padding:"2px 10px",fontSize:12,fontWeight:800}}>{margItems.length}</span>}
           </button>
         </div>
-      </div>:<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:"12px 16px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:11,fontWeight:700,color:"#28a745"}}>✓ 1</span><span style={{fontSize:13,fontWeight:600}}>Brand: <span style={{color:bObj.color}}>{bObj.icon} {bObj.label}{tipoCliente==="business"?" Business":""}</span></span></div>}
+      </div>:<div className="glass-panel" style={{borderRadius:10,padding:"12px 16px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:11,fontWeight:700,color:"#28a745"}}>✓ 1</span><div style={{width:24,height:24,borderRadius:6,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}><Image src={bObj.logo} alt={bObj.label} width={20} height={20} style={{objectFit:"contain"}}/></div><span style={{fontSize:13,fontWeight:600,color:"#f8fafc"}}>Brand: <span style={{color:bObj.color}}>{bObj.label}{tipoCliente==="business"?" Business":""}</span></span></div>}
 
-      {brand&&!showStep4&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid #6f42c1"}}>
-        <div style={{fontSize:11,fontWeight:700,color:"#6f42c1",marginBottom:12,textTransform:"uppercase"}}>Step 2 — Tipo Cliente</div>
-        <div style={{display:"flex",gap:12,marginBottom:tipoCliente?16:0}}>
-          {["privato","business"].map(t=><button key={t} onClick={()=>{setTipoCliente(t);setShowAna(false);setClienteFound(false);setLookupValue("");setSales({});setSkyS([{tvSel:null,tvCC:"",fibraSel:null,fibraCC:"",fibraGnp:null,fibraGnpBrand:"",fibraGnpNum:"",mobileSel:false,mobMnp:null,mobNumProv:"",mobNumDef:"",mobBrandMnp:"",mobIccid:"",mobNum:"",mobIccidNo:""}]);setShowStep4(false)}} style={{flex:1,padding:12,borderRadius:10,border:tipoCliente===t?"2px solid #6f42c1":"2px solid #e8e8e8",background:tipoCliente===t?"#F3EEFB":"#fff",cursor:"pointer",textAlign:"center"}}><div style={{fontSize:22,marginBottom:2}}>{t==="privato"?"👤":"🏢"}</div><div style={{fontWeight:700,fontSize:14,color:tipoCliente===t?"#6f42c1":"#333"}}>{t==="privato"?"Privato":"Business"}</div></button>)}
+      {brand&&!showStep4&&<div className="glass-card mb-6 p-6 space-y-5">
+        <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+          <User className="w-3.5 h-3.5" /> Step 2 — Tipo Cliente
+        </h3>
+
+        {/* Tipo toggle - pill style matching clienti */}
+        <div className="flex bg-black/40 p-1 rounded-xl border border-white/5 w-max">
+          {(["privato","business"] as const).map(t=>(
+            <button key={t} onClick={()=>{setTipoCliente(t);setShowAna(false);setClienteFound(false);setLookupValue("");setSales({});setSkyS([{tvSel:null,tvCC:"",fibraSel:null,fibraCC:"",fibraGnp:null,fibraGnpBrand:"",fibraGnpNum:"",mobileSel:false,mobMnp:null,mobNumProv:"",mobNumDef:"",mobBrandMnp:"",mobIccid:"",mobNum:"",mobIccidNo:""}]);setShowStep4(false)}}
+              className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-2 ${tipoCliente===t?"bg-violet-500/20 text-violet-300 border border-violet-500/20 shadow-lg shadow-violet-500/5":"text-slate-500 hover:text-white border border-transparent"}`}>
+              {t==="privato"?<User className="w-4 h-4"/>:<Building className="w-4 h-4"/>}
+              {t==="privato"?"Privato":"Business"}
+            </button>
+          ))}
         </div>
-        {tipoCliente&&<div style={{background:"rgba(255,255,255,0.03)",borderRadius:8,padding:14,position:"relative"}}>
-          <div style={{fontSize:12,fontWeight:600,color:"#8892b0",marginBottom:8}}>{tipoCliente==="privato"?"Codice Fiscale":"Partita IVA"}</div>
-          <div style={{display:"flex",gap:8}}>
-            <input placeholder={tipoCliente==="privato"?"RSSMRA80A01H501Z":"12345678901"} value={lookupValue} onChange={e=>setLookupValue(e.target.value.toUpperCase())} style={{flex:1,padding:"10px 12px",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",fontSize:14,fontFamily:"monospace",letterSpacing:1.2}}/>
-            <button onClick={doLookup} style={{padding:"10px 18px",borderRadius:8,border:"none",background:"#6f42c1",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>🔍 Cerca</button>
+
+        {/* CF/PIVA lookup */}
+        {tipoCliente&&<div className="space-y-4">
+          <div className="glass-panel p-4 rounded-xl space-y-3">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">{tipoCliente==="privato"?"Codice Fiscale":"Partita IVA"}</label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"/>
+                <input placeholder={tipoCliente==="privato"?"RSSMRA80A01H501Z":"12345678901"} value={lookupValue} onChange={e=>setLookupValue(e.target.value.toUpperCase())} className="glass-input w-full text-sm rounded-xl py-3 pl-10 font-mono tracking-wider"/>
+              </div>
+              <button onClick={doLookup} className="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-violet-500/20 flex items-center gap-2 whitespace-nowrap">
+                <Search className="w-3.5 h-3.5"/> Cerca
+              </button>
+              <button onClick={()=>{setClienteFound(false);setShowAna(true);setShowStep4(false);showToast("Modalità nuovo cliente attivata")}} className="px-5 py-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 font-bold text-xs uppercase tracking-widest transition-all border border-emerald-500/20 flex items-center gap-2 whitespace-nowrap">
+                <UserPlus className="w-3.5 h-3.5"/> Nuovo
+              </button>
+            </div>
+
+            {/* Result feedback */}
+            {clienteFound&&<div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+              <UserCheck className="w-4 h-4 text-emerald-400"/>
+              <span className="text-sm font-semibold text-emerald-400">Cliente trovato nel database — dati pre-compilati</span>
+            </div>}
+            {showAna&&!clienteFound&&lookupValue&&<div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+              <UserPlus className="w-4 h-4 text-amber-400"/>
+              <span className="text-sm font-semibold text-amber-400">Nuovo cliente — compila i dati anagrafici</span>
+            </div>}
           </div>
-          {clienteFound&&<div style={{marginTop:10,background:"rgba(40,167,69,0.1)",borderRadius:6,padding:"8px 12px",fontSize:12,color:"#28a745"}}>✅ Trovato!</div>}
+
+          {/* CF Generator - only for privato */}
+          {tipoCliente==="privato"&&<div>
+            <button onClick={()=>setShowCFGen(!showCFGen)} className="flex items-center gap-2 text-xs font-bold text-violet-400 hover:text-violet-300 uppercase tracking-widest transition-colors">
+              <Calculator className="w-3.5 h-3.5"/>{showCFGen?"Nascondi":"Calcola Codice Fiscale"}<ChevronRight className={`w-3 h-3 transition-transform ${showCFGen?"rotate-90":""}`}/>
+            </button>
+            {showCFGen&&<div className="glass-panel mt-3 p-5 rounded-xl border border-violet-500/10 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Cognome *</label>
+                  <input value={cfGen.cognome} onChange={e=>uCF("cognome",e.target.value)} placeholder="es. Rossi" className="glass-input w-full text-sm rounded-xl py-3"/>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Nome *</label>
+                  <input value={cfGen.nome} onChange={e=>uCF("nome",e.target.value)} placeholder="es. Mario" className="glass-input w-full text-sm rounded-xl py-3"/>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Sesso *</label>
+                  <div className="flex bg-black/40 p-1 rounded-xl border border-white/5">
+                    {["M","F"].map(s=><button key={s} onClick={()=>uCF("sesso",s)} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${cfGen.sesso===s?"bg-violet-500/20 text-violet-300 border border-violet-500/20":"text-slate-500 hover:text-white border border-transparent"}`}>{s==="M"?"Maschio":"Femmina"}</button>)}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Data di Nascita *</label>
+                  <div className="flex gap-2">
+                    <input value={cfGen.giorno} onChange={e=>uCF("giorno",e.target.value)} placeholder="GG" maxLength={2} className="glass-input text-center text-sm rounded-xl py-3 w-[28%]"/>
+                    <select value={cfGen.mese} onChange={e=>uCF("mese",e.target.value)} className="glass-input text-sm rounded-xl py-3 w-[44%]"><option value="">Mese</option>{["01","02","03","04","05","06","07","08","09","10","11","12"].map((m,i)=><option key={m} value={m}>{["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"][i]}</option>)}</select>
+                    <input value={cfGen.anno} onChange={e=>uCF("anno",e.target.value)} placeholder="AAAA" maxLength={4} className="glass-input text-center text-sm rounded-xl py-3 w-[28%]"/>
+                  </div>
+                </div>
+                <div className="col-span-2 space-y-1.5">
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Luogo di Nascita *</label>
+                    <label className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-pointer"><input type="checkbox" checked={cfGen.estero} onChange={e=>{uCF("estero",e.target.checked);uCF("comune","");uCF("paese","");setCfSearch("")}} className="accent-violet-500 rounded"/> Nato/a all&apos;estero</label>
+                  </div>
+                  {cfGen.estero?<input value={cfGen.paese} onChange={e=>uCF("paese",e.target.value)} placeholder="es. GERMANIA" className="glass-input w-full text-sm rounded-xl py-3"/>
+                  :<div className="relative" ref={cfComuneRef}><input value={cfSearch} onChange={e=>{setCfSearch(e.target.value);uCF("comune","")}} placeholder="Cerca comune..." className={`glass-input w-full text-sm rounded-xl py-3 ${cfGen.comune?"border-emerald-500/40":""}`}/>{cfGen.comune&&<span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-emerald-400 font-bold">{cfGen.comune}</span>}
+                    {filteredComuni.length>0&&!cfGen.comune&&<div className="absolute top-full left-0 right-0 z-50 mt-1 bg-[rgba(26,29,41,0.98)] border border-white/10 rounded-xl overflow-hidden shadow-2xl shadow-black/50 max-h-[200px] overflow-auto">
+                      {filteredComuni.map(c=><button key={c} onClick={()=>{uCF("comune",c);setCfSearch(c)}} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-violet-500/10 hover:text-white transition-colors border-b border-white/5 last:border-0">{c}</button>)}
+                    </div>}
+                  </div>}
+                </div>
+              </div>
+              <div className="flex gap-3 items-center pt-3 border-t border-white/5">
+                <button onClick={doCalcolaCF} className="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-violet-500/20 flex items-center gap-2">
+                  <Calculator className="w-3.5 h-3.5"/> Calcola CF
+                </button>
+                {cfResult&&<div className="flex items-center gap-2"><span className="font-mono text-sm font-bold tracking-widest text-violet-300 bg-violet-500/10 px-4 py-2 rounded-lg border border-violet-500/20">{cfResult}</span><CheckCircle2 className="w-4 h-4 text-emerald-400"/></div>}
+              </div>
+            </div>}
+          </div>}
         </div>}
       </div>}
 
-      {showAna&&!showStep4&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid #1B3A5C"}}>
-        <div style={{fontSize:11,fontWeight:700,color:"#1B3A5C",marginBottom:14,textTransform:"uppercase"}}>📝 Step 3 — Anagrafica</div>
-        {tipoCliente==="privato"?<><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 16px"}}><TF l="Nome" r v={ana.nome} o={v=>uA("nome",v)} p="Mario" pf={clienteFound}/><TF l="Cognome" r v={ana.cognome} o={v=>uA("cognome",v)} p="Rossi" pf={clienteFound}/><TF l="Cellulare" v={ana.cellulare} o={v=>uA("cellulare",v)} p="333..." pf={clienteFound}/><TF l="Email" v={ana.email} o={v=>uA("email",v)} p="email" pf={clienteFound}/></div><div style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(255,255,255,0.05)",display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:"10px 16px"}}><TF l="Via" v={ana.via} o={v=>uA("via",v)} p="Via Roma" pf={clienteFound}/><TF l="CAP" v={ana.cap} o={v=>uA("cap",v)} p="00100" pf={clienteFound}/><TF l="Città" v={ana.citta} o={v=>uA("citta",v)} p="Roma" pf={clienteFound}/></div></>
-        :<><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 16px"}}><TF l="Ragione Sociale" r v={ana.ragioneSociale} o={v=>uA("ragioneSociale",v)} p="Rossi Srl" pf={clienteFound}/><TF l="Nome Ref." r v={ana.nomeRef} o={v=>uA("nomeRef",v)} p="Mario" pf={clienteFound}/><TF l="Cognome Ref." r v={ana.cognomeRef} o={v=>uA("cognomeRef",v)} p="Rossi" pf={clienteFound}/><TF l="Recapito" v={ana.recapito} o={v=>uA("recapito",v)} p="333..." pf={clienteFound}/><TF l="Email" v={ana.email} o={v=>uA("email",v)} p="info@" pf={clienteFound}/></div><div style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(255,255,255,0.05)",display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:"10px 16px"}}><TF l="Via" v={ana.via} o={v=>uA("via",v)} p="Via Roma" pf={clienteFound}/><TF l="CAP" v={ana.cap} o={v=>uA("cap",v)} p="00100" pf={clienteFound}/><TF l="Città" v={ana.citta} o={v=>uA("citta",v)} p="Roma" pf={clienteFound}/></div></>}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:14,paddingTop:12,borderTop:"1px solid rgba(255,255,255,0.05)"}}>
-          <button onClick={()=>{setAna({nome:"",cognome:"",cellulare:"",email:"",via:"",cap:"",citta:"",ragioneSociale:"",nomeRef:"",cognomeRef:"",recapito:""});setLookupValue("");setClienteFound(false);setShowStep4(false)}} style={{padding:"9px 18px",borderRadius:8,border:"2px solid #dc3545",background:"rgba(255,255,255,0.02)",color:"#dc3545",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>↺ Reset anagrafica</button>
-          <button onClick={()=>setShowStep4(true)} style={{padding:"9px 22px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#2E75B6,#1B3A5C)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>Avanti →</button>
+      {showAna&&!showStep4&&<div className="glass-card mb-6 p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+            <User className="w-3.5 h-3.5" /> Step 3 — Anagrafica
+          </h3>
+          {!clienteFound && <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-black px-3 py-1 rounded-lg border border-emerald-500/20 flex items-center gap-1.5"><UserPlus className="w-3 h-3"/> NUOVO CLIENTE</span>}
+          {clienteFound && <span className="bg-blue-500/10 text-blue-400 text-[10px] font-black px-3 py-1 rounded-lg border border-blue-500/20 flex items-center gap-1.5"><UserCheck className="w-3 h-3"/> ESISTENTE</span>}
+        </div>
+
+        {tipoCliente==="privato"?<>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <TF l="Nome" r v={ana.nome} o={v=>uA("nome",v)} p="Es. Mario" pf={clienteFound}/>
+            <TF l="Cognome" r v={ana.cognome} o={v=>uA("cognome",v)} p="Es. Rossi" pf={clienteFound}/>
+            <TF l="Cellulare" v={ana.cellulare} o={v=>uA("cellulare",v)} p="333 123 4567" pf={clienteFound}/>
+            <TF l="Email" v={ana.email} o={v=>uA("email",v)} p="mario.rossi@email.com" pf={clienteFound}/>
+          </div>
+          <div className="pt-4 border-t border-white/5 grid grid-cols-3 gap-4">
+            <TF l="Via" v={ana.via} o={v=>uA("via",v)} p="Via Roma 1" pf={clienteFound}/>
+            <TF l="CAP" v={ana.cap} o={v=>uA("cap",v)} p="00100" pf={clienteFound}/>
+            <TF l="Città" v={ana.citta} o={v=>uA("citta",v)} p="Roma" pf={clienteFound}/>
+          </div>
+        </>:<>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2"><TF l="Ragione Sociale" r v={ana.ragioneSociale} o={v=>uA("ragioneSociale",v)} p="Nome Azienda Srl" pf={clienteFound}/></div>
+            <TF l="Nome Referente" r v={ana.nomeRef} o={v=>uA("nomeRef",v)} p="Es. Mario" pf={clienteFound}/>
+            <TF l="Cognome Referente" r v={ana.cognomeRef} o={v=>uA("cognomeRef",v)} p="Es. Rossi" pf={clienteFound}/>
+            <TF l="Recapito" v={ana.recapito} o={v=>uA("recapito",v)} p="333 123 4567" pf={clienteFound}/>
+            <TF l="Email" v={ana.email} o={v=>uA("email",v)} p="info@azienda.it" pf={clienteFound}/>
+          </div>
+          <div className="pt-4 border-t border-white/5 grid grid-cols-3 gap-4">
+            <TF l="Via" v={ana.via} o={v=>uA("via",v)} p="Via Roma 1" pf={clienteFound}/>
+            <TF l="CAP" v={ana.cap} o={v=>uA("cap",v)} p="00100" pf={clienteFound}/>
+            <TF l="Città" v={ana.citta} o={v=>uA("citta",v)} p="Roma" pf={clienteFound}/>
+          </div>
+        </>}
+
+        <div className="flex justify-between items-center pt-4 border-t border-white/5">
+          <button onClick={()=>{setAna({nome:"",cognome:"",cellulare:"",email:"",via:"",cap:"",citta:"",ragioneSociale:"",nomeRef:"",cognomeRef:"",recapito:""});setLookupValue("");setClienteFound(false);setShowStep4(false)}} className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-rose-500/10 text-slate-400 hover:text-rose-400 font-bold text-xs uppercase tracking-widest transition-all border border-white/5 hover:border-rose-500/20 flex items-center gap-2">
+            <RotateCcw className="w-3.5 h-3.5"/> Reset
+          </button>
+          <button onClick={()=>setShowStep4(true)} className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-violet-500/20 flex items-center gap-2">
+            Avanti <ChevronRight className="w-3.5 h-3.5"/>
+          </button>
         </div>
       </div>}
 
-      {showAna&&showStep4&&(brand==="windtre"||brand==="vodafone"||brand==="fastweb"||brand==="iliad"||brand==="energy")&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid "+(brand==="vodafone"?"#E60000":brand==="fastweb"?"#CC9900":brand==="iliad"?"#C00028":brand==="energy"?"#28a745":"#2E75B6")}}>
+      {showAna&&showStep4&&(brand==="windtre"||brand==="vodafone"||brand==="fastweb"||brand==="iliad"||brand==="energy")&&<div className="glass-card mb-6 p-6" style={{borderLeft:"4px solid "+(brand==="vodafone"?"#E60000":brand==="fastweb"?"#CC9900":brand==="iliad"?"#C00028":brand==="energy"?"#28a745":"#2E75B6")}}>
         <div style={{fontSize:11,fontWeight:700,color:brand==="vodafone"?"#E60000":brand==="fastweb"?"#CC9900":brand==="iliad"?"#C00028":brand==="energy"?"#28a745":"#2E75B6",marginBottom:14,textTransform:"uppercase"}}>📂 Step 4 — Prodotti e Contratto</div>
-        <div style={{background:"rgba(255,255,255,0.04)",borderRadius:8,padding:10,marginBottom:14,display:"flex",alignItems:"center",gap:12,border:"1px solid rgba(0,114,198,0.3)",flexWrap:"wrap"}}>
+        <div className="glass-panel mb-6 p-4" style={{display:"flex",alignItems:"center",gap:12,border:"1px solid rgba(0,114,198,0.3)",flexWrap:"wrap"}}>
           <span style={{fontSize:11,fontWeight:700,color:"#1B3A5C"}}>Codice inserimento:</span>
-          <select value={sesCode} onChange={e=>setSesCode(e.target.value)} style={{padding:"6px 10px",borderRadius:6,border:"1px solid rgba(0,114,198,0.3)",fontSize:12,fontWeight:600,background:"rgba(255,255,255,0.02)",minWidth:140}}><option value="">— Seleziona —</option>{(brand==="vodafone"?VF_CODICI_NEGOZIO:brand==="fastweb"?FW_CODICI_NEGOZIO:brand==="iliad"?IL_CODICI_NEGOZIO:brand==="energy"?EN_CODICI_NEGOZIO:codiciW3).map(c=><option key={c} value={c}>{c}</option>)}</select>
+          <select value={sesCode} onChange={e=>setSesCode(e.target.value)} className="glass-input min-w-[140px] font-bold border-blue-500/30 bg-white/5"><option value="">— Seleziona —</option>{(brand==="vodafone"?VF_CODICI_NEGOZIO:brand==="fastweb"?FW_CODICI_NEGOZIO:brand==="iliad"?IL_CODICI_NEGOZIO:brand==="energy"?EN_CODICI_NEGOZIO:codiciW3).map(c=><option key={c} value={c}>{c}</option>)}</select>
         </div>
         {cats.map(group=><div key={group.id} style={{marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:16}}>{group.icon}</span><span style={{fontSize:13,fontWeight:700,color:group.color,textTransform:"uppercase"}}>{group.title}</span></div>
-          {gS(group.id).map((sale,si)=><div key={si} style={{padding:12,borderRadius:8,marginBottom:6,background:"rgba(255,255,255,0.03)",borderLeft:"3px solid "+group.color}}>
+          {gS(group.id).map((sale,si)=><div key={si} className="glass-panel mb-4 p-4" style={{borderLeft:"3px solid "+group.color}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
               <span style={{fontSize:11,fontWeight:700,color:group.color}}>Vendita #{si+1}</span>
               <div style={{display:"flex",gap:6}}>
@@ -2492,7 +2671,7 @@ const finalSubmit = async () => {
               </div>
             </div>
             <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:group.subs.some(s=>sale[s.id]&&sale[s.id].active)?10:0}}>
-              {group.subs.map(sub=><button key={sub.id} onClick={()=>togSub(group.id,si,sub.id,group.radio?group.subs.map(s=>s.id):null)} style={{padding:"8px 14px",borderRadius:8,border:(sale[sub.id]&&sale[sub.id].active)?"2px solid "+group.color:"2px solid #e0e0e0",background:(sale[sub.id]&&sale[sub.id].active)?group.color:"#fff",color:(sale[sub.id]&&sale[sub.id].active)?"#fff":"#555",cursor:"pointer",fontSize:12,fontWeight:600}}>{sub.title}</button>)}
+              {group.subs.map(sub=><button key={sub.id} onClick={()=>togSub(group.id,si,sub.id,group.radio?group.subs.map(s=>s.id):null)} style={{padding:"8px 14px",borderRadius:8,border:(sale[sub.id]&&sale[sub.id].active)?`2px solid ${group.color}`:"1px solid rgba(255,255,255,0.12)",background:(sale[sub.id]&&sale[sub.id].active)?group.color:"rgba(255,255,255,0.03)",color:(sale[sub.id]&&sale[sub.id].active)?"#fff":"#94a3b8",cursor:"pointer",fontSize:12,fontWeight:600,transition:"all 0.15s"}}>{sub.title}</button>)}
             </div>
             {group.subs.filter(sub=>sale[sub.id]&&sale[sub.id].active).map(sub=>
               <SubCard key={sub.id} sub={sub} rawSd={sale[sub.id]||{}} group={group} si={si} sessionCode={sesCode} sale={sale} uF={uF} uC={uC} uP={uP} catSales={gS(group.id)} anaCel={ana.cellulare||""} onOpenVFModal={openVFModal}/>
@@ -2501,12 +2680,12 @@ const finalSubmit = async () => {
         </div>)}
       </div>}
 
-      {showAna&&showStep4&&brand==="sky"&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid #0072C6"}}>
+      {showAna&&showStep4&&brand==="sky"&&<div className="glass-card mb-6 p-6" style={{borderLeft:"4px solid #0072C6"}}>
         <div style={{fontSize:11,fontWeight:700,color:"#0072C6",marginBottom:14,textTransform:"uppercase"}}>📺 Step 4 — Sky</div>
         {skyS.map((sale,si)=>{
           const SKY_COLOR="#0072C6";
-          const btnSky=(label,active,onClick)=><button onClick={onClick} style={{padding:"10px 18px",borderRadius:8,cursor:"pointer",border:active?"2px solid "+SKY_COLOR:"2px solid #e0e0e0",background:active?SKY_COLOR:"#fff",color:active?"#fff":"#555",fontSize:13,fontWeight:600}}>{label}</button>;
-          const ynSky=(val,onYes,onNo)=><div style={{display:"flex",gap:6}}>{[{v:"Sì",fn:onYes},{v:"No",fn:onNo}].map(({v,fn})=><button key={v} onClick={fn} style={{padding:"7px 22px",borderRadius:8,border:val===v?"2px solid "+SKY_COLOR:"2px solid #e0e0e0",background:val===v?SKY_COLOR:"#fff",color:val===v?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>{v}</button>)}</div>;
+          const btnSky=(label,active,onClick)=><button onClick={onClick} style={{padding:"10px 18px",borderRadius:8,cursor:"pointer",border:active?"2px solid "+SKY_COLOR:"1px solid rgba(255,255,255,0.12)",background:active?SKY_COLOR:"rgba(255,255,255,0.03)",color:active?"#fff":"#94a3b8",fontSize:13,fontWeight:600}}>{label}</button>;
+          const ynSky=(val,onYes,onNo)=><div style={{display:"flex",gap:6}}>{[{v:"Sì",fn:onYes},{v:"No",fn:onNo}].map(({v,fn})=><button key={v} onClick={fn} style={{padding:"7px 22px",borderRadius:8,border:val===v?"2px solid "+SKY_COLOR:"1px solid rgba(255,255,255,0.12)",background:val===v?SKY_COLOR:"rgba(255,255,255,0.03)",color:val===v?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>{v}</button>)}</div>;
           const dBox=(children)=><div style={{marginTop:10,background:"rgba(0,114,198,0.1)",borderRadius:8,padding:12,border:"1px solid rgba(0,114,198,0.3)"}}><div style={{fontSize:11,fontWeight:700,color:SKY_COLOR,marginBottom:8,textTransform:"uppercase"}}>📄 Dati contratto</div>{children}</div>;
           return (<div key={si} style={{padding:12,borderRadius:8,marginBottom:8,background:"rgba(255,255,255,0.03)",borderLeft:"3px solid #0072C6"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
@@ -2525,7 +2704,7 @@ const finalSubmit = async () => {
               </div>
               {sale.tvSel&&dBox(
                 <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Codice contratto <span style={{color:"#dc3545"}}>*</span></div>
-                <input value={sale.tvCC||""} onChange={e=>uSkyF(si,"tvCC",e.target.value)} placeholder="es. 1679428185586" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+                <input value={sale.tvCC||""} onChange={e=>uSkyF(si,"tvCC",e.target.value)} placeholder="es. 1679428185586" className="glass-input w-full"/></div>
               )}
             </div>
 
@@ -2537,17 +2716,17 @@ const finalSubmit = async () => {
               </div>
               {sale.fibraSel&&dBox(<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 12px"}}>
                 <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Codice contratto <span style={{color:"#dc3545"}}>*</span></div>
-                <input value={sale.fibraCC||""} onChange={e=>uSkyF(si,"fibraCC",e.target.value)} placeholder="es. 1679428185586" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+                <input value={sale.fibraCC||""} onChange={e=>uSkyF(si,"fibraCC",e.target.value)} placeholder="es. 1679428185586" className="glass-input w-full"/></div>
                 <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>GNP?</div>
                 {ynSky(sale.fibraGnp,()=>uSkyF(si,"fibraGnp","Sì"),()=>{uSkyF(si,"fibraGnp","No");uSkyF(si,"fibraGnpBrand","");uSkyF(si,"fibraGnpNum","");})}</div>
                 {sale.fibraGnp==="Sì"&&<>
                   <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Brand GNP</div>
-                  <select value={sale.fibraGnpBrand||""} onChange={e=>uSkyF(si,"fibraGnpBrand",e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12}}>
+                  <select value={sale.fibraGnpBrand||""} onChange={e=>uSkyF(si,"fibraGnpBrand",e.target.value)} className="glass-input w-full text-sm rounded-xl py-3">
                     <option value="">— Seleziona —</option>
                     {SKY_BRAND_FIBRA.map(b=><option key={b} value={b}>{b}</option>)}
                   </select></div>
                   <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Numero fisso in portabilità</div>
-                  <input value={sale.fibraGnpNum||""} onChange={e=>uSkyF(si,"fibraGnpNum",e.target.value)} placeholder="es. 060000000" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+                  <input value={sale.fibraGnpNum||""} onChange={e=>uSkyF(si,"fibraGnpNum",e.target.value)} placeholder="es. 060000000" className="glass-input w-full"/></div>
                 </>}
               </div>)}
             </div>
@@ -2562,18 +2741,18 @@ const finalSubmit = async () => {
                 <div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:4}}>MNP?</div>
                 {ynSky(sale.mobMnp,()=>uSkyF(si,"mobMnp","Sì"),()=>{uSkyF(si,"mobMnp","No");uSkyF(si,"mobNumProv","");uSkyF(si,"mobNumDef","");uSkyF(si,"mobBrandMnp","");uSkyF(si,"mobIccid","");})}
                 {sale.mobMnp==="Sì"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 12px",marginTop:8}}>
-                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Numero provvisorio</div><input value={sale.mobNumProv||""} onChange={e=>uSkyF(si,"mobNumProv",e.target.value)} placeholder="es. 393XXXXXXX" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Numero definitivo</div><input value={sale.mobNumDef||""} onChange={e=>uSkyF(si,"mobNumDef",e.target.value)} placeholder="Numero da portare" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Numero provvisorio</div><input value={sale.mobNumProv||""} onChange={e=>uSkyF(si,"mobNumProv",e.target.value)} placeholder="es. 393XXXXXXX" className="glass-input w-full"/></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Numero definitivo</div><input value={sale.mobNumDef||""} onChange={e=>uSkyF(si,"mobNumDef",e.target.value)} placeholder="Numero da portare" className="glass-input w-full"/></div>
                   <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Brand MNP</div>
-                  <select value={sale.mobBrandMnp||""} onChange={e=>uSkyF(si,"mobBrandMnp",e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12}}>
+                  <select value={sale.mobBrandMnp||""} onChange={e=>uSkyF(si,"mobBrandMnp",e.target.value)} className="glass-input w-full text-sm rounded-xl py-3">
                     <option value="">— Seleziona —</option>
                     {["TIM","Vodafone","Fastweb","WINDTRE","Iliad","PosteMobile","CoopVoce","ho.","Very Mobile","Rabona","Lyca","Kena","MVNO altro"].map(b=><option key={b} value={b}>{b}</option>)}
                   </select></div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>ICCID</div><input value={sale.mobIccid||""} onChange={e=>uSkyF(si,"mobIccid",e.target.value)} placeholder="893XXXXXXXXXXXXXXXX" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>ICCID</div><input value={sale.mobIccid||""} onChange={e=>uSkyF(si,"mobIccid",e.target.value)} placeholder="893XXXXXXXXXXXXXXXX" className="glass-input w-full"/></div>
                 </div>}
                 {sale.mobMnp==="No"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 12px",marginTop:8}}>
-                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Numero</div><input value={sale.mobNum||""} onChange={e=>uSkyF(si,"mobNum",e.target.value)} placeholder="es. 393XXXXXXX" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>ICCID</div><input value={sale.mobIccidNo||""} onChange={e=>uSkyF(si,"mobIccidNo",e.target.value)} placeholder="893XXXXXXXXXXXXXXXX" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box"}}/></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>Numero</div><input value={sale.mobNum||""} onChange={e=>uSkyF(si,"mobNum",e.target.value)} placeholder="es. 393XXXXXXX" className="glass-input w-full"/></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"#8892b0",marginBottom:3}}>ICCID</div><input value={sale.mobIccidNo||""} onChange={e=>uSkyF(si,"mobIccidNo",e.target.value)} placeholder="893XXXXXXXXXXXXXXXX" className="glass-input w-full"/></div>
                 </div>}
               </div>)}
             </div>
@@ -2585,7 +2764,7 @@ const finalSubmit = async () => {
 
       
       {/* ── PRODOTTI & MARGINALITÀ ── */}
-      {showAna&&showStep4&&<div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:16,marginBottom:10,borderLeft:"4px solid #6f42c1"}}>
+      {showAna&&showStep4&&<div className="glass-card mb-6 p-6" style={{borderLeft:"4px solid #6f42c1"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
           <div style={{fontSize:11,fontWeight:700,color:"#6f42c1",textTransform:"uppercase"}}>📦 Prodotti & Marginalità</div>
           <button onClick={()=>setShowMargPOS(true)} style={{padding:"6px 16px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#6f42c1,#9b59b6)",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Aggiungi</button>

@@ -9,12 +9,16 @@ export async function POST(
 ) {
     try {
         const { id } = await params;
+        const numericId = parseInt(id, 10);
+        if (isNaN(numericId)) {
+            return NextResponse.json({ error: "Invalid credential ID" }, { status: 400 });
+        }
 
         // 1. Fetch the encrypted password
         const { data, error } = await supabase
             .from("password_credentials")
             .select("password_encrypted")
-            .eq("id", id)
+            .eq("id", numericId)
             .single();
 
         if (error || !data) {
@@ -28,7 +32,7 @@ export async function POST(
 
         // 3. Log the access
         await supabase.from("password_access_log").insert({
-            credential_id: id,
+            credential_id: numericId,
             action: "reveal"
         });
 

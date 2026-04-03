@@ -52,6 +52,17 @@
     @apply bg-slate-900/50 border border-border-glass text-text-main rounded-lg transition-all focus:bg-slate-900/80 focus:border-primary focus:ring-4 focus:ring-primary-glow outline-none px-4 py-2;
   }
 
+  select, select option {
+    background-color: #0f172a;
+    color: #f8fafc;
+  }
+
+  select.glass-input option {
+    background-color: #0f172a;
+    color: #f8fafc;
+    padding: 8px;
+  }
+
   .primary-btn {
     @apply bg-gradient-to-br from-primary to-purple-600 rounded-lg font-medium shadow-[0_4px_15px_var(--color-primary-glow)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_20px_var(--color-primary-glow)] hover:from-primary-hover hover:to-purple-700 px-4 py-2 text-white;
   }
