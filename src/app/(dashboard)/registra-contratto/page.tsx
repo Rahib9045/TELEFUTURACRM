@@ -1795,7 +1795,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
 
           {/* Cambio Offerta section */}
           {sd.cbCambio&&(
-            <div style={{padding:10,background:"#f5f0ff",borderRadius:8,border:"1px solid #d4c5f0",marginBottom:8}}>
+            <div style={{padding:10,background:"rgba(139,92,246,0.08)",borderRadius:8,border:"1px solid rgba(139,92,246,0.2)",marginBottom:8}}>
               <div style={{fontSize:10,fontWeight:700,color:"#6f42c1",marginBottom:8,textTransform:"uppercase"}}>Cambio Offerta</div>
               <div style={{marginBottom:8,maxWidth:250}}>
                 <SCd session={sessionCode} codici={codiciW3} val={sd.cbCambioCodIns||""} onCh={v=>uP(group.id,si,sub.id,"cbCambioCodIns",v)}/>
@@ -1818,7 +1818,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
 
           {/* Add-on section inside CB */}
           {sub.cbAddonVals&&(
-            <div style={{padding:10,background:"#f0faf0",borderRadius:8,border:"1px solid #c3e6c3",marginBottom:8}}>
+            <div style={{padding:10,background:"rgba(40,167,69,0.08)",borderRadius:8,border:"1px solid rgba(40,167,69,0.2)",marginBottom:8}}>
               <div style={{fontSize:10,fontWeight:700,color:"#28a745",marginBottom:8,textTransform:"uppercase"}}>{sub.isCBBiz?"Add-on / Security":"Add-on"}</div>
               <div style={{marginBottom:8,maxWidth:250}}>
                 <SCd session={sessionCode} codici={codiciW3} val={sd.cbAddonCodIns||(sd.cbTnpCodIns||sd.cbCambioCodIns||"")} onCh={v=>uP(group.id,si,sub.id,"cbAddonCodIns",v)}/>
@@ -2871,7 +2871,7 @@ const finalSubmit = async () => {
             <div style={{fontSize:18,fontWeight:800,color:"#f8fafc",marginBottom:4}}>Quante SIM hai venduto?</div>
             <div style={{fontSize:13,fontWeight:600,color:"#E60000",background:"rgba(230,0,0,0.1)",borderRadius:8,padding:"6px 16px",display:"inline-block",marginBottom:24}}>{vfQtyModal.offer}</div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:20,marginBottom:28}}>
-              <button onClick={()=>setVfQtyModal(p=>({...p,tempQty:Math.max(1,p.tempQty-1)}))} style={{width:52,height:52,borderRadius:"50%",border:"2px solid rgba(255,255,255,0.1)",background:"#f5f5f5",fontSize:26,fontWeight:700,cursor:"pointer",color:"#8892b0",lineHeight:"1",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+              <button onClick={()=>setVfQtyModal(p=>({...p,tempQty:Math.max(1,p.tempQty-1)}))} style={{width:52,height:52,borderRadius:"50%",border:"2px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.05)",fontSize:26,fontWeight:700,cursor:"pointer",color:"#8892b0",lineHeight:"1",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
               <div style={{textAlign:"center"}}>
                 <div style={{fontSize:52,fontWeight:900,color:"#E60000",lineHeight:1}}>{vfQtyModal.tempQty}</div>
                 <div style={{fontSize:11,color:"#64748b",marginTop:2}}>SIM</div>
@@ -2879,7 +2879,7 @@ const finalSubmit = async () => {
               <button onClick={()=>setVfQtyModal(p=>({...p,tempQty:Math.min(9,p.tempQty+1)}))} style={{width:52,height:52,borderRadius:"50%",border:"2px solid #E60000",background:"#E60000",fontSize:26,fontWeight:700,cursor:"pointer",color:"#fff",lineHeight:"1",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
             </div>
             <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-              <button onClick={()=>setVfQtyModal(null)} style={{padding:"11px 28px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",background:"#f5f5f5",color:"#8892b0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Annulla</button>
+              <button onClick={()=>setVfQtyModal(null)} style={{padding:"11px 28px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.05)",color:"#8892b0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Annulla</button>
               {vfQtyModal&&vfQtyModal.tempQty>0&&((sales[vfQtyModal.catId]||[{}])[vfQtyModal.si]||{})[vfQtyModal.subId]&&((((sales[vfQtyModal.catId]||[{}])[vfQtyModal.si]||{})[vfQtyModal.subId]||{}).vfOffers||{})[vfQtyModal.offer]>0&&<button onClick={()=>{if(!vfQtyModal)return;const{catId,si,subId,offer}=vfQtyModal;const cur=((sales[catId]||[{}])[si]||{})[subId];const newVfO={...((cur&&cur.vfOffers)||{})};delete newVfO[offer];const newVfC={...((cur&&cur.vfContratti)||{})};delete newVfC[offer];uP(catId,si,subId,"vfOffers",newVfO);uP(catId,si,subId,"vfContratti",newVfC);setVfQtyModal(null);}} style={{padding:"11px 20px",borderRadius:10,border:"1px solid #dc3545",background:"rgba(255,255,255,0.02)",color:"#dc3545",fontSize:13,fontWeight:600,cursor:"pointer"}}>✕ Rimuovi</button>}
               <button onClick={confirmVFQty} style={{padding:"11px 36px",borderRadius:10,border:"none",background:"#E60000",color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 16px rgba(230,0,0,0.35)"}}>Conferma</button>
             </div>

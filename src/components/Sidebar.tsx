@@ -28,6 +28,7 @@ import {
     Shield,
     Store as StoreIcon,
     Users as UsersIcon,
+    Phone,
 } from "lucide-react";
 
 type NavLink = { name: string; href: string; icon: React.ComponentType<{ className?: string }>; roles: string[] };
@@ -37,6 +38,7 @@ type NavItem = { type: "link"; name: string; href: string; icon: React.Component
 const navigation: (NavGroup | NavItem)[] = [
     { type: "link", name: "Home", href: "/dashboard", icon: Home, roles: ["admin", "agente"] },
     { type: "link", name: "Clienti", href: "/clienti", icon: Users, roles: ["admin", "agente"] },
+    { type: "link", name: "Caller", href: "/caller", icon: Phone, roles: ["admin", "back_office", "supervisore"] },
     {
         type: "group",
         label: "Agenti",
