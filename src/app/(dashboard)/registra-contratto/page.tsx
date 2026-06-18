@@ -214,9 +214,10 @@ const BRANDS = [
   { id: "tim", label: "TIM", short: "TIM", color: "#0050FF", gradient: "linear-gradient(135deg, #0033A0 0%, #0050FF 100%)", icon: "☎️", logo: "/tim-logo.png", desc: "Mobile, Fisso, Telepass", ready: true },
 ];
 const codiciW3 = ["Magliana","Libia","San Paolo","Mazzini","Donna","Promontori","Collatina"];
-const venditori = ["Alberto","Alex","Alin","Asad","Ben Aziza","Cristhian","Cristi","Damiano","Daniel","Daniele2","Denise","Dimitri","Eloise","Eros","Fadel","Federico","Francesca","Francesco","George","Giacomo","Gian","Giulia","Giuseppe B.","Ilaria","Lorenzo","Ludmilla","Manu","Marta","Marta2","Marta3","Matteo","Michele","Riccardo","Roberto","Samantha","Sheekell","Tommaso","Veronica"];
+const venditori = ["Alberto","Alex","Alin","Asad","Ben Aziza","Cristhian","Cristi","Damiano","Daniel","Daniele2","Denise","Dimitri","Eloise","Eros","Fadel","Federico","Francesca","Francesco","George","Giacomo","Gian","Giulia","Giuseppe B.","Ilaria","Lorenzo","Ludmilla","Manu","Marta","Marta2","Marta3","Matteo","Michele","Roberto","Samantha","Sheekell","Tommaso","Veronica"];
 const negozi = ["Magliana","Donna","Libia","Collatina","Mazzini","San Paolo","Garbatella","Promontori","Acilia","Baleniere","Castani","Merulana","Telefonico"];
 const opProv = ["Enel Energia","Eni Plenitude","A2A Energia","Edison Energia","Iren Mercato","Hera Comm","Sorgenia","Acea Energia","Engie","E.ON","Illumia","Wekiwi","Pulsee","Octopus Energy","Green Network","Dolomiti Energia","Axpo","NeN","Tate","WindTre Luce e Gas","Fastweb Energia","S4 Energy","Barton Energy","Altro"];
+const opProvNoW3 = opProv.filter(o=>o!=="WindTre Luce e Gas");
 const brandMNP = ["TIM","Vodafone","WindTre","Iliad","Fastweb Mobile","PosteMobile","ho. Mobile","Kena Mobile","Very Mobile","CoopVoce","Spusu","Lyca Mobile","1Mobile","Tiscali Mobile","Digi Mobil","Noitel","Optima Mobile","Feder Mobile","Rabona Mobile","Elimobile","BT Italia","Segnoverde Mobile","Uno Mobile","Saily","Visitel","Ops! Mobile"];
 // ── v10 NEW BRANDS: Very Mobile + Ho. Mobile (privato, mobile-only) ──
 const VERY_C = "#1FA300";
@@ -2004,7 +2005,160 @@ const ENLuceGas = ({sd, uP, sub}) => {
 };
 
 
-const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,onOpenVFModal}) => {
+// ── v10 completeness engine ──
+const DET_LABELS={gnp:"GNP",gnpNum:"N. GNP",gnpOp:"Op. GNP",secondaLinea:"2ª Linea",gnp2L:"GNP 2ª Linea",gnp2LBrand:"Brand GNP 2L",gnp2LNum:"N. GNP 2L",domiciliazione:"Domiciliazione",opProvenienza:"Op. Provenienza",domiciliato:"Domiciliato",convergente:"Convergente",tipMob:"Tipologia",mnp:"MNP",easyPay:"EasyPay",tnpGa:"TNP GA",tnpTipo:"Tipo TNP",tnpModello:"Terminale",tnpImei:"IMEI TNP",tnpCount:"Q.tà TNP",packAccessori:"Pack Accessori",packAccessoriVal:"Importo Pack",packAccessoriQta:"Q.tà Accessori",cbTnp:"TNP CB",cbTnp2:"TNP CB",cbTnpTipo:"Tipo CB",cbTnpModello:"Term. CB",cbTnpImei:"IMEI CB",cbTnpCount:"Q.tà TNP CB",cbPackAccessori:"Pack Acc. CB",cbPackAccessoriVal:"Importo Pack CB",cbPackAccessoriQta:"Q.tà Acc. CB",cbTnpCell:"Cell. CB",cbTnpCC:"Cod.Cliente CB",cbTnpCodIns:"Cod.Ins. CB",cbTnpReload:"Reload CB",cbCambio:"Cambio Offerta",cbCambio2:"Cambio Offerta",cbCambioVal:"Offerta CB",cbCambioCell:"Cell. Cambio",cbCambioCC:"Cod.Cliente Cambio",cbCambioCodIns:"Cod.Ins. Cambio",cbCambioNumMod:"Numero Cambio",cbCambioCodIns2:"Cod.Ins. Cambio",cbCellulare:"Cellulare CB",cbCodContratto:"Cod. Contratto CB",cbCodIns2:"Cod.Ins. CB",cbTaglia:"Taglia CB",dcCbNumProv:"N. Provvisorio CB",dcCbIccid:"ICCID CB",cbSecurity:"Rete Sicura CB",cbSecurityCell:"Cell. Rete Sicura",cbSecurityCodIns:"Cod.Ins. Rete Sicura",cbTraslochi:"Traslochi",cbTraslochiNum:"N. Fisso Trasloco",cbTraslochiCodIns:"Cod.Ins. Trasloco",rfModello:"Modello Reload Forever",rfImei:"IMEI RF",cbRf:"Reload Forever CB",cbRfCodIns:"Cod.Ins. RF",cbAddonCodIns:"Cod.Ins. Add-on",cbAddonSecCell:"Cell. Security",cbAddonRoCell:"Cell. Reload Open",cbAddonRoImei:"IMEI Reload Open",tnpGaReload:"Reload GA",reloadForever:"Reload Forever",voceCasaCb:"Voce Casa CB",protectaCodIns:"Cod.Ins. Protecta",vfOffer:"Offerta",vfMnp:"MNP",vfMnpBrand:"Op. MNP",vfMnpNum:"N. MNP",vfDomicilio:"Domiciliata",vfConvergenza:"Convergenza",vfNumFisso:"N. Fisso Conv.",vfTnp:"TNP",vfSecurity:"Security",dcNumProv:"N. Provvisorio",dcNum:"Numero",dcIccid:"ICCID",dcCodIns:"Cod.Ins.",dcRicaricaAuto:"Ricarica Auto",vfFLockIn:"Lock In",vfFConvergenza:"Convergenza",vfFGnp:"GNP",vfFGnpBrand:"Op. GNP",vfFGnpNum:"N. GNP",vfFCodIns:"Cod.Ins.",vfFNumProvVisorio:"N. Provvisorio",vfFNumProv:"N. Provvisorio",vfFNumDef:"N. Definitivo",vfFIccid:"ICCID",vfbOffer:"Offerta",vfbMnp:"MNP",vfbMnpBrand:"Op. MNP",vfbMnpNum:"N. MNP",vfbTnp:"TNP",vfbModello:"Modello",vfbImei:"IMEI",vfbRataPiva:"Finanz.",vfbEasyRent:"Easy Rent",vfbCodIns:"Cod.Ins.",vfbNum:"Numero",vfbIccid:"ICCID",vfbCbOn:"Cambio Offerta",vfbCbCell:"Cellulare CB",vfbCbCodIns:"Cod.Ins. CB",vfbFGnp:"GNP",vfbFGnpBrand:"Op. GNP",vfbFGnpNum:"N. GNP",vfbFCodIns:"Cod.Ins.",vfbFNumProv:"N. Provvisorio",vfbFNumDef:"N. Definitivo",vfbFIccid:"ICCID",vfbFMnp:"MNP",vfbFMnpBrand:"Op. MNP",vfbFMnpNum:"N. MNP",vfbFCombNumProv:"N. Provv. Mobile",vfbFCombIccid:"ICCID Mobile",vfSolDigCodIns:"Cod.Ins.",verisureCodIns:"Cod.Ins.",kfCodIns:"Cod.Ins.",vcCodIns:"Cod.Ins.",fwOffer:"Offerta",fwMnp:"MNP",fwMnpBrand:"Op. MNP",fwMnpNum:"N. MNP",fwCodIns:"Cod.Ins.",fwNumProv:"N. Provvisorio",fwNumDef:"Numero",fwIccid:"ICCID",fwFGnp:"GNP",fwFGnpBrand:"Op. GNP",fwFGnpNum:"N. GNP",fwFCodIns:"Cod.Ins.",fwFNumProv:"N. Provvisorio",fwFNumDef:"N. Definitivo",fwPod:"POD",fwPdr:"PDR",fwEnCodIns:"Cod.Ins.",ilOffer:"Offerta",ilMnp:"MNP",ilDom:"Domiciliata",ilMnpBrand:"Op. MNP",ilMnpNum:"N. MNP",ilCodIns:"Cod.Ins.",ilNumProv:"N. Provvisorio",ilNumDef:"Numero",ilIccid:"ICCID",ilFGnp:"GNP",ilFGnpBrand:"Op. GNP",ilFGnpNum:"N. GNP",ilFCodIns:"Cod.Ins.",ilFNumProv:"N. Provvisorio",ilFNumDef:"N. Definitivo",ilFwaCodIns:"Cod.Ins.",ilFwaIccid:"ICCID",ilBizOffer:"Offerta",ilBizMnp:"MNP",ilBizMnpBrand:"Op. MNP",ilBizDom:"Domiciliazione",ilBizNum:"Numero",ilBizIccid:"ICCID",ilBizNumDef:"N. Definitivo",ilBizCodIns:"Cod.Ins.",enPod:"POD",enPdr:"PDR",enCodIns:"Cod.Ins.",enProv:"Op. Provenienza",fwEnProv:"Op. Provenienza",w3SostCell:"Numero",w3SostIccid:"ICCID",w3SostCodContr:"Cod. Contratto",w3SostCodIns:"Cod.Ins.",vfSostCell:"Numero",vfSostCodIns:"Cod.Ins.",timOffer:"Offerta",timMnp:"MNP",timMnpBrand:"Op. MNP",timMnpNum:"N. MNP",timTnp:"TNP",timModello:"Terminale",timSpedizione:"Spedizione",timFinanziato:"Finanziato",timCodPratica:"Codice Pratica",timVisionBox:"Box TIM Vision",timVisionTaglia:"TIM Vision",timVisionNumContr:"N. Contratto Vision",timImei:"IMEI",timNumProv:"N. Provvisorio",timNum:"Numero",timIccid:"ICCID",timCodIns:"Cod.Ins.",timFOffer:"Prodotto Fisso",timFGnp:"GNP",timFGnpBrand:"Op. GNP",timFGnpNum:"N. GNP",timFNumProv:"N. Fisso Provvisorio",timFCodIns:"Codice",timFVision:"TIM Vision",timFVisionTaglia:"TIM Vision",timFVisionNumContr:"N. Contratto Vision",timTpTwin:"Twin",timTpSeriale:"Seriale Telepass",timTpRecapito:"Recapito",timTpCodIns:"Cod.Ins.",veryOffer:"Offerta",veryMnp:"MNP",veryMnpBrand:"Op. MNP",veryMnpNum:"N. MNP",veryRicaricaAuto:"Ricarica Auto",veryFascia:"Tipologia offerta",veryCodIns:"Cod.Ins.",veryNumProv:"N. Provvisorio",veryNum:"Numero",veryIccid:"ICCID",hoOffer:"Offerta",hoMnp:"MNP",hoMnpBrand:"Op. MNP",hoMnpNum:"N. MNP",hoRicaricaAuto:"Ricarica Auto",hoFascia:"Tipologia offerta",hoCodIns:"Cod.Ins.",hoNumProv:"N. Provvisorio",hoNum:"Numero",hoIccid:"ICCID"};
+const DET_SKIP={active:1,fields:1,contract:1,hasContract:1,codiceOverride:1,vfOffers:1,vfContratti:1,vfCompassItems:1,fwFSecLineCount:1};
+const DET_SELOBJ={securitySel:"Security",tnpGaReloadSel:"Reload GA",cbTnpReloadSel:"Reload CB",cbAddonSel:"Add-on CB",vfbKaskoSel:"Kasko",addons:"Add-on",vfFAddons:"Add-on"};
+const detYN=(v)=>(v===true||v==="Sì")?"Sì":(v===false?null:v);
+const extractDetails=(d)=>{
+  const out={};
+  Object.keys(DET_SELOBJ).forEach(k=>{const o=d[k];if(o&&typeof o==="object"){const ks=Object.keys(o).filter(x=>o[x]);if(ks.length)out[DET_SELOBJ[k]]=ks.join(", ");}});
+  const slotSum=(s)=>{let x=s.tipo;if(s.modello)x+=" - "+s.modello+(s.imei?" ("+s.imei+")":"");if(Array.isArray(s.compassItems)){const ci=s.compassItems.filter(it=>it&&it.modello).map(it=>it.modello+(it.imei?" ("+it.imei+")":""));if(ci.length)x+=" - "+ci.join(", ");}return x;};
+  if(Array.isArray(d.vfTnpList)&&d.vfTnpList.length){const parts=d.vfTnpList.filter(s=>s&&s.tipo).map(slotSum);if(parts.length)out["TNP Dispositivi"]=parts.join(" | ");}
+  if(Array.isArray(d.cbTnpList)&&d.cbTnpList.length){const parts=d.cbTnpList.filter(s=>s&&s.tipo).map(slotSum);if(parts.length)out["TNP CB Dispositivi"]=parts.join(" | ");}
+  const joinPairs=(mods,imeis,lbl)=>{if(Array.isArray(mods)){const p=mods.map((m,i)=>m?(m+(imeis&&imeis[i]?" ("+imeis[i]+")":"")):"").filter(Boolean);if(p.length)out[lbl]=p.join(" | ");}};
+  joinPairs(d.tnpModelli,d.tnpImeis,"Terminali TNP");
+  joinPairs(d.cbTnpModelli,d.cbTnpImeis,"Terminali CB");
+  if(Array.isArray(d.fwFSecLines)){const sl=d.fwFSecLines.filter(Boolean);if(sl.length)out["2e Linee"]=sl.join(", ");}
+  Object.keys(d).forEach(k=>{if(DET_SKIP[k]||DET_SELOBJ[k])return;const v=d[k];if(v===null||v===undefined||v===""||v===false)return;if(typeof v==="object")return;const lbl=DET_LABELS[k]||k;const yv=detYN(v);if(yv!==null&&yv!==undefined&&yv!=="")out[lbl]=yv;});
+  return out;
+};
+
+const FIXED_NUM_KEYS={num_fisso_prov:1,cbTraslochiNum:1,num_fisso_def:1,vfFNumProv:1,vfFNumDef:1,vfFNumProvVisorio:1,fwFNumProv:1,fwFNumDef:1,ilFNumProv:1,ilFNumDef:1,timFNumProv:1,vfbFNumProv:1,vfbFNumDef:1,vfFGnpNum:1,fwFGnpNum:1,ilFGnpNum:1,timFGnpNum:1,vfbFGnpNum:1,gnpNum:1,gnp2LNum:1,vfNumFisso:1};
+const MK_NUM={dcNumProv:1,dcNum:1,vfMnpNum:1,dcCbNumProv:1,cbCambioNumMod:1,fwNumProv:1,fwNumDef:1,fwMnpNum:1,ilNumProv:1,ilNumDef:1,ilMnpNum:1,ilBizNum:1,ilBizNumDef:1,timNumProv:1,timNum:1,timMnpNum:1,timFNumProv:1,veryNumProv:1,veryNum:1,veryMnpNum:1,hoNumProv:1,hoNum:1,hoMnpNum:1,vfbNum:1,vfbMnpNum:1,vfbFNumProv:1,vfbFNumDef:1,vfbFMnpNum:1,vfbFCombNumProv:1,vfFNumProv:1,vfFNumDef:1,vfFNumProvVisorio:1,numProvv:1,numDef:1,numProv:1,numero:1,mobNumProv:1,mobNumDef:1,mobNum:1,w3SostCell:1,vfSostCell:1};
+const MK_IMEI={tnpImei:1,cbTnpImei:1,rfImei:1,vfbImei:1,timImei:1,imei:1};
+const _bNum=(v)=>{const s=String(v||"");return s.length>0&&(s.length<9||s.length>10||/\D/.test(s));};
+const _bNumFx=(v)=>{const s=String(v||"");return s.length>0&&(s.length<7||s.length>11||/\D/.test(s));};
+const _bIc=(v)=>{const s=String(v||"");return s.length>0&&(s.length!==19||/\D/.test(s));};
+const _bIm=(v)=>{const s=String(v||"");return s.length>0&&(s.length!==15||/[^A-Za-z0-9]/.test(s));};
+const _bPod=(v)=>{const s=String(v||"").toUpperCase();return s.length>0&&(s.length<14||s.length>15||!/^IT/.test(s)||/[^A-Z0-9]/.test(s));};
+const _bPdr=(v)=>{const s=String(v||"");return s.length>0&&(s.length!==14||/\D/.test(s));};
+const _subHasInvalid=(d)=>{let bad=false;const ck=(o)=>{if(!o||typeof o!=="object")return;Object.keys(o).forEach(k=>{const val=o[k];if(val&&typeof val==="object"){if(Array.isArray(val)){val.forEach(it=>{if(it&&typeof it==="object"){if(_bIm(it.imei))bad=true;if(_bIm(it.imei2))bad=true;if(Array.isArray(it.compassItems))it.compassItems.forEach(ci=>{if(ci&&_bIm(ci.imei))bad=true;if(ci&&_bIm(ci.imei2))bad=true;});}});}else{ck(val);}return;}if(/iccid/i.test(k)){if(_bIc(val))bad=true;}else if(MK_IMEI[k]||/imei/i.test(k)){if(_bIm(val))bad=true;}else if(/pdr/i.test(k)){if(_bPdr(val))bad=true;}else if(/pod/i.test(k)){if(_bPod(val))bad=true;}else if(FIXED_NUM_KEYS[k]){if(_bNumFx(val))bad=true;}else if(MK_NUM[k]||/tel|cell|phone/i.test(k)){if(_bNum(val))bad=true;}});};ck(d);return bad;};
+const _NE=(v)=>v!==undefined&&v!==null&&String(v).trim()!=="";
+const _vfRigaOk=(r,modo)=>{if(modo==="Entrambi"){if(!r.tipo)return false;if(r.tipo==="Bundle")return _NE(r.codice)&&_NE(r.tipoBundleVal);return _NE(r.imei2)&&_NE(r.valore);}if(modo==="Bundle")return _NE(r.codice)&&_NE(r.tipoBundleVal);if(modo==="Accessorio")return _NE(r.imei2)&&_NE(r.valore);return true;};
+const _vfCompassOk=(it)=>{if(!_NE(it.codicePratica))return false;if(it.bundleOn||it.accessorioOn){const modo=it.bundleOn&&it.accessorioOn?"Entrambi":it.bundleOn?"Bundle":"Accessorio";const righe=it.righe||[];if(!righe.length||!righe.every(r=>_vfRigaOk(r,modo)))return false;}return true;};
+const _vfSlotOk=(s)=>{if(!s||!s.tipo)return false;if(TNP_TAGLIA_OPTS.indexOf(s.tipo)>=0)return _NE(s.modello)&&_NE(s.imei);if(COMPASS_OPTS.indexOf(s.tipo)>=0||s.tipo==="Forward"){const items=(s.compassItems&&s.compassItems.length)?s.compassItems:[];if(!items.length)return false;return items.every(_vfCompassOk);}return true;};
+const _vfTnpListOk=(list)=>Array.isArray(list)&&list.length>0&&list.every(_vfSlotOk);
+const _vfStartedSlotsOk=(list)=>!Array.isArray(list)||list.filter(s=>s&&s.tipo).every(_vfSlotOk);
+const subComplete=(sub,d)=>{
+  if(!d)return false;
+  const F=(k)=>_NE(d[k]);
+  const C=d.contract||{};
+  const CF=(k)=>_NE(C[k]);
+  // VODAFONE privato GA
+  if(sub.isVFMobile){
+    if(!F("vfOffer"))return false;
+    const dv=d.vfOffer==="DOLCE VITA"||d.vfOffer==="DOLCE VITA+";
+    if(!dv){if(d.vfMnp==null)return false;if(d.vfMnp==="Sì"&&!(F("vfMnpBrand")&&F("vfMnpNum")))return false;if(d.vfDomicilio==null)return false;if(d.vfConvergenza==null)return false;if(d.vfConvergenza==="Sì"&&!F("vfNumFisso"))return false;if(d.vfTnp==null)return false;if(d.vfSecurity==null)return false;}
+    if(d.vfTnp==="Sì"){if(!_vfTnpListOk(d.vfTnpList))return false;}
+    if(d.vfMnp==="Sì"){if(!F("dcNumProv"))return false;}else{if(!F("dcNum"))return false;}
+    if(!F("dcIccid"))return false;
+    if(d.vfDomicilio==="Smart"&&d.dcRicaricaAuto==null)return false;
+    return true;
+  }
+  if(sub.isCBVF){ // VF CB privato: almeno un'azione completa
+    let any=false;
+    if(d.cbTnp===true){any=true;if(!(F("cbCellulare")&&F("cbCodContratto")))return false;if(!_vfTnpListOk(d.cbTnpList))return false;}
+    if(d.cbCambio2===true){any=true;if(!F("cbCambioNumMod"))return false;}
+    if(d.cbSecurity===true){any=true;if(!F("cbSecurityCell"))return false;}
+    if(d.cbTraslochi===true){any=true;if(!F("cbTraslochiNum"))return false;}
+    return any;
+  }
+  if(sub.isAssicBiz){return _NE((d.fields||{}).assicBizSel);}
+  if(sub.isProtecta){if(sub.isBizProtecta)return _NE(d.protectaCodIns);return _NE((d.fields||{}).protectaKit);}
+  if(sub.isVerisure){return true;}
+  if(sub.isKaskoFacile){const f=d.fields||{};return _NE(f.kfImei)&&_NE(f.kfTelefono)&&_NE(f.kfSeriale)&&_NE(f.kfTipologia);}
+  if(sub.isVFCare){const f=d.fields||{};return _NE(f.vcTelefono)&&_NE(f.vcImei);}
+  if(sub.isVFBizMobile){
+    if(!F("vfbOffer"))return false;
+    if(d.vfbMnp==="Sì"&&!(F("vfbMnpBrand")&&F("vfbMnpNum")))return false;
+    if(d.vfbTnp==null)return false;
+    if(d.vfbTnp==="Sì"&&!(F("vfbModello")&&F("vfbImei")&&_NE(d.vfbRataPiva)))return false;
+    if(d.vfbCbOn&&!F("vfbCbCell"))return false;
+    if(!F("vfbIccid")||!F("vfbCodIns"))return false;
+    return true;
+  }
+  if(sub.isVFFisso){return F("vfFCodIns");}
+  if(sub.isVFFissoBiz){return F("vfbFCodIns")&&(F("vfbFNumProv")||F("vfbFNumDef"));}
+  if(sub.isVFSolDig){return F("vfSolDigCodIns");}
+  if(sub.isVFSostSim){return F("vfSostCell")&&F("vfSostCodIns");}
+  if(sub.isW3SostSim){return F("w3SostCell")&&F("w3SostIccid")&&F("w3SostCodContr")&&F("w3SostCodIns");}
+  // FASTWEB
+  if(sub.isFWMobile){if(!F("fwOffer"))return false;const isMnp=(d.fwMnp!=null)?(d.fwMnp==="Sì"):(!!d.fwOffer&&d.fwOffer.indexOf("MNP")>=0);if(isMnp&&!(F("fwMnpBrand")&&F("fwMnpNum")))return false;return F("fwCodIns")&&F("fwIccid")&&(isMnp?F("fwNumProv"):(F("fwNumDef")||F("fwNumProv")));}
+  if(sub.isFWFisso){if(d.fwFGnp==="Sì"&&!(F("fwFGnpBrand")&&F("fwFGnpNum")))return false;return F("fwFCodIns")&&(F("fwFNumProv")||F("fwFNumDef"));}
+  if(sub.isFWEnergia){const gas=sub.title==="GAS";return F("fwEnCodIns")&&(gas?F("fwPdr"):F("fwPod"));}
+  // ILIAD
+  if(sub.isILMobile){if(!F("ilOffer"))return false;if(d.ilMnp==null)return false;if(d.ilMnp==="Sì"&&!(F("ilMnpBrand")&&F("ilMnpNum")))return false;if(d.ilDom==null)return false;return F("ilCodIns")&&F("ilIccid")&&(F("ilNumProv")||F("ilNumDef"));}
+  if(sub.isILBizMobile){if(d.ilBizMnp==="Sì"&&!F("ilBizMnpBrand"))return false;return F("ilBizCodIns")&&F("ilBizIccid")&&(F("ilBizNum")||F("ilBizNumDef"));}
+  if(sub.isILFisso){if(d.ilFGnp==null)return false;if(d.ilFGnp==="Sì")return F("ilFCodIns")&&F("ilFNumProv")&&F("ilFNumDef");return F("ilFCodIns")&&F("ilFNumDef");}
+  if(sub.isILFwa){return F("ilFwaCodIns")&&F("ilFwaIccid");}
+  // TIM
+  if(sub.isTimMobile){if(!F("timOffer"))return false;if(d.timMnp==null)return false;if(d.timMnp==="Sì"&&!(F("timMnpBrand")&&F("timMnpNum")))return false;if(d.timTnp==null)return false;if(d.timTnp==="Sì"){if(!F("timModello"))return false;if(d.timSpedizione==null)return false;if(d.timFinanziato==null)return false;if(d.timFinanziato==="Sì"&&!F("timCodPratica"))return false;}if(d.timVisionBox==null)return false;if(d.timVisionBox==="Sì"&&!(F("timVisionTaglia")&&F("timVisionNumContr")))return false;if(!F("timCodIns")||!F("timIccid"))return false;if(d.timMnp==="Sì"?!F("timNumProv"):!F("timNum"))return false;if(d.timSpedizione==="No"&&!F("timImei"))return false;return true;}
+  if(sub.isTimFisso){if(!F("timFOffer"))return false;if(d.timFGnp==null)return false;if(d.timFGnp==="Sì"&&!(F("timFGnpBrand")&&F("timFGnpNum")))return false;if(!F("timFNumProv")||!F("timFCodIns"))return false;if(d.timFVision==null)return false;if(d.timFVision==="Sì"&&!(F("timFVisionTaglia")&&F("timFVisionNumContr")))return false;return true;}
+  if(sub.isTimTelepass){if(d.timTpTwin==null)return false;return F("timTpSeriale")&&F("timTpRecapito")&&F("timTpCodIns");}
+  if(sub.isVeryMobile){if(!F("veryOffer")||d.veryMnp==null)return false;if(d.veryMnp==="Sì"&&!(F("veryMnpBrand")&&F("veryMnpNum")))return false;if(d.veryRicaricaAuto==null||!F("veryFascia"))return false;return F("veryCodIns")&&F("veryIccid")&&(d.veryMnp==="Sì"?F("veryNumProv"):F("veryNum"));}
+  if(sub.isHoMobile){if(!F("hoOffer")||d.hoMnp==null)return false;if(d.hoMnp==="Sì"&&!(F("hoMnpBrand")&&F("hoMnpNum")))return false;if(d.hoRicaricaAuto==null||!F("hoFascia"))return false;return F("hoCodIns")&&F("hoIccid")&&(d.hoMnp==="Sì"?F("hoNumProv"):F("hoNum"));}
+  // ENERGY
+  if(sub.isENLuceGas){const luce=sub.enProd==="Luce"||sub.enProd==="LuceRID";return F("enCodIns")&&(luce?F("enPod"):F("enPdr"));}
+  // WINDTRE Mobile GA
+  if(sub.isMobile){
+    const f=d.fields||{};
+    if(d.tipMob==null)return false;
+    const isUnd=d.tipMob==="Underground";
+    if(!isUnd&&d.mnp==null)return false;
+    if(d.easyPay==null)return false;
+    if(sub.mobOffers&&!_NE(f.offerta))return false;
+    if(d.easyPay==="Sì"||d.easyPay===true){
+      if(d.tnpGa==null)return false;
+      if(d.tnpGa==="Sì"||d.tnpGa===true){
+        if(!_NE(d.tnpTipo))return false;
+        if(!String(d.tnpTipo).startsWith("Finanziamento")){if(!_NE(d.tnpModello)||!_NE(d.tnpImei))return false;}
+        if(d.packAccessori===true&&!(_NE(d.packAccessoriVal)&&_NE(d.packAccessoriQta)))return false;
+        if(d.tnpGaReload==null)return false;
+        if((d.tnpGaReload==="Sì"||d.tnpGaReload===true)&&!(d.tnpGaReloadSel&&Object.keys(d.tnpGaReloadSel).some(k=>d.tnpGaReloadSel[k])))return false;
+      }
+      if((d.tnpGa==="No"||d.tnpGa===false)&&d.reloadForever==null)return false;
+    }
+    return true;
+  }
+  // WINDTRE Mobile Business
+  if(sub.isMobileBiz){
+    const f=d.fields||{};
+    if(d.mnp==null)return false;
+    if(sub.bizOffers&&!_NE(f.offerta))return false;
+    if(d.tnpGa==null)return false;
+    if((d.tnpGa==="Sì"||d.tnpGa===true)&&!_NE(d.tnpTipo))return false;
+    return true;
+  }
+  // WINDTRE CB (privato): almeno un'azione completa
+  if(sub.isCB){
+    let any=false;
+    if(d.cbTnp===true){any=true;if(!(_NE(d.cbTnpCell)&&_NE(d.cbTnpCC)&&_NE(d.cbTnpCodIns)))return false;if(_NE(d.cbTnpTipo)&&!String(d.cbTnpTipo).startsWith("Finanziamento")){if(!_NE(d.cbTnpModello)||!_NE(d.cbTnpImei))return false;}if(d.cbTnpReload==null)return false;if(d.cbTnpReload===true&&!(d.cbTnpReloadSel&&Object.keys(d.cbTnpReloadSel).some(k=>d.cbTnpReloadSel[k])))return false;}
+    if(d.cbCambio===true){any=true;if(!_NE(d.cbCambioVal))return false;if(!(_NE(d.cbCambioCell)&&_NE(d.cbCambioCodIns)))return false;const _needCC=["Caring","CL0","CL1","CL2","CL3"].indexOf(d.cbCambioVal)<0;if(_needCC&&!_NE(d.cbCambioCC))return false;}
+    if(d.cbRf===true){any=true;if(!(_NE(d.rfModello)&&_NE(d.rfImei)&&_NE(d.cbRfCodIns)))return false;}
+    if(d.cbAddon===true){any=true;const _addCod=_NE(d.cbAddonCodIns)||_NE(d.cbTnpCodIns)||_NE(d.cbCambioCodIns);if(!(d.cbAddonSel&&Object.keys(d.cbAddonSel).some(k=>d.cbAddonSel[k]))||!_addCod)return false;if(d.cbAddonSel&&d.cbAddonSel["Security"]&&!_NE(d.cbAddonSecCell))return false;if(d.cbAddonSel&&d.cbAddonSel["Reload Open"]&&!(_NE(d.cbAddonRoCell)&&_NE(d.cbAddonRoImei)))return false;}
+    return any;
+  }
+  if(sub.isFisso){const _isVC=sub.isVoceCasa||(sub.hasVoceCasaQ&&(d.voceCasaCb===true||d.voceCasaCb==="Sì"));if(_isVC&&!(CF("codice_contratto")&&CF("num_fisso_prov")&&CF("imei")))return false;if(sub.hasFwaImei&&!CF("imei"))return false;if(sub.has2LQ&&(d.secondaLinea===true||d.secondaLinea==="Sì")){if(d.gnp2L==null)return false;if((d.gnp2L==="Sì"||d.gnp2L===true)&&!(_NE(d.gnp2LBrand)&&_NE(d.gnp2LNum)))return false;}return true;}
+  if(sub.id==="luce"){return CF("pod");}
+  if(sub.id==="gas"){return CF("pdr");}
+  // default: completo se ci sono dettagli (flussi senza campi testuali obbligatori specifici)
+  return Object.keys(extractDetails(d)).length>0;
+};
+const subBadge=(d,dupFn,sub,missing)=>{
+  if(!d||!d.active)return null;
+  const det=extractDetails(d);
+  const n=Object.keys(det).length;
+  const _truthy=(o)=>o&&Object.keys(o).some(k=>{const v=o[k];return v!==null&&v!==undefined&&v!==""&&v!==false;});
+  const hasData=n>0||_truthy(d.contract)||_truthy(d.fields)||(sub&&sub.isVerisure);
+  let invalid=_subHasInvalid(d);
+  if(!invalid&&dupFn){if(dupFn("POD",d.fwPod)||dupFn("POD",d.enPod)||(d.contract&&dupFn("POD",d.contract.pod))||dupFn("PDR",d.fwPdr)||dupFn("PDR",d.enPdr)||(d.contract&&dupFn("PDR",d.contract.pdr)))invalid=true;}
+  if(!hasData)return {st:"empty",label:"● Da compilare",bg:"rgba(255,255,255,0.06)",fg:"#94a3b8"};
+  if(invalid||missing||(sub&&!subComplete(sub,d)))return {st:"warn",label:"⚠ Incompleto",bg:"rgba(245,158,11,0.14)",fg:"#f59e0b"};
+  return {st:"ok",label:"✓ Completo",bg:"rgba(40,167,69,0.12)",fg:"#28a745"};
+};
+
+const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,onOpenVFModal,dupCheck}) => {
   const _r = rawSd || {};
   const sd = {active:true,fields:_r.fields||{},contract:_r.contract||{},gnp:_r.gnp||false,gnpNum:_r.gnpNum||"",gnpOp:_r.gnpOp||"",secondaLinea:_r.secondaLinea||false,gnp2L:_r.gnp2L!=null?_r.gnp2L:null,gnp2LBrand:_r.gnp2LBrand||"",gnp2LNum:_r.gnp2LNum||"",domiciliazione:_r.domiciliazione||false,opProvenienza:_r.opProvenienza||"",codiceOverride:_r.codiceOverride||"",addons:_r.addons||{},domiciliato:_r.domiciliato!=null?_r.domiciliato:null,convergente:_r.convergente!=null?_r.convergente:null,tipMob:_r.tipMob!=null?_r.tipMob:null,mnp:_r.mnp!=null?_r.mnp:null,easyPay:_r.easyPay!=null?_r.easyPay:null,tnpGa:_r.tnpGa!=null?_r.tnpGa:null,tnpTipo:_r.tnpTipo||"",tnpModello:_r.tnpModello||"",tnpImei:_r.tnpImei||"",tnpCount:_r.tnpCount||null,tnpModelli:_r.tnpModelli||[],tnpImeis:_r.tnpImeis||[],packAccessori:_r.packAccessori!=null?_r.packAccessori:null,packAccessoriVal:_r.packAccessoriVal||"",packAccessoriQta:_r.packAccessoriQta||"",cbTnp:_r.cbTnp||false,cbTnpTipo:_r.cbTnpTipo||"",cbTnpModello:_r.cbTnpModello||"",cbTnpImei:_r.cbTnpImei||"",cbTnpCount:_r.cbTnpCount||null,cbTnpModelli:_r.cbTnpModelli||[],cbTnpImeis:_r.cbTnpImeis||[],cbPackAccessori:_r.cbPackAccessori!=null?_r.cbPackAccessori:null,cbPackAccessoriVal:_r.cbPackAccessoriVal||"",cbPackAccessoriQta:_r.cbPackAccessoriQta||"",cbTnpCell:_r.cbTnpCell||"",cbTnpCC:_r.cbTnpCC||"",cbTnpCodIns:_r.cbTnpCodIns||"",cbTnpReload:_r.cbTnpReload!=null?_r.cbTnpReload:null,cbTnpReloadSel:_r.cbTnpReloadSel||{},cbCambio:_r.cbCambio||false,cbCambioVal:_r.cbCambioVal||"",cbCambioCell:_r.cbCambioCell||"",cbCambioCC:_r.cbCambioCC||"",cbCambioCodIns:_r.cbCambioCodIns||"",cbAddonSel:_r.cbAddonSel||{},rfModello:_r.rfModello||"",rfImei:_r.rfImei||"",cbRf:_r.cbRf||false,cbAddonCodIns:_r.cbAddonCodIns||"",cbRfCodIns:_r.cbRfCodIns||"",tnpGaReload:_r.tnpGaReload!=null?_r.tnpGaReload:null,tnpGaReloadSel:_r.tnpGaReloadSel||{},reloadForever:_r.reloadForever!=null?_r.reloadForever:null,securitySel:_r.securitySel||{},voceCasaCb:_r.voceCasaCb!=null?_r.voceCasaCb:null,vfOffers:_r.vfOffers||{},vfContratti:_r.vfContratti||{},vfOffer:_r.vfOffer||null,vfMnp:_r.vfMnp||null,vfMnpBrand:_r.vfMnpBrand||"",vfMnpNum:_r.vfMnpNum||"",vfDomicilio:_r.vfDomicilio||null,vfConvergenza:_r.vfConvergenza||null,vfNumFisso:_r.vfNumFisso||"",vfTnp:_r.vfTnp||null,vfTnpTipo:_r.vfTnpTipo||null,vfTnpCount:_r.vfTnpCount||null,vfTnpItems:_r.vfTnpItems||[],vfCompassTipo:_r.vfCompassTipo||null,vfFConvergenza:_r.vfFConvergenza||null,vfFGnp:_r.vfFGnp||null,vfFGnpBrand:_r.vfFGnpBrand||"",vfFGnpNum:_r.vfFGnpNum||"",vfFLockIn:_r.vfFLockIn||null,
     vfTnpList:_r.vfTnpList||[],cbTnpList:_r.cbTnpList||[],
@@ -2021,6 +2175,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
     vfSolDigCodIns:_r.vfSolDigCodIns||"",fwOffer:_r.fwOffer||null,fwMnpBrand:_r.fwMnpBrand||"",fwMnpNum:_r.fwMnpNum||"",fwModello:_r.fwModello||"",fwImei:_r.fwImei||"",fwCodIns:_r.fwCodIns||"",fwNumProv:_r.fwNumProv||"",fwNumDef:_r.fwNumDef||"",fwIccid:_r.fwIccid||"",fwFGnp:_r.fwFGnp||null,fwFGnpBrand:_r.fwFGnpBrand||"",fwFGnpNum:_r.fwFGnpNum||"",fwFCodIns:_r.fwFCodIns||"",fwFNumProv:_r.fwFNumProv||"",fwFNumDef:_r.fwFNumDef||"",fwPod:_r.fwPod||"",ilOffer:_r.ilOffer||null,ilMnp:_r.ilMnp||null,ilMnpBrand:_r.ilMnpBrand||"",ilMnpNum:_r.ilMnpNum||"",ilCodIns:_r.ilCodIns||"",ilNumProv:_r.ilNumProv||"",ilNumDef:_r.ilNumDef||"",ilIccid:_r.ilIccid||"",ilFGnp:_r.ilFGnp||null,ilFCodIns:_r.ilFCodIns||"",ilFNumProv:_r.ilFNumProv||"",ilFNumDef:_r.ilFNumDef||"",enCodIns:_r.enCodIns||"",enPod:_r.enPod||"",enPdr:_r.enPdr||""};
   const f=sd.fields;
   const c=sd.contract;
+  const _bd = _r.active ? subBadge(sd, dupCheck, sub, false) : null;
   const gaOn=sale.ga&&sale.ga.active;
   const gaC=gaOn&&sale.ga.contract?sale.ga.contract:{};
   const toggleAddon=(name)=>{const cur=sd.addons[name];uP(group.id,si,sub.id,"addons",{...sd.addons,[name]:!cur})};
@@ -2046,7 +2201,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
 
   const content = (
     <div style={{marginBottom:10,padding:10,background:"rgba(255,255,255,0.02)",borderRadius:8,border:"1px solid "+group.color+"30"}}>
-      <div style={{fontSize:11,fontWeight:700,color:group.color,marginBottom:6}}>{sub.title}</div>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}><div style={{fontSize:11,fontWeight:700,color:group.color}}>{sub.title}</div>{_bd&&<span style={{fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:6,background:_bd.bg,color:_bd.fg,whiteSpace:"nowrap"}}>{_bd.label}</span>}</div>
       {sub.isVeryMobile&&<SimpleMobile sd={_r} uP={(k,v)=>uP(group.id,si,sub.id,k,v)} pfx="very" accent={group.color} codici={VERY_CODICI_NEGOZIO} sc={sessionCode}/>}
       {sub.isHoMobile&&<SimpleMobile sd={_r} uP={(k,v)=>uP(group.id,si,sub.id,k,v)} pfx="ho" accent={group.color} codici={HO_CODICI_NEGOZIO} sc={sessionCode}/>}
       {sub.isTimMobile&&<TIMMobile sd={_r} uP={(k,v)=>uP(group.id,si,sub.id,k,v)} sc={sessionCode}/>}
@@ -2612,7 +2767,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
             <TF l="IMEI" v={c.imei||""} o={v=>uC(group.id,si,sub.id,"imei",v)} p="15 cifre" nt="Barcode 📷"/>
           </>}
           {sub.ct==="lg"&&<>
-            <DD l="Operatore provenienza" r v={sd.opProvenienza||""} o={v=>uP(group.id,si,sub.id,"opProvenienza",v)} vals={opProv}/>
+            <DD l="Operatore provenienza" r v={sd.opProvenienza||""} o={v=>uP(group.id,si,sub.id,"opProvenienza",v)} vals={opProvNoW3}/>
             <TF l="Codice Contratto" r v={c.codice_contratto||""} o={v=>uC(group.id,si,sub.id,"codice_contratto",v)} p="es. 167942"/>
             {sub.id==="luce"&&<TF l="POD" v={c.pod||""} o={v=>uC(group.id,si,sub.id,"pod",v.toUpperCase().replace(/[^A-Z0-9]/g,""))} p="IT001E..." nt="Alfanumerico"/>}
             {sub.id==="gas"&&<TF l="PDR" v={c.pdr||""} o={v=>uC(group.id,si,sub.id,"pdr",v.replace(/[^A-Za-z0-9]/g,""))} p="Codice PDR" nt="Alfanumerico"/>}
@@ -2732,6 +2887,9 @@ function CRM() {
     if(brand==="very"||brand==="ho"){const pfx=brand;const gc=brand==="very"?getVERY(tipoCliente):getHO(tipoCliente);gc.forEach(g=>{(sales[g.id]||[{}]).forEach((sale,si)=>{g.subs.forEach(sub=>{const d=sale[sub.id];if(d&&d.active){const K=s=>pfx+s;const det={hasContract:!!sub.hasContract};if(d[K("Offer")])det["Offerta"]=d[K("Offer")];if(d[K("Mnp")]!=null)det["MNP"]=d[K("Mnp")];if(d[K("MnpBrand")])det["Op. MNP"]=d[K("MnpBrand")];if(d[K("MnpNum")])det["N. MNP"]=d[K("MnpNum")];if(d[K("RicaricaAuto")]!=null)det["Ricarica Auto"]=d[K("RicaricaAuto")];if(d[K("Fascia")])det["Tipologia offerta"]=d[K("Fascia")];if(d[K("CodIns")])det["Cod.Ins."]=d[K("CodIns")];if(d[K("NumProv")])det["N. Provvisorio"]=d[K("NumProv")];if(d[K("Num")])det["Numero"]=d[K("Num")];if(d[K("Iccid")])det["ICCID"]=d[K("Iccid")];items.push({macro:g.title,macroColor:g.color,macroIcon:g.icon,sub:sub.title,saleNum:si+1,details:det})}})})})}
     return items;
   },[brand,sales,skyS,tipoCliente]);
+  const podPdrMap=(()=>{const m={};const add=(t,v)=>{if(v&&String(v).trim()){const k=t+":"+String(v).trim().toUpperCase();m[k]=(m[k]||0)+1;}};(cats||[]).forEach(g=>{(sales[g.id]||[]).forEach(row=>{if(!row)return;g.subs.forEach(su=>{const d=row[su.id];if(!d||!d.active)return;add("POD",d.fwPod);add("POD",d.enPod);add("PDR",d.fwPdr);add("PDR",d.enPdr);if(d.contract){add("POD",d.contract.pod);add("PDR",d.contract.pdr);}});});});return m;})();
+  const dupCheck=(t,val)=>{if(!val||!String(val).trim())return false;return (podPdrMap[t+":"+String(val).trim().toUpperCase()]||0)>1;};
+  const blockSaveAll=(()=>{let bad=false;(cats||[]).forEach(g=>{(sales[g.id]||[]).forEach(row=>{if(!row)return;g.subs.forEach(su=>{const d=row[su.id];if(d&&d.active){const b=subBadge(d,dupCheck,su,false);if(b&&b.st!=="ok")bad=true;}});});});return bad;})();
 
   const addCart=()=>{
     const items=colItems();
@@ -2986,7 +3144,7 @@ const finalSubmit = async () => {
   };
 
 
-  const tCI=cart.reduce((s,g)=>s+g.items.length,0)+colItems().length;
+  const tCI=cart.reduce((s,g)=>s+g.items.length,0)+colItems().length+margItems.length;
   const bC=bObj?bObj.color:"#8892b0";
   const bG=bObj?bObj.gradient:"linear-gradient(135deg,#374151,#6b7280)";
   const gSS=i=>{if(i===0)return brand?"done":"active";if(i===1)return !brand?"pending":tipoCliente?"done":"active";if(i===2)return !tipoCliente?"pending":showAna?"done":"active";return showAna?"active":"pending"};
@@ -2995,7 +3153,7 @@ const finalSubmit = async () => {
   if(showCart){
     const curI=colItems();const allG=[...cart];
     if(curI.length>0&&bObj)allG.push({brandId:brand,brandLabel:bObj.label,brandIcon:bObj.icon,brandColor:bObj.color,items:curI,isCurrent:true});
-    const tp=allG.reduce((s,g)=>s+g.items.length,0);
+    const tp=allG.reduce((s,g)=>s+g.items.length,0)+margItems.length;
     const onlyMarg=allG.length===0&&margItems.length>0;
     const cartContent = (
       <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6 space-y-4" style={{fontFamily:"Inter,-apple-system,sans-serif",minHeight:"100vh"}}>
@@ -3078,7 +3236,7 @@ const finalSubmit = async () => {
 <button onClick={handleDownloadPDF} disabled={!ana.nome && cart.length === 0} style={{padding:"11px 26px",borderRadius:10,border:"1px solid rgba(99, 102, 241, 0.3)",background:"rgba(99, 102, 241, 0.1)",color:"#818cf8",fontSize:13,fontWeight:700,cursor:(ana.nome || cart.length > 0) ? "pointer":"not-allowed",display:"flex",alignItems:"center",gap:8,opacity:(ana.nome || cart.length > 0)?1:0.5}}>Scarica PDF</button>
           {!onlyMarg&&<button onClick={()=>{if(brand&&colItems().length>0)addCart();else{setBrand(null);setShowCart(false)}}} style={{padding:"12px 24px",borderRadius:10,border:"2px solid #6f42c1",background:"rgba(111,66,193,0.1)",color:"#6f42c1",fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Altro brand</button>}
           {onlyMarg&&<button onClick={()=>setShowMargSave(true)} style={{padding:"12px 36px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#6f42c1,#9b59b6)",color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer",marginLeft:"auto"}}>💾 Salva Marginalità ({margItems.length})</button>}
-          {!onlyMarg&&<button onClick={finalSubmit} disabled={tp===0} style={{padding:"12px 36px",borderRadius:10,border:"none",background:tp>0?"linear-gradient(135deg,#28a745,#20c997)":"#ccc",color:"#fff",fontSize:14,fontWeight:800,cursor:tp>0?"pointer":"not-allowed",marginLeft:"auto"}}>💾 Salva contratto ({tp})</button>}
+          {!onlyMarg&&<button onClick={finalSubmit} disabled={tp===0||blockSaveAll} style={{padding:"12px 36px",borderRadius:10,border:"none",background:tp>0?"linear-gradient(135deg,#28a745,#20c997)":"#ccc",color:"#fff",fontSize:14,fontWeight:800,cursor:tp>0?"pointer":"not-allowed",marginLeft:"auto"}}>💾 Salva contratto ({tp})</button>}
         </div>
         {showMargSave&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(4px)"}}>
           <div style={{background:"rgba(255,255,255,0.02)",borderRadius:16,width:"100%",maxWidth:420,padding:24,boxShadow:"0 8px 40px rgba(0,0,0,.25)",margin:"0 16px"}}>
@@ -3123,7 +3281,7 @@ const finalSubmit = async () => {
             {bObj?<Image src={bObj.logo} alt={bObj.label} width={40} height={40} className="w-full h-full object-cover rounded-xl"/>:<span className="text-xl">📋</span>}
           </div>
           <div>
-            <div className="text-lg font-bold text-white tracking-tight">Inserimento Contratto</div>
+            <div className="text-lg font-bold text-white tracking-tight">Registra Contratto</div>
             <div className="flex items-center gap-2 mt-1">
               {bObj&&<span className="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wider" style={{background:`${bObj.color}20`,color:bObj.color}}>{bObj.label}</span>}
               {tipoCliente&&<span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">{tipoCliente}</span>}
@@ -3138,7 +3296,7 @@ const finalSubmit = async () => {
           <button onClick={()=>setShowCart(true)} className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 text-sm font-bold transition-all flex items-center gap-2">
             🛒 <span className="hidden sm:inline">Carrello</span>{tCI>0&&<span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-xs font-bold">{tCI}</span>}
           </button>
-          {brand&&<button onClick={addCart} className="px-4 py-2.5 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 text-violet-300 text-sm font-bold transition-all flex items-center gap-2">
+          {brand&&<button onClick={addCart} disabled={blockSaveAll} title={blockSaveAll?"Completa tutti i prodotti (stato Incompleto) prima di salvare":""} className={"px-4 py-2.5 rounded-xl border text-sm font-bold transition-all flex items-center gap-2 "+(blockSaveAll?"bg-white/5 border-white/10 text-slate-500 cursor-not-allowed":"bg-violet-500/10 hover:bg-violet-500/20 border-violet-500/20 text-violet-300")}>
             <CheckCircle2 className="w-4 h-4"/> <span className="hidden sm:inline">Salva brand</span>
           </button>}
           <button onClick={fullReset} className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 transition-all" title="Reset">
@@ -3361,7 +3519,7 @@ const finalSubmit = async () => {
               {group.subs.map(sub=><button key={sub.id} onClick={()=>togSub(group.id,si,sub.id,group.radio?group.subs.map(s=>s.id):null)} style={{padding:"8px 14px",borderRadius:8,border:(sale[sub.id]&&sale[sub.id].active)?`2px solid ${group.color}`:"1px solid rgba(255,255,255,0.12)",background:(sale[sub.id]&&sale[sub.id].active)?group.color:"rgba(255,255,255,0.03)",color:(sale[sub.id]&&sale[sub.id].active)?"#fff":"#94a3b8",cursor:"pointer",fontSize:12,fontWeight:600,transition:"all 0.15s"}}>{sub.title}</button>)}
             </div>
             {group.subs.filter(sub=>sale[sub.id]&&sale[sub.id].active).map(sub=>
-              <SubCard key={sub.id} sub={sub} rawSd={sale[sub.id]||{}} group={group} si={si} sessionCode={sesCode} sale={sale} uF={uF} uC={uC} uP={uP} catSales={gS(group.id)} anaCel={ana.cellulare||""} onOpenVFModal={openVFModal}/>
+              <SubCard key={sub.id} sub={sub} rawSd={sale[sub.id]||{}} group={group} si={si} sessionCode={sesCode} sale={sale} uF={uF} uC={uC} uP={uP} catSales={gS(group.id)} anaCel={ana.cellulare||""} onOpenVFModal={openVFModal} dupCheck={dupCheck}/>
             )}
           </div>)}
         </div>)}
