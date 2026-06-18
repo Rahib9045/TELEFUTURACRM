@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [user, pathname, router]);
 
     const login = (email: string) => {
-        const foundUser = MOCK_USERS[email.toLowerCase()];
+        const foundUser = MOCK_USERS[email.trim().toLowerCase()];
         if (foundUser) {
             setUser(foundUser);
             localStorage.setItem("crm_session", JSON.stringify(foundUser));

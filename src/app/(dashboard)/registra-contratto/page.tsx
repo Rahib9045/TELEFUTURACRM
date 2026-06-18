@@ -66,6 +66,17 @@ const MARG_PRODUCTS=[
     {id:"sim_l",name:"Sim L",price:0,fixedMargin:-15,linked:true,icon:"📶",type:"fixed"},
     {id:"sim_next",name:"Sim Next",price:0,fixedMargin:-7,linked:true,icon:"📶",type:"fixed"},
     {id:"subentro",name:"Subentro/Reale Util.",price:0,fixedMargin:-10,linked:true,icon:"🔄",type:"fixed"},
+    {id:"sim_sky",name:"Sim Sky",price:0,fixedMargin:0,linked:true,icon:"📶",type:"fixed"},
+    {id:"sim_ho",name:"Sim Ho.",price:0,fixedMargin:0,linked:true,icon:"📶",type:"fixed"},
+    {id:"sim_tim",name:"Sim TIM",price:0,fixedMargin:0,linked:true,icon:"📶",type:"fixed"},
+    {id:"sost_tim",name:"Sost TIM",price:0,fixedMargin:0,linked:true,icon:"🔄",type:"fixed"},
+  ]},
+  {cat:"📲 ESIM",items:[
+    {id:"esim_vod",name:"ESIM Vodafone",price:0,fixedMargin:0,linked:true,icon:"📲",type:"fixed"},
+    {id:"esim_fw",name:"ESIM Fastweb",price:0,fixedMargin:0,linked:true,icon:"📲",type:"fixed"},
+    {id:"esim_sost_fw",name:"ESIM Sost Fastweb",price:0,fixedMargin:0,linked:true,icon:"🔄",type:"fixed"},
+    {id:"esim_w3",name:"ESIM Windtre",price:0,fixedMargin:0,linked:true,icon:"📲",type:"fixed"},
+    {id:"esim_sost_w3",name:"ESIM Sost Windtre",price:0,fixedMargin:0,linked:true,icon:"🔄",type:"fixed"},
   ]},
 ];
 
@@ -86,6 +97,9 @@ const MargPOS=memo(({show,onClose,venditore,negozio,onAdd,editItem})=>{
   const [importo,setImporto]=useState("");
   const [model,setModel]=useState("");
   const [imei,setImei]=useState("");
+  const [usatoUnits,setUsatoUnits]=useState([{imei:"",model:""}]);
+  const setUnit=(i,k,v)=>setUsatoUnits(prev=>{const a=[...prev];a[i]={...a[i],[k]:v};return a;});
+  const onUnitImei=(i,raw)=>{const v=raw.replace(/\D/g,"").slice(0,15);setUsatoUnits(prev=>{const a=[...prev];a[i]={...a[i],imei:v};return a;});if(v.length===15){supabase.from("usati").select("model").eq("imei",v).maybeSingle().then(r=>{if(r&&r.data&&r.data.model)setUsatoUnits(prev=>{const a=[...prev];if(a[i])a[i]={...a[i],model:r.data.model};return a;})}).catch(()=>{})}};
   useEffect(()=>{
     if(show&&editItem){
       const found=MARG_PRODUCTS.flatMap(c=>c.items).find(p=>p.id===editItem.productId);
@@ -97,21 +111,26 @@ const MargPOS=memo(({show,onClose,venditore,negozio,onAdd,editItem})=>{
         setImporto(editItem.importo!=null?String(editItem.importo):"");
         setModel(editItem.model||"");
         setImei(editItem.imei||"");
+        if(found.needsImei&&Array.isArray(editItem.units)&&editItem.units.length)setUsatoUnits(editItem.units.map(u=>({imei:u.imei||"",model:u.model||""})));
         if(found.price===null)setPrice(String(editItem.price||""));
       }
     } else if(show&&!editItem){
-      setSelProd(null);setPrice("");setQty("1");setImporto("");setModel("");setImei("");
+      setSelProd(null);setPrice("");setQty("1");setImporto("");setModel("");setImei("");setUsatoUnits([{imei:"",model:""}]);
     }
   },[show,editItem]);
+  useEffect(()=>{if(show&&selProd&&selProd.needsImei){const n=Math.max(1,parseInt(qty)||1);setUsatoUnits(prev=>{const a=prev.map(u=>({...u}));while(a.length<n)a.push({imei:"",model:""});a.length=n;return a;});}},[qty,selProd,show]);
   if(!show)return null;
   const handleAdd=()=>{
     if(!selProd)return;
     const p=selProd;
     const pVal=p.price!==null?p.price:parseFloat(price)||0;
     const mVal=p.type==="fixed"?(p.fixedMargin||0):p.type==="pct"?(pVal*(p.pctMargin||0)/100):0;
-    onAdd({product:p.name,productId:p.id,price:pVal,qty:parseInt(qty)||1,importo:parseFloat(importo)||null,margin:mVal,totalMargin:mVal*(parseInt(qty)||1),model:model||null,imei:imei||null,venditore,negozio,date:new Date().toISOString().split("T")[0],linked:p.linked||false});
-    setSelProd(null);setPrice("");setQty("1");setImporto("");setModel("");setImei("");
+    const _uu=usatoUnits.filter(u=>u.imei||u.model);const _q=p.needsImei?(_uu.length||1):(parseInt(qty)||1);
+    onAdd({product:p.name,productId:p.id,price:pVal,qty:_q,importo:parseFloat(importo)||null,margin:mVal,totalMargin:mVal*_q,model:p.needsImei?(_uu.map(u=>u.model).filter(Boolean).join(", ")||null):(model||null),imei:p.needsImei?(_uu.map(u=>u.imei).filter(Boolean).join(", ")||null):(imei||null),units:p.needsImei?_uu:undefined,venditore,negozio,date:new Date().toISOString().split("T")[0],linked:p.linked||false});
+    setSelProd(null);setPrice("");setQty("1");setImporto("");setModel("");setImei("");setUsatoUnits([{imei:"",model:""}]);
   };
+  const _imeis=usatoUnits.map(u=>String(u.imei||"").replace(/\D/g,"")).filter(x=>x.length===15);
+  const hasDupImei=!!(selProd&&selProd.needsImei)&&(new Set(_imeis).size!==_imeis.length);
   return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center",backdropFilter:"blur(4px)"}}>
     <style>{`@keyframes margSlideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
     <div style={{background:"rgba(255,255,255,0.02)",borderRadius:"20px 20px 0 0",width:"100%",maxWidth:640,maxHeight:"85vh",overflow:"hidden",display:"flex",flexDirection:"column",boxShadow:"0 -4px 30px rgba(0,0,0,.2)",animation:"margSlideUp 0.32s cubic-bezier(0.22,1,0.36,1)"}}>
@@ -134,13 +153,23 @@ const MargPOS=memo(({show,onClose,venditore,negozio,onAdd,editItem})=>{
             <span style={{fontSize:22}}>{selProd.icon}</span>
             <span style={{fontSize:16,fontWeight:800,color:"#f8fafc"}}>{selProd.name}</span>
           </div>
-          {selProd.hasQty&&<div style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Quantità</div>
+          {(selProd.hasQty||selProd.needsImei)&&<div style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Quantità</div>
             <input value={qty} onChange={e=>setQty(e.target.value)} type="number" min="1" className="glass-input" style={{width:"100%",padding:"10px 14px",borderRadius:10,fontSize:14,fontWeight:700,boxSizing:"border-box"}}/></div>}
-          {selProd.needsModel&&<div style={{marginBottom:10}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Modello</div><input value={model} onChange={e=>setModel(e.target.value)} placeholder="es. iPhone 15..." className="glass-input" style={{width:"100%",padding:"10px 14px",borderRadius:10,fontSize:13,boxSizing:"border-box"}}/></div>}
-          {selProd.needsImei&&<div style={{marginBottom:10}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>IMEI</div><input value={imei} onChange={e=>setImei(e.target.value)} placeholder="15 cifre" className="glass-input" style={{width:"100%",padding:"10px 14px",borderRadius:10,fontSize:13,boxSizing:"border-box",fontFamily:"monospace"}}/></div>}
+          {selProd.needsModel&&!selProd.needsImei&&<div style={{marginBottom:10}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Modello</div><input value={model} onChange={e=>setModel(e.target.value)} placeholder="es. iPhone 15..." className="glass-input" style={{width:"100%",padding:"10px 14px",borderRadius:10,fontSize:13,boxSizing:"border-box"}}/></div>}
+          {selProd.needsImei&&<div style={{marginBottom:12}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#6f42c1",marginBottom:6,textTransform:"uppercase"}}>Dispositivi usati ({usatoUnits.length})</div>
+            {usatoUnits.map((u,i)=>{const _di=String(u.imei||"").replace(/\D/g,"");const done=_di.length===15;const dup=done&&usatoUnits.some((x,j)=>j!==i&&String(x.imei||"").replace(/\D/g,"")===_di);return (
+              <div key={i} style={{marginBottom:8,padding:8,borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)"}}>
+                <input value={u.imei} onChange={e=>onUnitImei(i,e.target.value)} placeholder={"IMEI #"+(i+1)+" (15 cifre)"} style={{width:"100%",padding:"9px 12px",borderRadius:8,border:dup?"2px solid #dc3545":done?(u.model?"2px solid #28a745":"2px solid #fd7e14"):"1px solid rgba(255,255,255,0.1)",fontSize:13,boxSizing:"border-box",fontFamily:"monospace",marginBottom:6,background:"rgba(255,255,255,0.02)",color:"#f8fafc"}}/>
+                <input value={u.model} onChange={e=>setUnit(i,"model",e.target.value)} placeholder="Modello (auto da magazzino)" style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",fontSize:13,boxSizing:"border-box",background:(done&&u.model)?"rgba(40,167,69,0.12)":"rgba(255,255,255,0.04)",color:"#f8fafc"}}/>
+                {dup&&<div style={{fontSize:10,color:"#f87171",fontWeight:700,marginTop:4}}>IMEI duplicato</div>}
+              </div>
+            );})}
+          </div>}
           <div style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Importo €</div>
             <input value={importo} onChange={e=>setImporto(e.target.value)} type="number" min="0" step="0.01" placeholder="es. 29.90" className="glass-input" style={{width:"100%",padding:"10px 14px",borderRadius:10,fontSize:14,fontWeight:700,boxSizing:"border-box"}}/></div>
-          <button onClick={handleAdd} style={{width:"100%",padding:14,borderRadius:12,border:"none",background:"linear-gradient(135deg,#6f42c1,#9b59b6)",color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer"}}>✅ Registra {selProd.name}</button>
+          {hasDupImei&&<div style={{marginBottom:8,padding:"8px 12px",borderRadius:8,background:"rgba(220,53,69,0.12)",border:"1px solid rgba(220,53,69,0.3)",color:"#f87171",fontSize:12,fontWeight:700,textAlign:"center"}}>⛔ IMEI duplicati: correggi per registrare</div>}
+          <button onClick={handleAdd} disabled={hasDupImei} style={{width:"100%",padding:14,borderRadius:12,border:"none",background:hasDupImei?"rgba(255,255,255,0.1)":"linear-gradient(135deg,#6f42c1,#9b59b6)",color:hasDupImei?"#64748b":"#fff",fontSize:14,fontWeight:800,cursor:hasDupImei?"not-allowed":"pointer"}}>✅ Registra {selProd.name}</button>
         </div>)}
       </div>
     </div>
@@ -180,12 +209,570 @@ const BRANDS = [
   { id: "fastweb", label: "Fastweb", short: "FW", color: "#CC9900", gradient: "linear-gradient(135deg, #CC9900 0%, #FFD800 100%)", icon: "⚡", logo: "/fastweb.png", desc: "Mobile, Fisso, Energy", ready: true },
   { id: "iliad", label: "Iliad", short: "IL", color: "#C00028", gradient: "linear-gradient(135deg, #800018 0%, #C00028 100%)", icon: "📡", logo: "/iliad.png", desc: "Mobile e Fisso (Fibra)", ready: true },
   { id: "energy", label: "Energy", short: "EN", color: "#28a745", gradient: "linear-gradient(135deg, #1a6b2d 0%, #28a745 100%)", icon: "🔋", logo: "/energy - Copy.png", desc: "Forniture Luce e Gas (S4, Barton)", ready: true },
+  { id: "very", label: "Very Mobile", short: "VERY", color: "#1FA300", gradient: "linear-gradient(135deg, #137A00 0%, #1FA300 100%)", icon: "🟢", logo: "/very-mobile.png", desc: "Mobile", ready: true },
+  { id: "ho", label: "Ho. Mobile", short: "HO", color: "#E6007E", gradient: "linear-gradient(135deg, #B0005F 0%, #E6007E 100%)", icon: "💗", logo: "/ho-mobile.png", desc: "Mobile", ready: true },
+  { id: "tim", label: "TIM", short: "TIM", color: "#0050FF", gradient: "linear-gradient(135deg, #0033A0 0%, #0050FF 100%)", icon: "☎️", logo: "/tim-logo.png", desc: "Mobile, Fisso, Telepass", ready: true },
 ];
 const codiciW3 = ["Magliana","Libia","San Paolo","Mazzini","Donna","Promontori","Collatina"];
-const venditori = ["Alberto","Alex","Alin","Asad","Ben Aziza","Cristhian","Cristi","Damiano","Daniel","Daniele2","Denise","Dimitri","Eloise","Eros","Fadel","Federico","Francesca","Francesco","George","Giacomo","Gian","Giulia","Giuseppe B.","Ilaria","Lorenzo","Manu","Marta","Marta2","Marta3","Matteo","Michele","Riccardo","Roberto","Samantha","Sheekell","Tommaso","Veronica"];
+const venditori = ["Alberto","Alex","Alin","Asad","Ben Aziza","Cristhian","Cristi","Damiano","Daniel","Daniele2","Denise","Dimitri","Eloise","Eros","Fadel","Federico","Francesca","Francesco","George","Giacomo","Gian","Giulia","Giuseppe B.","Ilaria","Lorenzo","Ludmilla","Manu","Marta","Marta2","Marta3","Matteo","Michele","Riccardo","Roberto","Samantha","Sheekell","Tommaso","Veronica"];
 const negozi = ["Magliana","Donna","Libia","Collatina","Mazzini","San Paolo","Garbatella","Promontori","Acilia","Baleniere","Castani","Merulana","Telefonico"];
-const opProv = ["WindTre","Vodafone","Tim","Fastweb","Iliad","Enel","Eni","A2A","Edison","Hera","Sorgenia","Plenitude","Altro"];
+const opProv = ["Enel Energia","Eni Plenitude","A2A Energia","Edison Energia","Iren Mercato","Hera Comm","Sorgenia","Acea Energia","Engie","E.ON","Illumia","Wekiwi","Pulsee","Octopus Energy","Green Network","Dolomiti Energia","Axpo","NeN","Tate","WindTre Luce e Gas","Fastweb Energia","S4 Energy","Barton Energy","Altro"];
 const brandMNP = ["TIM","Vodafone","WindTre","Iliad","Fastweb Mobile","PosteMobile","ho. Mobile","Kena Mobile","Very Mobile","CoopVoce","Spusu","Lyca Mobile","1Mobile","Tiscali Mobile","Digi Mobil","Noitel","Optima Mobile","Feder Mobile","Rabona Mobile","Elimobile","BT Italia","Segnoverde Mobile","Uno Mobile","Saily","Visitel","Ops! Mobile"];
+// ── v10 NEW BRANDS: Very Mobile + Ho. Mobile (privato, mobile-only) ──
+const VERY_C = "#1FA300";
+const HO_C = "#E6007E";
+const VERY_CODICI_NEGOZIO = ["Donna","Promontori","Garbatella"];
+const HO_CODICI_NEGOZIO = ["Collatina","Donna","Magliana","Promontori"];
+const FASCIA_OPTS = ["< 6,99 €","> 6,99 €"];
+const SimpleMobile = ({sd, uP, pfx, accent, codici, sc}) => {
+  const upv=(k,v)=>uP(k,v);
+  const K=(s)=>pfx+s;
+  const offSel=sd[K("Offer")];
+  const content = (
+    <div>
+      <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:8,textTransform:"uppercase",letterSpacing:.4}}>Tipologia offerta</div>
+      <div style={{display:"flex",gap:8,marginBottom:16}}>
+        <button onClick={()=>{const on=offSel==="MOBILE";upv(K("Offer"),on?null:"MOBILE");if(on){upv(K("Mnp"),null);upv(K("MnpBrand"),"");upv(K("MnpNum"),"");upv(K("RicaricaAuto"),null);upv(K("Fascia"),null);upv(K("CodIns"),"");upv(K("NumProv"),"");upv(K("Num"),"");upv(K("Iccid"),"");}}}
+          style={{padding:"8px 22px",borderRadius:10,border:offSel==="MOBILE"?"2px solid "+accent:"2px solid rgba(255,255,255,0.1)",background:offSel==="MOBILE"?accent:"rgba(255,255,255,0.04)",color:offSel==="MOBILE"?"#fff":"#8892b0",fontSize:12,fontWeight:700,cursor:"pointer"}}>MOBILE</button>
+      </div>
+      {offSel&&(
+        <div>
+          <RB label="MNP?" val={sd[K("Mnp")]} opts={["Sì","No"]} onCh={v=>{upv(K("Mnp"),v);if(v==="No"){upv(K("MnpBrand"),"");upv(K("MnpNum"),"");}}}/>
+          {sd[K("Mnp")]==="Sì"&&(
+            <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:8,padding:12,marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                <DD l="Operatore provenienza" r v={sd[K("MnpBrand")]||""} o={v=>upv(K("MnpBrand"),v)} vals={brandMNP}/>
+                <TF l="Numero Portabilità" r v={sd[K("MnpNum")]||""} o={v=>upv(K("MnpNum"),v)} p="3XXXXXXXXX"/>
+              </div>
+            </div>
+          )}
+          {sd[K("Mnp")]&&<RB label="Ricarica Automatica?" val={sd[K("RicaricaAuto")]} opts={["Sì","No"]} onCh={v=>upv(K("RicaricaAuto"),v)}/>}
+          {sd[K("RicaricaAuto")]&&(
+            <div style={{marginBottom:12}}>
+              <DD l="Tipologia offerta" r v={sd[K("Fascia")]||""} o={v=>upv(K("Fascia"),v)} vals={FASCIA_OPTS}/>
+            </div>
+          )}
+          {sd[K("RicaricaAuto")]&&(
+            <div style={{background:"rgba(0,114,198,0.10)",border:"1px solid rgba(0,114,198,0.18)",borderRadius:8,padding:14}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+                <SCd session={sc} codici={codici} val={sd[K("CodIns")]||""} onCh={v=>upv(K("CodIns"),v)}/>
+                {sd[K("Mnp")]==="Sì"?(
+                  <TF l="Numero Provvisorio" r v={sd[K("NumProv")]||""} o={v=>upv(K("NumProv"),v)} p="393XXXXXXX"/>
+                ):(
+                  <TF l="Numero" v={sd[K("Num")]||""} o={v=>upv(K("Num"),v)} p="3XXXXXXXXX"/>
+                )}
+                <TF l="ICCID" r v={sd[K("Iccid")]||""} o={v=>upv(K("Iccid"),v)} p="8939..." nt="Barcode 📷"/>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+  return content;
+};
+const getVERY = (tc) => (tc==="business")?[]:[
+  { id:"mobile", title:"MOBILE", icon:"📱", color:VERY_C, radio:true, subs:[
+    { id:"ga", title:"MOBILE", isVeryMobile:true, hasContract:true, ct:"ga", fields:[] },
+  ]},
+];
+const IL_BIZ_MOBILE_OFFERS = ["Giga300","Dati180"];
+const ILBizMobile = ({sd, uP, sc}) => {
+  const upv=(k,v)=>uP(k,v);
+  const content = (
+    <div>
+      <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:8,textTransform:"uppercase",letterSpacing:.4}}>Offerta Mobile</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16}}>
+        {IL_BIZ_MOBILE_OFFERS.map(offer=>{
+          const isActive=sd.ilBizOffer===offer;
+          return (
+            <button key={offer} onClick={()=>{upv("ilBizOffer",isActive?null:offer);upv("ilBizMnp",null);upv("ilBizMnpBrand","");upv("ilBizDom",null);upv("ilBizNum","");upv("ilBizIccid","");upv("ilBizNumDef","");upv("ilBizCodIns","");}}
+              style={{padding:"8px 18px",borderRadius:10,border:isActive?"2px solid "+IL_C:"2px solid rgba(255,255,255,0.1)",background:isActive?IL_C:"rgba(255,255,255,0.04)",color:isActive?"#fff":"#8892b0",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+              {offer}
+            </button>
+          );
+        })}
+      </div>
+      {sd.ilBizOffer&&(
+        <div>
+          <RB label="MNP?" val={sd.ilBizMnp} opts={["Sì","No"]} onCh={v=>{upv("ilBizMnp",v);if(v==="No"){upv("ilBizMnpBrand","");}}}/>
+          {sd.ilBizMnp==="Sì"&&(
+            <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:8,padding:12,marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                <DD l="Operatore provenienza" r v={sd.ilBizMnpBrand||""} o={v=>upv("ilBizMnpBrand",v)} vals={IL_GNP_BRANDS}/>
+                <TF l="Numero Definitivo" r v={sd.ilBizNumDef||""} o={v=>upv("ilBizNumDef",v)} p="3XXXXXXXXX"/>
+              </div>
+            </div>
+          )}
+          {sd.ilBizMnp&&(
+            <div>
+              <RB label="Domiciliata?" val={sd.ilBizDom} opts={["Sì","No"]} onCh={v=>upv("ilBizDom",v)}/>
+              {sd.ilBizDom&&(
+                <div style={{background:"rgba(0,114,198,0.10)",border:"1px solid rgba(0,114,198,0.18)",borderRadius:8,padding:14,marginTop:8}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+                    <SCd session={sc} codici={IL_CODICI_NEGOZIO} val={sd.ilBizCodIns||""} onCh={v=>upv("ilBizCodIns",v)}/>
+                    <TF l="Numero Provvisorio" r v={sd.ilBizNum||""} o={v=>upv("ilBizNum",v)} p="3XXXXXXXXX"/>
+                    <TF l="ICCID" r v={sd.ilBizIccid||""} o={v=>upv("ilBizIccid",v)} p="8939..." nt="Barcode 📷"/>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+  return content;
+};
+
+const getHO = (tc) => (tc==="business")?[]:[
+  { id:"mobile", title:"MOBILE", icon:"📱", color:HO_C, radio:true, subs:[
+    { id:"ga", title:"MOBILE", isHoMobile:true, hasContract:true, ct:"ga", fields:[] },
+  ]},
+];
+
+// ── v10 NEW BRAND: TIM (privato: Mobile / Fisso / Telepass) ──
+const TIM_SMARTPHONES_GROUPED = [
+  {group:"APPLE", items:[
+    "APPLE iPhone Air 1TB",
+    "APPLE iPhone Air 512GB",
+    "APPLE iPhone Air 256GB",
+    "APPLE iPhone 17 ProMax 2TB",
+    "APPLE iPhone 17 ProMax 1TB",
+    "APPLE iPhone 17 ProMax 512GB",
+    "APPLE iPhone 17 ProMax 256GB",
+    "APPLE iPhone 17 Pro 1TB",
+    "APPLE iPhone 17 Pro 512GB",
+    "APPLE iPhone 17 Pro 256GB",
+    "APPLE iPhone 17 512GB",
+    "APPLE iPhone 17 256GB",
+    "APPLE iPhone 17E 512GB",
+    "APPLE iPhone 17E 256GB",
+    "APPLE iPhone 16 Pro Max 512GB",
+    "APPLE iPhone 16 Pro Max 256GB",
+    "APPLE iPhone 16 Pro 256GB",
+    "APPLE iPhone 16 Pro 128GB",
+    "APPLE iPhone 16 Plus 256GB",
+    "APPLE iPhone 16 Plus 128GB",
+    "APPLE iPhone 16 256GB",
+    "APPLE iPhone 16 128GB",
+    "APPLE iPhone 16E 512GB",
+    "APPLE iPhone 16E 256GB",
+    "APPLE iPhone 16E 128GB",
+    "APPLE iPhone 17e 256GB",
+    "APPLE iPhone 17 Pro Max 256GB",
+    "APPLE iPhone 17 Pro Max 512GB",
+    "APPLE iPhone 17 Pro Max 2TB",
+    "APPLE iPhone 16e 128GB"
+  ]},
+  {group:"SAMSUNG", items:[
+    "SAMSUNG Galaxy S26 Ultra 5G 512GB",
+    "SAMSUNG Galaxy S26 Ultra 5G 256GB",
+    "SAMSUNG Galaxy S26 Plus 5G 512GB",
+    "SAMSUNG Galaxy S26 Plus 5G 256GB",
+    "SAMSUNG Galaxy S26 5G 512GB",
+    "SAMSUNG Galaxy S26 5G 256GB",
+    "SAMSUNG Galaxy S25 Ultra 5G 512GB",
+    "SAMSUNG Galaxy S25 Ultra 5G 256GB",
+    "SAMSUNG Galaxy S25 Edge 512GB",
+    "SAMSUNG Galaxy S25 Edge 256GB",
+    "SAMSUNG Galaxy S25 Plus 5G 512GB",
+    "SAMSUNG Galaxy S25 Plus 5G 256GB",
+    "SAMSUNG Galaxy S25 5G 256GB",
+    "SAMSUNG Galaxy S25 5G 128GB",
+    "SAMSUNG Galaxy S25 FE 256GB",
+    "SAMSUNG Galaxy S25 FE 128GB",
+    "SAMSUNG Galaxy ZFold7 512GB",
+    "SAMSUNG Galaxy ZFold7 256GB",
+    "SAMSUNG Galaxy ZFlip7 512GB",
+    "SAMSUNG Galaxy ZFlip7 256GB",
+    "SAMSUNG Galaxy ZFlip7 FE 256GB",
+    "SAMSUNG Galaxy ZFlip7 FE 128GB",
+    "SAMSUNG Galaxy A57 256GB",
+    "SAMSUNG Galaxy A57 128GB",
+    "SAMSUNG Galaxy A56 256GB",
+    "SAMSUNG Galaxy A56 128GB EE",
+    "SAMSUNG Galaxy A56 128GB",
+    "SAMSUNG Galaxy A37 256GB",
+    "SAMSUNG Galaxy A37 128GB",
+    "SAMSUNG Galaxy A36 256GB",
+    "SAMSUNG Galaxy A36 128GB",
+    "SAMSUNG Galaxy A34 Enterprise Ed",
+    "SAMSUNG Galaxy A26 256GB",
+    "SAMSUNG Galaxy A26 128GB",
+    "SAMSUNG Galaxy A17 5G 256GB",
+    "SAMSUNG Galaxy A17 5G 128GB",
+    "SAMSUNG Galaxy A17 4G",
+    "SAMSUNG Galaxy A16 5G",
+    "SAMSUNG Galaxy A16 4G",
+    "SAMSUNG Galaxy A37 5G 256GB",
+    "SAMSUNG Galaxy A37 5G 128GB",
+    "SAMSUNG Galaxy A57 5G 256GB",
+    "SAMSUNG Galaxy S26 256GB",
+    "SAMSUNG Galaxy S26 512GB",
+    "SAMSUNG Galaxy S26+ 256GB",
+    "SAMSUNG Galaxy S26+ 512GB",
+    "SAMSUNG Galaxy S26 Ultra 256GB",
+    "SAMSUNG Galaxy S26 Ultra 512GB",
+    "SAMSUNG Galaxy S26 Ultra 1TB",
+    "SAMSUNG Galaxy A17 4G 128GB",
+    "SAMSUNG Galaxy A17 4G 256GB",
+    "SAMSUNG Galaxy Z Fold7 256GB",
+    "SAMSUNG Galaxy Z Fold7 512GB",
+    "SAMSUNG Galaxy Z Fold7 1TB",
+    "SAMSUNG Galaxy Z Flip7 256GB",
+    "SAMSUNG Galaxy Z Flip7 512GB",
+    "SAMSUNG Galaxy A56 5G 256GB",
+    "SAMSUNG Galaxy A36 5G 128GB",
+    "SAMSUNG Galaxy A26 5G 128GB",
+    "SAMSUNG Galaxy Z Flip6 256GB"
+  ]},
+  {group:"MOTOROLA", items:[
+    "MOTOROLA Razr 60 Ultra",
+    "MOTOROLA Razr 70",
+    "MOTOROLA Edge 70 512GB",
+    "MOTOROLA Edge 60 Pro",
+    "MOTOROLA Edge60 Neo",
+    "MOTOROLA Edge 60",
+    "MOTOROLA G86 8 256GB",
+    "MOTOROLA G85 8 256GB",
+    "MOTOROLA G77 + Moto Buds",
+    "MOTOROLA G57 5G 256GB",
+    "MOTOROLA G37 5G 128GB",
+    "MOTOROLA G35 256GB",
+    "MOTOROLA G35 128GB",
+    "MOTOROLA G17 4G 256GB",
+    "MOTOROLA G17 4G 128GB",
+    "MOTOROLA G15 128GB",
+    "MOTOROLA G06 64GB",
+    "MOTOROLA G05 128GB",
+    "MOTOROLA Edge 70 Fusion 8+512GB Bundle Watch",
+    "MOTOROLA Razr 70 Plus 12+512GB 5G",
+    "MOTOROLA Razr Fold 16+512GB 5G",
+    "MOTOROLA Signature 16+512GB 5G",
+    "MOTOROLA Moto G57 5G 8+256GB",
+    "MOTOROLA Edge 70",
+    "MOTOROLA Moto G86 5G 8GB+256GB",
+    "MOTOROLA Moto G35 5G 4+128GB"
+  ]},
+  {group:"OPPO", items:[
+    "OPPO Find X9 Ultra",
+    "OPPO Find X9 Pro",
+    "OPPO Reno 15 5G",
+    "OPPO Reno 15F 5G",
+    "OPPO Reno 14 5G",
+    "OPPO Reno 14FS 5G",
+    "OPPO Reno 13 Pro",
+    "OPPO Reno 13 FS",
+    "OPPO Reno 13F",
+    "OPPO A6 Pro 5G 256GB",
+    "OPPO A5 Pro 5G",
+    "OPPO A6 5G 256GB",
+    "OPPO A6K 4G 256GB",
+    "OPPO A6X 5G 128GB",
+    "OPPO A60 5G",
+    "OPPO A5 5G",
+    "OPPO A5M 4G",
+    "OPPO A40 256GB",
+    "OPPO A40 128GB",
+    "OPPO A5X 4G",
+    "OPPO A6 5G, 6+256",
+    "OPPO A6X 5G, 4+128",
+    "OPPO Reno15 5G, 8+512",
+    "OPPO Reno15 F 5G, 8+256"
+  ]},
+  {group:"REALME", items:[
+    "REALME GT7 5G",
+    "REALME 14Pro",
+    "REALME 14 5G",
+    "REALME 14X",
+    "REALME C75 4G",
+    "REALME C71",
+    "REALME C61 4G 128GB",
+    "REALME Note 50"
+  ]},
+  {group:"HONOR", items:[
+    "HONOR Magic V5",
+    "HONOR Magic V3",
+    "HONOR Magic 8 Pro",
+    "HONOR Magic 7 Pro",
+    "HONOR 600 + Watch",
+    "HONOR 400 5G",
+    "HONOR Magic 8 Lite + Earbuds X7 Lite",
+    "HONOR Magic 7 Lite",
+    "HONOR 600 Lite + Buds",
+    "HONOR 400 Lite",
+    "HONOR 200 Smart",
+    "HONOR X6B",
+    "HONOR X5C Plus 4G",
+    "HONOR 600 8+256GB 5G Bundle Watch",
+    "HONOR 600 Lite 8+256GB 5G Bundle Buds",
+    "HONOR Magic 8 Lite",
+    "HONOR 400 Smart",
+    "HONOR 200 Lite 5G"
+  ]},
+  {group:"ZTE", items:[
+    "ZTE Nubia Flip",
+    "ZTE Blade A36 4+64 GB",
+    "ZTE nubia Air 5G 8+512 GB",
+    "ZTE Blade A76 5G (4+128)",
+    "ZTE nubia Flip 2",
+    "ZTE nubia Focus 2 5G",
+    "ZTE Blade A35e (2+64)"
+  ]},
+  {group:"TCL", items:[
+    "TCL 50NextPaper 5G",
+    "TCL 60R 5G",
+    "TCL NXTPAPER 70 PRO 8+256GB",
+    "TCL NXTPAPER 60 Ultra",
+    "TCL 501 2+64GB"
+  ]},
+  {group:"VIVO", items:[
+    "VIVO V70 5G 512GB",
+    "VIVO V70 FE 5G 256GB",
+    "VIVO Y31 5G 256GB",
+    "VIVO V70 5G",
+    "VIVO V70 5G FE",
+    "VIVO Y21 5G",
+    "VIVO X300"
+  ]},
+  {group:"ALTRO", items:[
+    "APPLE Watch S11 Titanium 46mm",
+    "APPLE Watch S11 Titanium 42mm",
+    "APPLE Watch S11 Aluminium 46mm",
+    "APPLE Watch S11 Aluminium 42mm",
+    "APPLE Watch10 46mm",
+    "APPLE Watch10 42mm",
+    "APPLE AirPods Pro3",
+    "APPLE AirPods 4",
+    "SAMSUNG Watch7 Ultra",
+    "SAMSUNG Watch7",
+    "SAMSUNG Buds3",
+    "GOOGLE Watch3 45mm",
+    "GOOGLE Watch3 41mm",
+    "GOOGLE Buds Pro",
+    "Altro",
+    "APPLE AirTag (2nd generation)",
+    "RAY-BAN META Gen2 Wayfarer Sun Polar_ Matte Black",
+    "RAY-BAN META Gen2 Wayfarer Transitions_Shiny Black",
+    "RAY-BAN META Gen2 Wayfarer Transitions_Matte Black",
+    "RAY-BAN META Gen2 Wayfarer Sun Plano_Shiny Black",
+    "SAMSUNG Galaxy Buds4",
+    "MOTOROLA moto tag 2",
+    "ZYXEL FWA indoor 5G Zyxel NR5309",
+    "TP-LINK FWA indoor 5G TP-LINK NX620v",
+    "GREENPACKET FWA H5 + TH-40M",
+    "TP-LINK CAM TC72",
+    "EZVIZ CAM TY1 3M",
+    "SAMSUNG Galaxy Buds3 FE",
+    "OAKLEY META Vanguard (Matte Black)",
+    "SAMSUNG Galaxy Tab S11 5G (12GB / 128GB)",
+    "SAMSUNG Galaxy Tab S10 Lite 5G (6GB / 128GB)",
+    "APPLE Air Pods Pro 3",
+    "APPLE Watch Series 11 46mm",
+    "ZTE WebPocket. 4G+ (ZTE U20)",
+    "RAY-BAN META Wayfarer (Shiny Black/Green)",
+    "RAY-BAN META Wayfarer (Matte Black/Grey)",
+    "RAY-BAN META Wayfarer Large (Matte Black/Grey)",
+    "SAMSUNG Galaxy Watch8 Classic 46mm BT",
+    "APPLE iPad 11 128GB",
+    "APPLE AirTag",
+    "APPLE iPad 11 256GB",
+    "TELSEY W52 5G",
+    "TCL Onetouch 5041",
+    "TCL Internet Key TCL IK41",
+    "SAMSUNG Galaxy Watch7 44mm BT",
+    "SAMSUNG Galaxy Buds3",
+    "APPLE Watch 10 46mm",
+    "APPLE AirPods 4 con cancellazione attiva del rumore",
+    "TCL Onetouch 5023 + ECO SIM",
+    "TCL WebPocket. 4G+ (TCL)",
+    "ALCATEL Internet Key Alcatel IK41",
+    "EZVIZ Lampadina Ezviz LB1",
+    "EZVIZ C6N"
+  ]},
+  {group:"XIAOMI", items:[
+    "XIAOMI 17T Pro 12+512 GB + Redmi Pad 2",
+    "XIAOMI 17T 12+256 GB + Redmi Pad 2",
+    "XIAOMI 17T Pro 12+512 GB",
+    "XIAOMI 17T 12+256 GB",
+    "XIAOMI 17 Ultra",
+    "XIAOMI 17 Ultra 5G 512GB + Photo Kit",
+    "XIAOMI Redmi Note 15 5G 8+256",
+    "XIAOMI Redmi Note 15 Pro 5G 8+256",
+    "XIAOMI Redmi Note 15 Pro+ 5G 8+256",
+    "XIAOMI Redmi 15C 5G 4+128GB",
+    "XIAOMI Redmi 15 5G 8+256GB"
+  ]}
+];
+const TIM_C = "#0050FF";
+const TIM_MOBILE_OFFERS = ["Tim Mobile","Tim Power Supreme Orange","Tim Power Supreme Red"];
+const TIM_FISSO_OFFERS = ["Fibra","Fwa"];
+const TIM_VISION_TAGLIE = ["Tim Vision S","Tim Vision M","Tim Vision L"];
+const TIM_CODICI_NEGOZIO = ["Collatina"];
+const GNP_FISSO_BRANDS=["TIM","Vodafone","WindTre","Fastweb","Tiscali","Sky Wifi","Enel Fibra","EniPlenitude Fibra","Iliad","Altro"];
+const getTIM = (tc) => {
+  const biz = tc === "business";
+  if(biz) return [];
+  return [
+    { id:"mobile", title:"MOBILE", icon:"📱", color:TIM_C, radio:true, subs:[
+      { id:"ga", title:"MOBILE", isTimMobile:true, hasContract:true, ct:"ga", fields:[] },
+    ]},
+    { id:"fisso", title:"FISSO", icon:"🏠", color:"#28a745", radio:true, subs:[
+      { id:"ga", title:"FISSO", isTimFisso:true, hasContract:true, ct:"fisso", fields:[] },
+    ]},
+    { id:"multi", title:"MULTI-SERVIZI", icon:"🧩", color:"#6f42c1", radio:false, subs:[
+      { id:"telepass", title:"Telepass", isTimTelepass:true, hasContract:true, ct:"multi", fields:[] },
+    ]},
+  ];
+};
+
+const TIMMobile = ({sd, uP, sc}) => {
+  const upv=(k,v)=>uP(k,v);
+  const content = (
+    <div>
+      <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:8,textTransform:"uppercase",letterSpacing:.4}}>Offerta Mobile</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16}}>
+        {TIM_MOBILE_OFFERS.map(offer=>{
+          const isActive=sd.timOffer===offer;
+          return (
+            <button key={offer} onClick={()=>{upv("timOffer",isActive?null:offer);if(isActive){upv("timMnp",null);upv("timMnpBrand","");upv("timMnpNum","");upv("timTnp",null);upv("timModello","");upv("timSpedizione",null);upv("timFinanziato",null);upv("timCodPratica","");upv("timVisionBox",null);upv("timVisionTaglia",null);upv("timVisionNumContr","");upv("timImei","");upv("timNumProv","");upv("timNum","");upv("timIccid","");upv("timCodIns","");}}}
+              style={{padding:"8px 14px",borderRadius:10,border:isActive?"2px solid "+TIM_C:"2px solid rgba(255,255,255,0.1)",background:isActive?TIM_C:"rgba(255,255,255,0.04)",color:isActive?"#fff":"#8892b0",fontSize:12,fontWeight:700,cursor:"pointer"}}>{offer}</button>
+          );
+        })}
+      </div>
+      {sd.timOffer&&(
+        <div>
+          <RB label="MNP?" val={sd.timMnp} opts={["Sì","No"]} onCh={v=>{upv("timMnp",v);if(v==="No"){upv("timMnpBrand","");upv("timMnpNum","");}}}/>
+          {sd.timMnp==="Sì"&&(
+            <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:8,padding:12,marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                <DD l="Operatore provenienza" r v={sd.timMnpBrand||""} o={v=>upv("timMnpBrand",v)} vals={brandMNP}/>
+                <TF l="Numero Portabilità" r v={sd.timMnpNum||""} o={v=>upv("timMnpNum",v)} p="3XXXXXXXXX"/>
+              </div>
+            </div>
+          )}
+          {sd.timMnp&&<RB label="TNP?" val={sd.timTnp} opts={["Sì","No"]} onCh={v=>{upv("timTnp",v);if(v==="No"){upv("timModello","");upv("timSpedizione",null);upv("timFinanziato",null);upv("timCodPratica","");upv("timImei","");}}}/>}
+          {sd.timTnp==="Sì"&&(
+            <div style={{background:"rgba(0,114,198,0.10)",border:"1px solid rgba(0,114,198,0.18)",borderRadius:8,padding:14,marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:10}}>
+                <DD l="Modello terminale" r v={sd.timModello||""} o={v=>upv("timModello",v)} vals={TIM_SMARTPHONES_GROUPED}/>
+              </div>
+              <RB label="Spedizione?" val={sd.timSpedizione} opts={["Sì","No"]} onCh={v=>upv("timSpedizione",v)}/>
+              <RB label="Finanziato?" val={sd.timFinanziato} opts={["Sì","No"]} onCh={v=>{upv("timFinanziato",v);if(v==="No")upv("timCodPratica","");}}/>
+              {sd.timFinanziato==="Sì"&&(
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px",marginTop:4}}>
+                  <TF l="Codice Pratica" r v={sd.timCodPratica||""} o={v=>upv("timCodPratica",v)} p="es. PR123456"/>
+                </div>
+              )}
+            </div>
+          )}
+          {sd.timTnp&&<RB label="Box TIM Vision?" val={sd.timVisionBox} opts={["Sì","No"]} onCh={v=>{upv("timVisionBox",v);if(v==="No"){upv("timVisionTaglia",null);upv("timVisionNumContr","");}}}/>}
+          {sd.timVisionBox==="Sì"&&(
+            <div style={{background:"rgba(111,66,193,0.12)",border:"1px solid rgba(111,66,193,0.25)",borderRadius:8,padding:14,marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#6f42c1",marginBottom:8,textTransform:"uppercase"}}>TIM Vision <span style={{color:"#dc3545"}}>*</span></div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
+                {TIM_VISION_TAGLIE.map(t=>{const on=sd.timVisionTaglia===t;return <button key={t} onClick={()=>upv("timVisionTaglia",on?null:t)} style={{padding:"7px 16px",borderRadius:8,border:on?"2px solid #6f42c1":"2px solid rgba(255,255,255,0.1)",background:on?"#6f42c1":"rgba(255,255,255,0.04)",color:on?"#fff":"#8892b0",fontSize:12,fontWeight:700,cursor:"pointer"}}>{t}</button>;})}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                <TF l="Numero Contratto" r v={sd.timVisionNumContr||""} o={v=>upv("timVisionNumContr",v)} p="N. contratto Vision"/>
+              </div>
+            </div>
+          )}
+          {sd.timTnp&&(
+            <div style={{background:"rgba(0,114,198,0.10)",border:"1px solid rgba(0,114,198,0.18)",borderRadius:8,padding:14}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+                <SCd session={sc} codici={TIM_CODICI_NEGOZIO} val={sd.timCodIns||""} onCh={v=>upv("timCodIns",v)}/>
+                {sd.timMnp==="Sì"?(
+                  <TF l="Numero Provvisorio" r v={sd.timNumProv||""} o={v=>upv("timNumProv",v)} p="393XXXXXXX"/>
+                ):(
+                  <TF l="Numero" v={sd.timNum||""} o={v=>upv("timNum",v)} p="3XXXXXXXXX"/>
+                )}
+                <TF l="ICCID" r v={sd.timIccid||""} o={v=>upv("timIccid",v)} p="8939..." nt="Barcode 📷"/>
+                {sd.timSpedizione==="No"&&<TF l="IMEI" r v={sd.timImei||""} o={v=>upv("timImei",v)} p="15 cifre" nt="Barcode 📷"/>}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+  return content;
+};
+
+const TIMFisso = ({sd, uP, sc}) => {
+  const upv=(k,v)=>uP(k,v);
+  const content = (
+    <div>
+      <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:8,textTransform:"uppercase",letterSpacing:.4}}>Prodotto Fisso</div>
+      <div style={{display:"flex",gap:8,marginBottom:16}}>
+        {TIM_FISSO_OFFERS.map(offer=>{const isActive=sd.timFOffer===offer;return (
+          <button key={offer} onClick={()=>{upv("timFOffer",isActive?null:offer);if(isActive){upv("timFGnp",null);upv("timFGnpBrand","");upv("timFGnpNum","");upv("timFNumProv","");upv("timFCodIns","");upv("timFVision",null);upv("timFVisionTaglia",null);upv("timFVisionNumContr","");}}}
+            style={{padding:"8px 18px",borderRadius:10,border:isActive?"2px solid "+TIM_C:"2px solid rgba(255,255,255,0.1)",background:isActive?TIM_C:"rgba(255,255,255,0.04)",color:isActive?"#fff":"#8892b0",fontSize:12,fontWeight:700,cursor:"pointer"}}>{offer}</button>
+        );})}
+      </div>
+      {sd.timFOffer&&(
+        <div>
+          <RB label="GNP?" val={sd.timFGnp} opts={["Sì","No"]} onCh={v=>{upv("timFGnp",v);if(v==="No"){upv("timFGnpBrand","");upv("timFGnpNum","");}}}/>
+          {sd.timFGnp==="Sì"&&(
+            <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:12,marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                <DD l="Operatore GNP" r v={sd.timFGnpBrand||""} o={v=>upv("timFGnpBrand",v)} vals={GNP_FISSO_BRANDS}/>
+                <TF l="Numero Fisso Portabilità" r v={sd.timFGnpNum||""} o={v=>upv("timFGnpNum",v)} p="06XXXXXXXX"/>
+              </div>
+            </div>
+          )}
+          {sd.timFGnp&&(
+            <div style={{background:"rgba(0,114,198,0.10)",border:"1px solid rgba(0,114,198,0.18)",borderRadius:8,padding:14,marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+                <TF l="Numero Fisso Provvisorio" r v={sd.timFNumProv||""} o={v=>upv("timFNumProv",v)} p="06XXXXXXXX"/>
+                <SCd session={sc} codici={TIM_CODICI_NEGOZIO} val={sd.timFCodIns||""} onCh={v=>upv("timFCodIns",v)}/>
+              </div>
+            </div>
+          )}
+          {sd.timFGnp&&<RB label="TIM Vision?" val={sd.timFVision} opts={["Sì","No"]} onCh={v=>{upv("timFVision",v);if(v==="No"){upv("timFVisionTaglia",null);upv("timFVisionNumContr","");}}}/>}
+          {sd.timFVision==="Sì"&&(
+            <div style={{background:"rgba(111,66,193,0.12)",border:"1px solid rgba(111,66,193,0.25)",borderRadius:8,padding:14}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#6f42c1",marginBottom:8,textTransform:"uppercase"}}>TIM Vision <span style={{color:"#dc3545"}}>*</span></div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
+                {TIM_VISION_TAGLIE.map(t=>{const on=sd.timFVisionTaglia===t;return <button key={t} onClick={()=>upv("timFVisionTaglia",on?null:t)} style={{padding:"7px 16px",borderRadius:8,border:on?"2px solid #6f42c1":"2px solid rgba(255,255,255,0.1)",background:on?"#6f42c1":"rgba(255,255,255,0.04)",color:on?"#fff":"#8892b0",fontSize:12,fontWeight:700,cursor:"pointer"}}>{t}</button>;})}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                <TF l="Numero Contratto" r v={sd.timFVisionNumContr||""} o={v=>upv("timFVisionNumContr",v)} p="N. contratto Vision"/>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+  return content;
+};
+
+const TIMTelepass = ({sd, uP, sc}) => {
+  const upv=(k,v)=>uP(k,v);
+  const content = (
+    <div>
+      <RB label="Twin?" val={sd.timTpTwin} opts={["Sì","No"]} onCh={v=>upv("timTpTwin",v)}/>
+      {sd.timTpTwin&&(
+        <div style={{background:"rgba(0,114,198,0.10)",border:"1px solid rgba(0,114,198,0.18)",borderRadius:8,padding:14}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:10,textTransform:"uppercase"}}>📋 Dati Contratto</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+            <TF l="Seriale Telepass" r v={sd.timTpSeriale||""} o={v=>upv("timTpSeriale",v)} p="Seriale"/>
+            <TF l="Recapito Cliente" r v={sd.timTpRecapito||""} o={v=>upv("timTpRecapito",v)} p="Tel/Email"/>
+            <SCd session={sc} codici={TIM_CODICI_NEGOZIO} val={sd.timTpCodIns||""} onCh={v=>upv("timTpCodIns",v)}/>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+  return content;
+};
+
 const SKY_P = { privato: ["TV","TV 14,90","Sky Glass","Fibra","3P","4P","Sky Mobile"], business: ["Sky TV Uffici","Sky Fibra P.IVA"] };
 const SKY_TV = ["TV","TV 14,90","Sky Glass"];
 const SKY_FIBRA = ["Fibra","3P","4P"];
@@ -396,7 +983,7 @@ const getFW = (tc) => {
       { id:"ga", title:"MOBILE", isFWMobile:true, hasContract:true, ct:"ga", fields:[] },
     ]},
     { id:"fisso", title:"FISSO", icon:"🏠", color:"#28a745", radio:true, subs:
-      FW_FISSO_OFFERS.map(o=>({ id:o.toLowerCase().replace(/ /g,"_"), title:o, isFWFisso:true, hasContract:true, ct:"fisso", fields:[] }))
+      (biz?FW_FISSO_BIZ_OFFERS:FW_FISSO_OFFERS).map(o=>({ id:o.toLowerCase().replace(/ /g,"_"), title:o, isFWFisso:true, fwBiz:biz, hasContract:true, ct:"fisso", fields:[] }))
     },
     { id:"energia", title:"ENERGIA", icon:"🔋", color:"#28a745", radio:false, subs:
       FW_ENERGIA_OFFERS.map(o=>({ id:o.toLowerCase().replace(/ /g,"_"), title:o, isFWEnergia:true, hasContract:true, ct:"multi", fields:[] }))
@@ -452,31 +1039,53 @@ const FWMobile = ({sd, uP}) => {
   return content;
 };
 
-const FWFisso = ({sd, uP}) => {
+const FW_FISSO_BIZ_OFFERS = ["Fastweb Business Light","Fastweb Business","Fastweb Business Plus","Fastweb Business Pro","Centralino"];
+const FW_FISSO_BIZ_SECLINE = ["Fastweb Business Pro","Centralino"];
+const FWFisso = ({sd, uP, sc, biz, offer}) => {
   const upv=(k,v)=>uP(k,v);
+  const hasSecLines = biz && FW_FISSO_BIZ_SECLINE.includes(offer);
+  const isCentr = offer==="Centralino";
+  const secCount = sd.fwFSecLineCount||0;
+  const setSecCount=(n)=>{upv("fwFSecLineCount",n);const arr=[...(sd.fwFSecLines||[])];arr.length=n;for(let i=0;i<n;i++)if(!arr[i])arr[i]="";upv("fwFSecLines",arr);};
+  const setSecLine=(i,v)=>{const arr=[...(sd.fwFSecLines||[])];arr[i]=v;upv("fwFSecLines",arr);};
   const content = (
     <div>
-      <RB label="GNP?" val={sd.fwFGnp} opts={["Sì","No"]} onCh={v=>{upv("fwFGnp",v);if(v==="No"){upv("fwFGnpBrand","");upv("fwFGnpNum","");}}}/>
+      <RB label="GNP?" val={sd.fwFGnp} opts={["Sì","No"]} onCh={v=>{upv("fwFGnp",v);if(v==="No"){upv("fwFGnpBrand","");upv("fwFGnpNum","");upv("fwFSecLineCount",0);upv("fwFSecLines",[]);}}}/>
       {sd.fwFGnp==="Sì"&&(
-        <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:12,marginBottom:12}}>
+        <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:12,marginBottom:12}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
             <DD l="Operatore GNP" r v={sd.fwFGnpBrand||""} o={v=>upv("fwFGnpBrand",v)} vals={FW_GNP_BRANDS}/>
-            <TF l="Numero Fisso GNP" r v={sd.fwFGnpNum||""} o={v=>upv("fwFGnpNum",v)} p="06XXXXXXXX"/>
+            <TF l="Numero Fisso GNP" r v={sd.fwFGnpNum||""} o={v=>{upv("fwFGnpNum",v);if(isCentr)upv("fwFNumDef",v);}} p="06XXXXXXXX"/>
           </div>
+          {hasSecLines&&(
+            <div style={{marginTop:12,borderTop:"1px solid rgba(255,255,255,0.1)",paddingTop:10}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:6,textTransform:"uppercase"}}>Seconde linee da migrare</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+                {[0,1,2,3,4,5].map(n=>(
+                  <button key={n} onClick={()=>setSecCount(n)} style={{width:36,height:34,borderRadius:8,border:secCount===n?"2px solid "+FW_C:"2px solid rgba(255,255,255,0.1)",background:secCount===n?FW_C:"rgba(255,255,255,0.04)",color:secCount===n?"#fff":"#8892b0",fontSize:13,fontWeight:700,cursor:"pointer"}}>{n}</button>
+                ))}
+              </div>
+              {secCount>0&&[...Array(secCount)].map((_,i)=>(
+                <div key={i} style={{marginBottom:6}}>
+                  <TF l={"Numero 2ª linea "+(i+1)} r v={(sd.fwFSecLines&&sd.fwFSecLines[i])||""} o={v=>setSecLine(i,v)} p="06XXXXXXXX"/>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       {sd.fwFGnp&&(
-        <div style={{background:"rgba(0,114,198,0.05)",border:"1px solid rgba(0,114,198,0.2)",borderRadius:8,padding:14}}>
+        <div style={{background:"rgba(0,114,198,0.10)",border:"1px solid rgba(0,114,198,0.18)",borderRadius:8,padding:14}}>
           <div style={{fontSize:11,fontWeight:700,color:"#0066cc",marginBottom:12,textTransform:"uppercase"}}>📋 Dati Contratto</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
-            <DD l="Codice Inserimento" r v={sd.fwFCodIns||""} o={v=>upv("fwFCodIns",v)} vals={FW_CODICI_NEGOZIO}/>
+            <SCd session={sc} codici={FW_CODICI_NEGOZIO} val={sd.fwFCodIns||""} onCh={v=>upv("fwFCodIns",v)}/>
             {sd.fwFGnp==="Sì"?(
               <TF l="N. Fisso Provvisorio" r v={sd.fwFNumProv||""} o={v=>upv("fwFNumProv",v)} p="06XXXXXXXX"/>
             ):(
               <TF l="N. Fisso Definitivo" r v={sd.fwFNumDef||""} o={v=>upv("fwFNumDef",v)} p="06XXXXXXXX"/>
             )}
             {sd.fwFGnp==="Sì"&&(
-              <TF l="N. Fisso Definitivo" r v={sd.fwFNumDef||""} o={v=>upv("fwFNumDef",v)} p="06XXXXXXXX"/>
+              <TF l="N. Fisso Definitivo" r v={sd.fwFNumDef||""} o={v=>{upv("fwFNumDef",v);if(isCentr)upv("fwFGnpNum",v);}} p="06XXXXXXXX"/>
             )}
           </div>
         </div>
@@ -1081,6 +1690,22 @@ const VFCB = ({sd, uP}) => {
         </div>
       )}
 
+      {/* ── Traslochi ── */}
+      <div style={{marginTop:4}}>
+        <button onClick={()=>upv("cbTraslochi",!sd.cbTraslochi)}
+          style={{padding:"8px 20px",borderRadius:8,border:sd.cbTraslochi?"2px solid "+VF_C:"1px solid rgba(255,255,255,0.12)",background:sd.cbTraslochi?VF_C:"rgba(255,255,255,0.03)",color:sd.cbTraslochi?"#fff":"#94a3b8",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+          Traslochi
+        </button>
+      </div>
+      {sd.cbTraslochi&&(
+        <div style={{background:VF_LIGHT,border:"1px solid "+VF_BORDER,borderRadius:8,padding:14,marginTop:10}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:10,textTransform:"uppercase"}}>Dati Traslochi CB</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}}>
+            <TF l="Numero Fisso" r v={sd.cbTraslochiNum||""} o={v=>upv("cbTraslochiNum",v)} p="06XXXXXXXX"/>
+            <DD l="Codice Inserimento" r v={sd.cbTraslochiCodIns||""} o={v=>upv("cbTraslochiCodIns",v)} vals={VF_CODICI_NEGOZIO}/>
+          </div>
+        </div>
+      )}
       {/* ── Rete Sicura ── */}
       <div style={{marginTop:4}}>
         <button onClick={()=>upv("cbSecurity",!sd.cbSecurity)}
@@ -1254,6 +1879,8 @@ const IL_GNP_BRANDS = ["TIM","Vodafone","WindTre","Fastweb","Iliad","Tiscali","A
 const IL_CODICI_NEGOZIO = ["IL-RM001","IL-RM002","IL-RM003","IL-RM004","IL-RM005","IL-RM006","IL-RM007","IL-RM008"];
 
 const getIL = (tc) => {
+  const _biz = tc === "business";
+  if(_biz) return [{ id:"mobile", title:"MOBILE", icon:"📱", color:IL_C, radio:true, subs:[{ id:"ga", title:"MOBILE", isILBizMobile:true, hasContract:true, ct:"ga", fields:[] }]}];
   return [
     { id:"mobile", title:"MOBILE", icon:"📱", color:IL_C, radio:true, subs:[
       { id:"ga", title:"MOBILE", isILMobile:true, hasContract:true, ct:"ga", fields:[] },
@@ -1386,7 +2013,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
     cbCellulare:_r.cbCellulare||"",cbCodContratto:_r.cbCodContratto||"",cbModello:_r.cbModello||"",cbImei:_r.cbImei||"",cbTaglia:_r.cbTaglia||null,cbCodIns2:_r.cbCodIns2||"",
     dcCbNumProv:_r.dcCbNumProv||"",dcCbIccid:_r.dcCbIccid||"",
     cbCambio2:_r.cbCambio2||false,cbCambioNumMod:_r.cbCambioNumMod||"",cbCambioCodIns2:_r.cbCambioCodIns2||"",
-    cbSecurity:_r.cbSecurity||false,cbSecurityCell:_r.cbSecurityCell||"",
+    cbSecurity:_r.cbSecurity||false,cbSecurityCell:_r.cbSecurityCell||"",cbTraslochi:_r.cbTraslochi||false,cbTraslochiNum:_r.cbTraslochiNum||"",cbTraslochiCodIns:_r.cbTraslochiCodIns||"",cbAddonSecCell:_r.cbAddonSecCell||"",cbAddonRoCell:_r.cbAddonRoCell||"",cbAddonRoImei:_r.cbAddonRoImei||"",
     vfFAddons:_r.vfFAddons||{},vfFCodIns:_r.vfFCodIns||"",vfFNumProvVisorio:_r.vfFNumProvVisorio||"",vfFNumDef:_r.vfFNumDef||"",
     vfbOffer:_r.vfbOffer||null,vfbMnp:_r.vfbMnp||null,vfbMnpBrand:_r.vfbMnpBrand||"",vfbMnpNum:_r.vfbMnpNum||"",vfbTnp:_r.vfbTnp||null,vfbModello:_r.vfbModello||"",vfbImei:_r.vfbImei||"",vfbRataPiva:_r.vfbRataPiva||null,vfbCodIns:_r.vfbCodIns||"",
     vfbCbOn:_r.vfbCbOn||false,vfbCbCodIns:_r.vfbCbCodIns||"",
@@ -1420,6 +2047,12 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
   const content = (
     <div style={{marginBottom:10,padding:10,background:"rgba(255,255,255,0.02)",borderRadius:8,border:"1px solid "+group.color+"30"}}>
       <div style={{fontSize:11,fontWeight:700,color:group.color,marginBottom:6}}>{sub.title}</div>
+      {sub.isVeryMobile&&<SimpleMobile sd={_r} uP={(k,v)=>uP(group.id,si,sub.id,k,v)} pfx="very" accent={group.color} codici={VERY_CODICI_NEGOZIO} sc={sessionCode}/>}
+      {sub.isHoMobile&&<SimpleMobile sd={_r} uP={(k,v)=>uP(group.id,si,sub.id,k,v)} pfx="ho" accent={group.color} codici={HO_CODICI_NEGOZIO} sc={sessionCode}/>}
+      {sub.isTimMobile&&<TIMMobile sd={_r} uP={(k,v)=>uP(group.id,si,sub.id,k,v)} sc={sessionCode}/>}
+      {sub.isTimFisso&&<TIMFisso sd={_r} uP={(k,v)=>uP(group.id,si,sub.id,k,v)} sc={sessionCode}/>}
+      {sub.isTimTelepass&&<TIMTelepass sd={_r} uP={(k,v)=>uP(group.id,si,sub.id,k,v)} sc={sessionCode}/>}
+      {sub.isILBizMobile&&<ILBizMobile sd={_r} uP={(k,v)=>uP(group.id,si,sub.id,k,v)} sc={sessionCode}/>}
 
       {/* MOBILE flow: Tipologia → MNP → EasyPay → Dropdown */}
       {sub.isMobile&&(
@@ -1570,7 +2203,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
 
       {/* FASTWEB */}
       {sub.isFWMobile&&<FWMobile sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)}/>}
-      {sub.isFWFisso&&<FWFisso sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)}/>}
+      {sub.isFWFisso&&<FWFisso sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)} sc={sessionCode} biz={sub.fwBiz} offer={sub.title}/>}
       {sub.isFWEnergia&&<FWEnergia sd={sd} uP={(k,v)=>uP(group.id,si,sub.id,k,v)}/>}
 
       {/* ILIAD */}
@@ -1835,6 +2468,17 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
                   </button>
                 )}
               </div>
+              {sd.cbAddonSel&&sd.cbAddonSel["Security"]&&(
+                <div style={{marginTop:10,display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                  <TF l="Cellulare Rete Sicura" r v={sd.cbAddonSecCell||""} o={v=>uP(group.id,si,sub.id,"cbAddonSecCell",v)} p="3XXXXXXXXX"/>
+                </div>
+              )}
+              {sd.cbAddonSel&&sd.cbAddonSel["Reload Open"]&&(
+                <div style={{marginTop:10,display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}}>
+                  <TF l="Cellulare Reload Open" r v={sd.cbAddonRoCell||""} o={v=>uP(group.id,si,sub.id,"cbAddonRoCell",v)} p="3XXXXXXXXX"/>
+                  <TF l="IMEI Reload Open" r v={sd.cbAddonRoImei||""} o={v=>uP(group.id,si,sub.id,"cbAddonRoImei",v)} p="15 cifre" nt="Barcode 📷"/>
+                </div>
+              )}
             </div>
           )}
           {!sub.isCBBiz&&sd.cbRf&&(
@@ -2062,7 +2706,7 @@ function CRM() {
   };
 
   const bObj=brand?BRANDS.find(b=>b.id===brand):null;
-  const cats=(brand==="windtre"?getW3(tipoCliente):brand==="vodafone"?getVF(tipoCliente):brand==="fastweb"?getFW(tipoCliente):brand==="iliad"?getIL(tipoCliente):brand==="energy"?getEN(tipoCliente):[]);
+  const cats=(brand==="windtre"?getW3(tipoCliente):brand==="vodafone"?getVF(tipoCliente):brand==="fastweb"?getFW(tipoCliente):brand==="iliad"?getIL(tipoCliente):brand==="energy"?getEN(tipoCliente):brand==="very"?getVERY(tipoCliente):brand==="ho"?getHO(tipoCliente):brand==="tim"?getTIM(tipoCliente):[]);
   const sT=m=>{setToast(m);setTimeout(()=>setToast(null),3500)};
   const uA=(k,v)=>setAna(p=>({...p,[k]:v}));
   const gS=catId=>sales[catId]||[{}];
@@ -2081,8 +2725,11 @@ function CRM() {
 
   const colItems=useCallback(()=>{
     const items=[];
-    if(brand==="windtre"||brand==="vodafone"||brand==="fastweb"||brand==="iliad"||brand==="energy"){const getCats=brand==="windtre"?getW3(tipoCliente):getVF(tipoCliente);getCats.forEach(g=>{(sales[g.id]||[{}]).forEach((sale,si)=>{g.subs.forEach(sub=>{const d=sale[sub.id];if(d&&d.active){const det={...(d.fields||{}),...(d.contract||{}),hasContract:!!sub.hasContract};if(d.tipMob)det["Tipologia"]=d.tipMob;if(d.mnp!=null)det["MNP"]=d.mnp===true||d.mnp==="Sì"?"Sì":"No";if(d.easyPay!=null)det["EasyPay"]=d.easyPay==="Sì"||d.easyPay===true?"Sì":"No";if(d.tnpGa==="Sì"||d.tnpGa===true){det["TNP GA"]="Sì";if(d.tnpTipo)det["Tipo TNP"]=d.tnpTipo;if(d.tnpModello)det["Terminale"]=d.tnpModello;if(d.tnpImei)det["IMEI TNP"]=d.tnpImei;if(d.tnpTipo&&d.tnpTipo.startsWith("Finanziamento"))det["Finanziamento"]="Approvato"};const gaRl=d.tnpGaReloadSel?Object.keys(d.tnpGaReloadSel).filter(k=>d.tnpGaReloadSel[k]):[];if(gaRl.length)det["Reload GA"]=gaRl.join(", ");if(d.reloadForever)det["Reload Forever"]="Sì";const secK=d.securitySel?Object.keys(d.securitySel).filter(k=>d.securitySel[k]):[];if(secK.length)det["Security"]=secK.join(", ");if(d.cbTnp){det["TNP CB"]="Sì";if(d.cbTnpCodIns)det["Cod.Ins.CB"]=d.cbTnpCodIns;if(d.cbTnpCell)det["Cell.CB"]=d.cbTnpCell;if(d.cbTnpCC)det["CC.CB"]=d.cbTnpCC;if(d.cbTnpTipo)det["Tipo CB"]=d.cbTnpTipo;if(d.cbTnpModello)det["Term.CB"]=d.cbTnpModello;if(d.cbTnpImei)det["IMEI CB"]=d.cbTnpImei;if(d.cbTnpTipo&&d.cbTnpTipo.startsWith("Finanziamento"))det["Fin.CB"]="Approvato"};const cbRl=d.cbTnpReloadSel?Object.keys(d.cbTnpReloadSel).filter(k=>d.cbTnpReloadSel[k]):[];if(cbRl.length)det["Reload CB"]=cbRl.join(", ");if(d.cbCambio&&d.cbCambioVal){det["Cambio Off."]=d.cbCambioVal;if(d.cbCambioCodIns)det["Cod.Ins.Cambio"]=d.cbCambioCodIns;if(d.cbCambioCell)det["Cell.Cambio"]=d.cbCambioCell;if(d.cbCambioCC)det["CC.Cambio"]=d.cbCambioCC};const cbAd=d.cbAddonSel?Object.keys(d.cbAddonSel).filter(k=>d.cbAddonSel[k]):[];if(cbAd.length)det["Add-on CB"]=cbAd.join(", ");if(d.gnp)det.GNP="Sì";if(d.gnpNum)det["N.GNP"]=d.gnpNum;if(d.gnpOp)det["Op.GNP"]=d.gnpOp;if(d.secondaLinea)det["2°Linea"]="Sì";if(d.domiciliazione)det["Domic."]="Sì";if(d.opProvenienza)det["Op.Prov."]=d.opProvenienza;if(d.domiciliato!=null)det["Domiciliato"]=d.domiciliato?"Sì":"No";if(d.voceCasaCb===true||d.voceCasaCb==="Sì")det["Voce Casa CB"]="Sì";if(d.convergente!=null)det["Convergente"]=d.convergente?"Sì":"No";const adks=d.addons?Object.keys(d.addons).filter(k=>d.addons[k]):[];if(adks.length)det["Add-on"]=adks.join(", ");items.push({macro:g.title,macroColor:g.color,macroIcon:g.icon,sub:sub.title,saleNum:si+1,details:det})}})})})
+    if(brand==="windtre"||brand==="vodafone"||brand==="fastweb"||brand==="iliad"||brand==="energy"){const getCats=brand==="windtre"?getW3(tipoCliente):getVF(tipoCliente);getCats.forEach(g=>{(sales[g.id]||[{}]).forEach((sale,si)=>{g.subs.forEach(sub=>{const d=sale[sub.id];if(d&&d.active){const det={...(d.fields||{}),...(d.contract||{}),hasContract:!!sub.hasContract};if(d.tipMob)det["Tipologia"]=d.tipMob;if(d.mnp!=null)det["MNP"]=d.mnp===true||d.mnp==="Sì"?"Sì":"No";if(d.easyPay!=null)det["EasyPay"]=d.easyPay==="Sì"||d.easyPay===true?"Sì":"No";if(d.tnpGa==="Sì"||d.tnpGa===true){det["TNP GA"]="Sì";if(d.tnpTipo)det["Tipo TNP"]=d.tnpTipo;if(d.tnpModello)det["Terminale"]=d.tnpModello;if(d.tnpImei)det["IMEI TNP"]=d.tnpImei;if(d.tnpTipo&&d.tnpTipo.startsWith("Finanziamento"))det["Finanziamento"]="Approvato"};const gaRl=d.tnpGaReloadSel?Object.keys(d.tnpGaReloadSel).filter(k=>d.tnpGaReloadSel[k]):[];if(gaRl.length)det["Reload GA"]=gaRl.join(", ");if(d.reloadForever)det["Reload Forever"]="Sì";const secK=d.securitySel?Object.keys(d.securitySel).filter(k=>d.securitySel[k]):[];if(secK.length)det["Security"]=secK.join(", ");if(d.cbTnp){det["TNP CB"]="Sì";if(d.cbTnpCodIns)det["Cod.Ins.CB"]=d.cbTnpCodIns;if(d.cbTnpCell)det["Cell.CB"]=d.cbTnpCell;if(d.cbTnpCC)det["CC.CB"]=d.cbTnpCC;if(d.cbTnpTipo)det["Tipo CB"]=d.cbTnpTipo;if(d.cbTnpModello)det["Term.CB"]=d.cbTnpModello;if(d.cbTnpImei)det["IMEI CB"]=d.cbTnpImei;if(d.cbTnpTipo&&d.cbTnpTipo.startsWith("Finanziamento"))det["Fin.CB"]="Approvato"};const cbRl=d.cbTnpReloadSel?Object.keys(d.cbTnpReloadSel).filter(k=>d.cbTnpReloadSel[k]):[];if(cbRl.length)det["Reload CB"]=cbRl.join(", ");if(d.cbCambio&&d.cbCambioVal){det["Cambio Off."]=d.cbCambioVal;if(d.cbCambioCodIns)det["Cod.Ins.Cambio"]=d.cbCambioCodIns;if(d.cbCambioCell)det["Cell.Cambio"]=d.cbCambioCell;if(d.cbCambioCC)det["CC.Cambio"]=d.cbCambioCC};const cbAd=d.cbAddonSel?Object.keys(d.cbAddonSel).filter(k=>d.cbAddonSel[k]):[];if(cbAd.length)det["Add-on CB"]=cbAd.join(", ");if(d.cbAddonSecCell)det["Cell.Rete Sicura CB"]=d.cbAddonSecCell;if(d.cbAddonRoCell)det["Cell.Reload Open"]=d.cbAddonRoCell;if(d.cbAddonRoImei)det["IMEI Reload Open"]=d.cbAddonRoImei;if(d.cbTraslochi){det["Traslochi"]="Sì";if(d.cbTraslochiNum)det["N.Fisso Traslochi"]=d.cbTraslochiNum;if(d.cbTraslochiCodIns)det["Cod.Ins.Traslochi"]=d.cbTraslochiCodIns;}if(d.gnp)det.GNP="Sì";if(d.gnpNum)det["N.GNP"]=d.gnpNum;if(d.gnpOp)det["Op.GNP"]=d.gnpOp;if(d.secondaLinea)det["2°Linea"]="Sì";if(d.domiciliazione)det["Domic."]="Sì";if(d.opProvenienza)det["Op.Prov."]=d.opProvenienza;if(d.domiciliato!=null)det["Domiciliato"]=d.domiciliato?"Sì":"No";if(d.voceCasaCb===true||d.voceCasaCb==="Sì")det["Voce Casa CB"]="Sì";if(d.convergente!=null)det["Convergente"]=d.convergente?"Sì":"No";const adks=d.addons?Object.keys(d.addons).filter(k=>d.addons[k]):[];if(adks.length)det["Add-on"]=adks.join(", ");items.push({macro:g.title,macroColor:g.color,macroIcon:g.icon,sub:sub.title,saleNum:si+1,details:det})}})})})
     }else if(brand==="sky"){skyS.forEach((s,si)=>{if(s.tvSel)items.push({macro:"SKY TV",macroColor:"#0072C6",macroIcon:"📺",sub:s.tvSel,saleNum:si+1,details:{hasContract:true,"Codice Contratto":s.tvCC||""}});if(s.fibraSel){const det={hasContract:true,"Codice Contratto":s.fibraCC||"","GNP":s.fibraGnp==="Sì"?"Sì":"No"};if(s.fibraGnp==="Sì"){det["Brand GNP"]=s.fibraGnpBrand||"";det["N.Fisso Portabilità"]=s.fibraGnpNum||""}items.push({macro:"SKY FIBRA",macroColor:"#0072C6",macroIcon:"🌐",sub:s.fibraSel,saleNum:si+1,details:det})}if(s.mobileSel){const det={hasContract:false,"MNP":s.mobMnp==="Sì"?"Sì":"No"};if(s.mobMnp==="Sì"){det["N.Provvisorio"]=s.mobNumProv||"";det["N.Definitivo"]=s.mobNumDef||"";det["Brand MNP"]=s.mobBrandMnp||"";det["ICCID"]=s.mobIccid||""}else if(s.mobMnp==="No"){det["Numero"]=s.mobNum||"";det["ICCID"]=s.mobIccidNo||""}items.push({macro:"SKY MOBILE",macroColor:"#0072C6",macroIcon:"📱",sub:"Sky Mobile",saleNum:si+1,details:det})}});}
+    if(brand==="iliad"&&tipoCliente==="business"){getIL("business").forEach(g=>{(sales[g.id]||[{}]).forEach((sale,si)=>{g.subs.forEach(sub=>{const d=sale[sub.id];if(d&&d.active&&sub.isILBizMobile){const det={hasContract:!!sub.hasContract};const put=(l,v)=>{if(v!=null&&v!=="")det[l]=v;};put("Offerta",d.ilBizOffer);put("MNP",d.ilBizMnp);put("Op. MNP",d.ilBizMnpBrand);put("Domiciliata",d.ilBizDom);put("Cod.Ins.",d.ilBizCodIns);put("N. Provvisorio",d.ilBizNum);put("N. Definitivo",d.ilBizNumDef);put("ICCID",d.ilBizIccid);items.push({macro:g.title,macroColor:g.color,macroIcon:g.icon,sub:sub.title,saleNum:si+1,details:det})}})})})}
+    if(brand==="tim"){getTIM(tipoCliente).forEach(g=>{(sales[g.id]||[{}]).forEach((sale,si)=>{g.subs.forEach(sub=>{const d=sale[sub.id];if(d&&d.active){const det={hasContract:!!sub.hasContract};const put=(lbl,val)=>{if(val!=null&&val!=="")det[lbl]=val;};if(sub.isTimMobile){put("Offerta",d.timOffer);put("MNP",d.timMnp);put("Op. MNP",d.timMnpBrand);put("N. MNP",d.timMnpNum);put("TNP",d.timTnp);put("Terminale",d.timModello);put("Spedizione",d.timSpedizione);put("Finanziato",d.timFinanziato);put("Codice Pratica",d.timCodPratica);put("Box TIM Vision",d.timVisionBox);put("TIM Vision",d.timVisionTaglia);put("N. Contratto Vision",d.timVisionNumContr);put("Cod.Ins.",d.timCodIns);put("N. Provvisorio",d.timNumProv);put("Numero",d.timNum);put("ICCID",d.timIccid);put("IMEI",d.timImei);}else if(sub.isTimFisso){put("Prodotto Fisso",d.timFOffer);put("GNP",d.timFGnp);put("Op. GNP",d.timFGnpBrand);put("N. GNP",d.timFGnpNum);put("N. Fisso Provvisorio",d.timFNumProv);put("Cod.Ins.",d.timFCodIns);put("TIM Vision",d.timFVision);put("Taglia Vision",d.timFVisionTaglia);put("N. Contratto Vision",d.timFVisionNumContr);}else if(sub.isTimTelepass){put("Twin",d.timTpTwin);put("Seriale Telepass",d.timTpSeriale);put("Recapito",d.timTpRecapito);put("Cod.Ins.",d.timTpCodIns);}items.push({macro:g.title,macroColor:g.color,macroIcon:g.icon,sub:sub.title,saleNum:si+1,details:det})}})})})}
+    if(brand==="very"||brand==="ho"){const pfx=brand;const gc=brand==="very"?getVERY(tipoCliente):getHO(tipoCliente);gc.forEach(g=>{(sales[g.id]||[{}]).forEach((sale,si)=>{g.subs.forEach(sub=>{const d=sale[sub.id];if(d&&d.active){const K=s=>pfx+s;const det={hasContract:!!sub.hasContract};if(d[K("Offer")])det["Offerta"]=d[K("Offer")];if(d[K("Mnp")]!=null)det["MNP"]=d[K("Mnp")];if(d[K("MnpBrand")])det["Op. MNP"]=d[K("MnpBrand")];if(d[K("MnpNum")])det["N. MNP"]=d[K("MnpNum")];if(d[K("RicaricaAuto")]!=null)det["Ricarica Auto"]=d[K("RicaricaAuto")];if(d[K("Fascia")])det["Tipologia offerta"]=d[K("Fascia")];if(d[K("CodIns")])det["Cod.Ins."]=d[K("CodIns")];if(d[K("NumProv")])det["N. Provvisorio"]=d[K("NumProv")];if(d[K("Num")])det["Numero"]=d[K("Num")];if(d[K("Iccid")])det["ICCID"]=d[K("Iccid")];items.push({macro:g.title,macroColor:g.color,macroIcon:g.icon,sub:sub.title,saleNum:si+1,details:det})}})})})}
     return items;
   },[brand,sales,skyS,tipoCliente]);
 
@@ -2523,7 +3170,7 @@ const finalSubmit = async () => {
               {!b.ready&&<div className="absolute inset-0 bg-[rgba(15,17,26,0.85)] flex flex-col items-center justify-center z-10 rounded-2xl backdrop-blur-sm"><span className="text-xl">🔧</span><span className="text-[10px] font-bold text-slate-500">Manutenzione</span></div>}
               <div className="flex flex-col items-center justify-center text-center gap-3 py-2">
                 <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center" style={{background:`${b.color}15`}}>
-                  <Image src={b.logo} alt={b.label} width={56} height={56} className="w-full h-full object-cover rounded-xl"/>
+                  {b.logo?<Image src={b.logo} alt={b.label} width={56} height={56} className="w-full h-full object-cover rounded-xl"/>:<span className="text-3xl">{b.icon}</span>}
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-white">{b.label}</h3>
