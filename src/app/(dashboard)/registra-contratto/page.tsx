@@ -3902,8 +3902,8 @@ export default function CRM() {
                 {si>0&&<button onClick={()=>rmSl(group.id,si)} style={{padding:"4px 10px",borderRadius:6,border:"1px solid #dc3545",background:"rgba(255,255,255,0.02)",color:"#dc3545",fontSize:10,fontWeight:700,cursor:"pointer"}}>✕</button>}
               </div>
             </div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:group.subs.some(s=>sale[s.id]&&sale[s.id].active)?10:0}}>
-              {group.subs.map(sub=><button key={sub.id} onClick={()=>togSub(group.id,si,sub.id,group.radio?group.subs.map(s=>s.id):null)} style={{padding:"8px 14px",borderRadius:8,border:(sale[sub.id]&&sale[sub.id].active)?"2px solid "+group.color:"2px solid rgba(255,255,255,0.1)",background:(sale[sub.id]&&sale[sub.id].active)?group.color:"rgba(255,255,255,0.04)",color:(sale[sub.id]&&sale[sub.id].active)?"#fff":"#8892b0",cursor:"pointer",fontSize:12,fontWeight:600}}>{sub.title}</button>)}
+            <div style={{display:"flex",flexWrap:"wrap",justifyContent:"center",gap:10,marginBottom:group.subs.some(s=>sale[s.id]&&sale[s.id].active)?12:0}}>
+              {group.subs.map(sub=><button key={sub.id} onClick={()=>togSub(group.id,si,sub.id,group.radio?group.subs.map(s=>s.id):null)} style={{padding:"13px 28px",borderRadius:10,border:(sale[sub.id]&&sale[sub.id].active)?"2px solid "+group.color:"2px solid rgba(255,255,255,0.1)",background:(sale[sub.id]&&sale[sub.id].active)?group.color:"rgba(255,255,255,0.04)",color:(sale[sub.id]&&sale[sub.id].active)?"#fff":"#8892b0",cursor:"pointer",fontSize:13,fontWeight:700}}>{sub.title}</button>)}
             </div>
             {group.subs.filter(sub=>sale[sub.id]&&sale[sub.id].active).map(sub=>
               <SubCard key={sub.id} sub={sub} rawSd={sale[sub.id]||{}} group={group} si={si} sessionCode={sesCode} sale={sale} uF={uF} uC={uC} uP={uP} catSales={gS(group.id)} anaCel={(ana.cellulare||"").replace(/\D/g,"")} onOpenVFModal={openVFModal} dupCheck={dupCheck}/>
