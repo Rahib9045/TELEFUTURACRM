@@ -794,7 +794,7 @@ const getVF = (tc) => {
 // ── Small components (no return keyword needed with arrow implicit) ──────
 
 const YN = ({val,onCh,label}) => (
-  <div style={{marginTop:8,padding:10,background:"#f8fafc",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)"}}>
+  <div style={{marginTop:8,padding:10,background:"rgba(255,255,255,0.03)",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)"}}>
     <div style={{fontSize:12,fontWeight:700,color:"#f8fafc",marginBottom:6}}>{label}</div>
     <div style={{display:"flex",gap:8}}>
       <button onClick={()=>onCh(true)} style={{padding:"6px 20px",borderRadius:6,border:val===true?"2px solid #28a745":"2px solid rgba(255,255,255,0.1)",background:val===true?"rgba(40,167,69,0.12)":"rgba(255,255,255,0.04)",color:val===true?"#28a745":"#8892b0",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sì</button>
@@ -914,7 +914,7 @@ const CartItem = ({it,ii,gi,total,expI,setExpI}) => {
           <button onClick={()=>setExpI(p=>({...p,[gi+"_"+ii]:!p[gi+"_"+ii]}))} style={{background:exp?"rgba(0,114,198,0.10)":"rgba(255,255,255,0.03)",border:exp?"1px solid #2E75B6":"1px solid rgba(255,255,255,0.1)",borderRadius:5,padding:"3px 10px",fontSize:10,fontWeight:600,cursor:"pointer",color:exp?"#2E75B6":"#64748b"}}>{exp?"▲ Nascondi":"👁 Mostra"}</button>
         </div>
       </div>
-      {exp&&<div style={{padding:"8px 12px 12px 32px"}}><div style={{background:"#f8fafc",borderRadius:8,padding:12,border:"1px solid #e8edf2"}}><div style={{fontSize:11,fontWeight:700,color:it.macroColor,marginBottom:8}}>📋 {it.sub}</div>
+      {exp&&<div style={{padding:"8px 12px 12px 32px"}}><div style={{background:"rgba(255,255,255,0.03)",borderRadius:8,padding:12,border:"1px solid #e8edf2"}}><div style={{fontSize:11,fontWeight:700,color:it.macroColor,marginBottom:8}}>📋 {it.sub}</div>
         {dets.length>0?<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 16px"}}>{dets.map(([k,v])=><div key={k}><span style={{fontSize:10,fontWeight:600,color:"#64748b",textTransform:"uppercase"}}>{k}</span><div style={{fontSize:12,color:"#f8fafc",marginTop:1}}>{String(v)}</div></div>)}</div>
         :<div style={{fontSize:12,color:"#64748b"}}>Nessun dettaglio — premi ✏️ Modifica</div>}
       </div></div>}
@@ -1544,7 +1544,7 @@ const VFMobileGAFisso = ({sd,uP,sc}) => {
               {/* Add-on Fisso — appare dopo GNP */}
               {sd.vfFGnp&&(
                 <div>
-                  <div style={{background:"#f8fafc",border:"1px solid #e0e8f0",borderRadius:8,padding:12,marginBottom:12}}>
+                  <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid #e0e8f0",borderRadius:8,padding:12,marginBottom:12}}>
                     <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:8,textTransform:"uppercase"}}>Add-on Fisso</div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                       {VF_ADDON_FISSO.map(a=>{
@@ -2781,7 +2781,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
           )}
           {/* Security when Easy Pay = No (after Offerta Mobile) */}
           {mobDone&&(sd.easyPay==="No"||sd.easyPay===false)&&(
-            <div style={{marginTop:8,padding:8,background:"#f8fafc",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+            <div style={{marginTop:8,padding:8,background:"rgba(255,255,255,0.03)",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
               <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6}}>Security</div>
               <div style={{display:"flex",gap:6}}>
                 {["Security","Security PRO"].map(s=>
@@ -2868,7 +2868,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
               )}
               {/* Security for TNP GA = Sì: OUTSIDE blue box, before dati contratto */}
               {(sd.tnpGa==="Sì"||sd.tnpGa===true)&&sd.tnpTipo&&(
-                <div style={{marginTop:8,padding:8,background:"#f8fafc",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                <div style={{marginTop:8,padding:8,background:"rgba(255,255,255,0.03)",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
                   <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6}}>Security</div>
                   <div style={{display:"flex",gap:6}}>
                     {["Security","Security PRO"].map(s=>
@@ -2886,7 +2886,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
             <div style={{marginTop:6}}>
               <YN val={sd.reloadForever} onCh={v=>uP(group.id,si,sub.id,"reloadForever",v)} label="Reload Forever?"/>
               {/* Security when TNP GA = No (after Reload Forever) */}
-              <div style={{marginTop:8,padding:8,background:"#f8fafc",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+              <div style={{marginTop:8,padding:8,background:"rgba(255,255,255,0.03)",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
                 <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6}}>Security</div>
                 <div style={{display:"flex",gap:6}}>
                   {["Security","Security PRO"].map(s=>
@@ -2957,7 +2957,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
                       )}
                     </div>
                   </div>
-                  <div style={{padding:8,background:"#f8fafc",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                  <div style={{padding:8,background:"rgba(255,255,255,0.03)",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
                     <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6}}>Security / Reload</div>
                     <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                       <button onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel["Security"]?{}:{"Security":true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel["Security"]?"2px solid #fd7e14":"2px solid rgba(255,255,255,0.1)",background:sd.securitySel["Security"]?"rgba(245,158,11,0.14)":"rgba(255,255,255,0.04)",color:sd.securitySel["Security"]?"#e8590c":"#8892b0",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
@@ -2973,7 +2973,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
                 </div>
               )}
               {(sd.tnpGa==="No"||sd.tnpGa===false)&&(
-                <div style={{marginTop:8,padding:8,background:"#f8fafc",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
+                <div style={{marginTop:8,padding:8,background:"rgba(255,255,255,0.03)",borderRadius:6,border:"1px solid rgba(255,255,255,0.1)"}}>
                   <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:6}}>Security / Reload</div>
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                     <button onClick={()=>uP(group.id,si,sub.id,"securitySel",sd.securitySel["Security"]?{}:{"Security":true})} style={{padding:"5px 14px",borderRadius:6,border:sd.securitySel["Security"]?"2px solid #fd7e14":"2px solid rgba(255,255,255,0.1)",background:sd.securitySel["Security"]?"rgba(245,158,11,0.14)":"rgba(255,255,255,0.04)",color:sd.securitySel["Security"]?"#e8590c":"#8892b0",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
@@ -3287,7 +3287,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
 
       {/* Addon/Checklist checkboxes (hidden for Voce Casa) */}
       {sub.hasAddons&&sub.addonList&&!isVCMode&&(
-        <div style={{marginTop:10,padding:10,background:"#f8fafc",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)"}}>
+        <div style={{marginTop:10,padding:10,background:"rgba(255,255,255,0.03)",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)"}}>
           <div style={{fontSize:11,fontWeight:700,color:"#f8fafc",marginBottom:8}}>{sub.isFisso?"Add-on Fisso":"Seleziona prodotti"}</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
             {sub.addonList.map(ad=>
