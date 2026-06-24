@@ -862,13 +862,13 @@ const DD = ({l,r,v,o,vals,nt}) => {
         onBlur={()=>setTimeout(()=>setOpen(false),180)}
         style={{width:"100%",padding:"7px 10px",borderRadius:6,border:v?"2px solid #28a745":"1px solid rgba(255,255,255,0.1)",fontSize:12,boxSizing:"border-box",background:v&&!open?"rgba(40,167,69,0.12)":"rgba(255,255,255,0.04)"}}/>
       {open&&(
-        <div style={{position:"absolute",zIndex:200,left:0,right:0,top:"100%",marginTop:2,background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,.15)",maxHeight:260,overflowY:"auto"}}>
+        <div style={{position:"absolute",zIndex:200,left:0,right:0,top:"100%",marginTop:2,background:"#161a26",border:"1px solid rgba(255,255,255,0.14)",borderRadius:8,boxShadow:"0 12px 32px rgba(0,0,0,.6)",maxHeight:260,overflowY:"auto"}}>
           {v&&<div onMouseDown={()=>{o&&o("");setOpen(false);}} style={{padding:"7px 10px",fontSize:11,color:"#dc3545",cursor:"pointer",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>✕ Deseleziona</div>}
           {filtered.length===0&&<div style={{padding:"10px",fontSize:12,color:"#64748b"}}>Nessun risultato</div>}
           {Object.keys(byGroup).map(gk=>(
             <div key={gk||"_"}>
-              {gk&&<div style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#64748b",background:"#f5f7fa",textTransform:"uppercase",position:"sticky",top:0}}>{gk}</div>}
-              {byGroup[gk].map(it=><div key={it} onMouseDown={()=>{o&&o(it);setOpen(false);setQ("");}} style={{padding:"7px 12px",fontSize:12,cursor:"pointer",background:v===it?"rgba(40,167,69,0.12)":"rgba(255,255,255,0.04)",color:"#f8fafc"}} onMouseEnter={e=>e.currentTarget.style.background="#f0f4ff"} onMouseLeave={e=>e.currentTarget.style.background=v===it?"rgba(40,167,69,0.12)":"#fff"}>{it}</div>)}
+              {gk&&<div style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#94a3b8",background:"#1f2533",textTransform:"uppercase",position:"sticky",top:0}}>{gk}</div>}
+              {byGroup[gk].map(it=><div key={it} onMouseDown={()=>{o&&o(it);setOpen(false);setQ("");}} style={{padding:"7px 12px",fontSize:12,cursor:"pointer",background:v===it?"rgba(40,167,69,0.12)":"rgba(255,255,255,0.04)",color:"#f8fafc"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.08)"} onMouseLeave={e=>e.currentTarget.style.background=v===it?"rgba(40,167,69,0.12)":"rgba(255,255,255,0.04)"}>{it}</div>)}
             </div>
           ))}
         </div>
