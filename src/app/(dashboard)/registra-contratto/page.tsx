@@ -187,7 +187,7 @@ const MargPOS=memo(({show,onClose,venditore,negozio,onAdd,editItem})=>{
           </div>}
           <div style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:"#8892b0",marginBottom:3}}>Importo €</div>
             <input value={importo} onChange={e=>setImporto(e.target.value)} type="number" min="0" step="0.01" placeholder="es. 29.90" style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",fontSize:14,fontWeight:700,boxSizing:"border-box"}}/></div>
-          {hasDupImei&&<div style={{marginBottom:8,padding:"8px 12px",borderRadius:8,background:"#fdecec",border:"1px solid #f5c2c2",color:"#dc3545",fontSize:12,fontWeight:700,textAlign:"center"}}>⛔ Sono presenti IMEI duplicati: correggili per registrare</div>}
+          {hasDupImei&&<div style={{marginBottom:8,padding:"8px 12px",borderRadius:8,background:"rgba(220,53,69,0.12)",border:"1px solid #f5c2c2",color:"#dc3545",fontSize:12,fontWeight:700,textAlign:"center"}}>⛔ Sono presenti IMEI duplicati: correggili per registrare</div>}
           <button onClick={handleAdd} disabled={hasDupImei} style={{width:"100%",padding:14,borderRadius:12,border:"none",background:hasDupImei?"#cfcfcf":"linear-gradient(135deg,#6f42c1,#9b59b6)",color:"#fff",fontSize:14,fontWeight:800,cursor:hasDupImei?"not-allowed":"pointer"}}>✅ Registra {selProd.name}</button>
         </div>)}
       </div>
@@ -3013,7 +3013,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
             <span style={{fontSize:20}}>🛡️</span>
             <span style={{fontSize:13,fontWeight:700,color:"#6f42c1"}}>Verisure</span>
-            <span style={{marginLeft:"auto",fontSize:12,fontWeight:800,color:"#6f42c1",background:"#e0d4ff",borderRadius:6,padding:"3px 12px"}}>✅ CONTATTO INSERITO - In attesa di approvazione</span>
+            <span style={{marginLeft:"auto",fontSize:12,fontWeight:800,color:"#6f42c1",background:"rgba(111,66,193,0.18)",borderRadius:6,padding:"3px 12px"}}>✅ CONTATTO INSERITO - In attesa di approvazione</span>
           </div>
           <SCd session={sessionCode} codici={VF_CODICI_NEGOZIO} val={sd.verisureCodIns||""} onCh={v=>uP(group.id,si,sub.id,"verisureCodIns",v)}/>
         </div>
@@ -3166,7 +3166,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
 
           {/* Cambio Offerta section */}
           {sd.cbCambio&&(
-            <div style={{padding:10,background:"#f5f0ff",borderRadius:8,border:"1px solid rgba(111,66,193,0.3)",marginBottom:8}}>
+            <div style={{padding:10,background:"rgba(111,66,193,0.10)",borderRadius:8,border:"1px solid rgba(111,66,193,0.3)",marginBottom:8}}>
               <div style={{fontSize:10,fontWeight:700,color:"#6f42c1",marginBottom:8,textTransform:"uppercase"}}>Cambio Offerta</div>
               <div style={{marginBottom:8,maxWidth:250}}>
                 <SCd session={sessionCode} codici={codiciW3} val={sd.cbCambioCodIns||""} onCh={v=>uP(group.id,si,sub.id,"cbCambioCodIns",v)}/>
@@ -3189,7 +3189,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
 
           {/* Add-on section inside CB */}
           {sub.cbAddonVals&&sd.cbAddon&&(
-            <div style={{padding:10,background:"#f0faf0",borderRadius:8,border:"1px solid rgba(40,167,69,0.3)",marginBottom:8}}>
+            <div style={{padding:10,background:"rgba(40,167,69,0.10)",borderRadius:8,border:"1px solid rgba(40,167,69,0.3)",marginBottom:8}}>
               <div style={{fontSize:10,fontWeight:700,color:"#28a745",marginBottom:8,textTransform:"uppercase"}}>{sub.isCBBiz?"Add-on / Security":"Add-on"}</div>
               <div style={{marginBottom:8,maxWidth:250}}>
                 <SCd session={sessionCode} codici={codiciW3} val={sd.cbAddonCodIns||(sd.cbTnpCodIns||sd.cbCambioCodIns||"")} onCh={v=>uP(group.id,si,sub.id,"cbAddonCodIns",v)}/>
@@ -3303,7 +3303,7 @@ const SubCard = ({sub,rawSd,group,si,sessionCode,sale,uF,uC,uP,catSales,anaCel,o
 
       {/* LG Convergente */}
       {sub.hasConvLG&&(
-        <div style={{marginTop:8,padding:10,background:lgConvLocked?"rgba(255,255,255,0.03)":"#f8fafc",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)"}}>
+        <div style={{marginTop:8,padding:10,background:"rgba(255,255,255,0.03)",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)"}}>
           <div style={{fontSize:12,fontWeight:700,color:lgConvLocked?"#64748b":"#f8fafc",marginBottom:6}}>Convergente?</div>
           {lgConvLocked?<div style={{display:"flex",alignItems:"center",gap:8}}><button disabled style={{padding:"6px 20px",borderRadius:6,border:"2px solid #dc3545",background:"rgba(220,53,69,0.12)",color:"#f87171",fontSize:12,fontWeight:700,cursor:"not-allowed",opacity:.7}}>No</button><span style={{fontSize:10,color:"#64748b",fontStyle:"italic"}}>Già selezionato altrove</span></div>
           :<div style={{display:"flex",gap:8}}>
@@ -3844,7 +3844,7 @@ export default function CRM() {
         <div style={{fontSize:11,fontWeight:700,color:"#8892b0",marginBottom:14,textTransform:"uppercase"}}>Step 1 — Brand</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
           {BRANDS.map(b=><button key={b.id} onClick={()=>{if(!b.ready)return;const cont=cart.length>0||(tipoCliente&&(ana.nome||ana.cognome||ana.ragioneSociale));const ei=cart.findIndex(g=>g.brandId===b.id);setBrand(b.id);const dSky=[{tvSel:null,tvCC:"",fibraSel:null,fibraCC:"",fibraGnp:null,fibraGnpBrand:"",fibraGnpNum:"",mobileSel:false,mobMnp:null,mobNumProv:"",mobNumDef:"",mobBrandMnp:"",mobIccid:"",mobNum:"",mobIccidNo:"",tvCodIns:"",fibraCodIns:"",mobCodIns:""}];if(ei>=0){const g=cart[ei];setSales(g.sv&&g.sv.sales?g.sv.sales:{});setSesCode(g.sv&&g.sv.sesCode?g.sv.sesCode:"");setSkyS(g.sv&&g.sv.skyS?g.sv.skyS:dSky);setCart(p=>p.filter((_,i)=>i!==ei));}else{setSales({});setSesCode("");setSkyS(dSky);}if(b.id==="very"||b.id==="ho"){setTipoCliente("privato");if(!cont)setClienteFound(false);setShowAna(true);setShowStep4(cont||ei>=0?true:false);}else if(cont||ei>=0){setShowAna(true);setShowStep4(true);}else{setTipoCliente(null);setShowAna(false);setShowStep4(false);}}} style={{padding:16,borderRadius:12,border:"2px solid rgba(255,255,255,0.06)",background:"rgba(255,255,255,0.02)",cursor:b.ready?"pointer":"default",textAlign:"center",opacity:b.ready?1:.6,position:"relative",overflow:"hidden"}}>
-            {!b.ready&&<div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"rgba(255,255,255,.6)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:2}}><div style={{fontSize:22}}>🔧</div><div style={{fontSize:10,fontWeight:700,color:"#64748b"}}>Manutenzione</div></div>}
+            {!b.ready&&<div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"rgba(15,17,26,0.88)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:2}}><div style={{fontSize:22}}>🔧</div><div style={{fontSize:10,fontWeight:700,color:"#64748b"}}>Manutenzione</div></div>}
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:56,marginBottom:12}}>{b.logo?<Image src={b.logo} alt={b.label} width={180} height={56} style={{height:56,width:"auto",maxWidth:"85%",objectFit:"contain"}}/>:<span style={{fontSize:36}}>{b.icon}</span>}</div><div style={{fontWeight:800,fontSize:15,color:b.color}}>{b.label}</div><div style={{fontSize:10,color:"#64748b",marginTop:3}}>{b.desc}</div>
           </button>)}
         </div>
